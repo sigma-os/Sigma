@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <sigma_loader.h>
 #include <sigma_file.h>
+#include <sigma_graphics.h>
 #include <acpi.h>
 
 
@@ -15,10 +16,12 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     uefi_call_wrapper(SystemTable->BootServices->SetWatchdogTimer, 4, 0, 0, 0, NULL);
     st = SystemTable;
 
-    init_sigma_file();
-
-
     Print(L"Booting Sigma\n");
+
+    init_sigma_file();
+    init_sigma_graphics();
+
+    
 
     return EFI_SUCCESS;
 }

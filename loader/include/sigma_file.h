@@ -10,3 +10,4 @@ void init_sigma_file();
 sigma_file_t* sigma_open_file(CHAR16* name);
 UINTN sigma_read_file(sigma_file_t* file, UINTN offset, UINTN size, uint8_t* buf);
 void sigma_close_file(sigma_file_t* file);
+UINTN sigma_get_file_size(sigma_file_t* file);
