@@ -1,0 +1,8 @@
+*.o
+*.so
+*.a
+*.fat
+*.iso
+*.img
+iso/
+*.efi

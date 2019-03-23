@@ -1,0 +1,1 @@
+fs0:sigma_loader.efi
