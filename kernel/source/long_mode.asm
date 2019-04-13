@@ -102,3 +102,34 @@ EFER_MSR equ 0xC0000080
 
 EFER_MSR_LONG_MODE_ENABLE equ (1 << 8)
 EFER_MSR_NXE_ENABLE equ (1 << 11)
+
+
+extern long_mode_start
+
+; Early GDT
+global install_early_gdt
+install_early_gdt:
+    lgdt [gdt64_pointer]
+    jmp CODE_SEG:long_mode_start
+
+
+
+section .rodata
+gdt64:
+    dq 0 ; Null Entry
+    dq (1 << 43) | (1 << 44) | (1 << 47) | (1 << 53) ; Kernel Code Segment
+    dq (1 << 41) | (1 << 44) | (1 << 47) ; Kernel Data Segment
+gdt64_end:
+CODE_SEG equ 0x8
+DATA_SEG equ 0x10
+
+
+
+
+align 4
+gdt64_pointer:
+    dw gdt64_end - gdt64 - 1
+    dq gdt64
+
+
+
