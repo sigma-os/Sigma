@@ -3,7 +3,7 @@ CC = gcc
 C_SOURCES = $(wildcard src/*.c)
 C_OBJECTS = $(C_SOURCES:.c=.o)
 
-CFLAGS = -fno-stack-protector -fpic -fshort-wchar -mno-red-zone -I lib/gnu-efi/inc -I lib/gnu-efi/inc/x86_64 -I lib/gnu-efi/inc/protocol -I include/ -DEFI_FUNCTION_WRAPPER
+CFLAGS = -fno-stack-protector -fpic -fshort-wchar -mno-red-zone -I lib/gnu-efi/inc -I lib/gnu-efi/inc/x86_64 -I lib/gnu-efi/inc/protocol -I include/ -DEFI_FUNCTION_WRAPPER -nostdlib
 LDFLAGS = lib/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o -nostdlib -znocombreloc -T lib/gnu-efi/gnuefi/elf_x86_64_efi.lds -shared -Bsymbolic -L lib/gnu-efi/x86_64/gnuefi -L lib/gnu-efi/x86_64/lib -l:libgnuefi.a -l:libefi.a     
 OBJCOPY_FLAGS = -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64 
 

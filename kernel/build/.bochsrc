@@ -1,0 +1,24 @@
+
+log: build/log/bochs.log
+boot: disk
+display_library: x, options="gui_debug"
+romimage: file=$BXSHARE/BIOS-bochs-latest
+
+
+magic_break: enabled=1
+pci: enabled=1, chipset=i440fx, slot1=pcivga
+speaker: enabled=1, mode=system
+vga: update_freq=30
+vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
+
+com1: enabled=1, mode=file, dev=build/log/com1.log
+com2: enabled=1, mode=file, dev=build/log/com2.log
+com3: enabled=1, mode=file, dev=build/log/com3.log
+com4: enabled=1, mode=file, dev=build/log/com4.log
+
+
+clock: sync=realtime
+cpu: model=corei7_haswell_4770, ips=1000000, reset_on_triple_fault=0
+megs: 2048
+
+ata0-master: type=disk, path=sigma.iso

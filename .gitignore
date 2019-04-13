@@ -4,6 +4,14 @@
 *.fat
 *.iso
 *.img
+*.bin
 iso/
 *.efi
 .vscode/
+
+
+kernel/build/iso/
+
+*.log
+
+kernel/bx_enh_dbg.ini
