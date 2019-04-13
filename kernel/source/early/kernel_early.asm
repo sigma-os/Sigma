@@ -31,12 +31,60 @@ long_mode_error:
     cli
     hlt
 
+initialize_sse:
+    mov eax, 1
+    cpuid
+    bt edx, 25
+    jnc .no_sse
+
+    mov rax, cr0
+    btc eax, 2
+    bts eax, 1
+    mov cr0, rax
+
+    mov rax, cr4
+    bts eax, 9
+    bts eax, 10
+    mov cr4, rax
+
+    ret
+
+.no_sse:    
+    ret
+
+initialize_avx:
+    mov eax, 1
+    cpuid
+    bt ecx, 26
+    jnc .no_avx
+
+    mov rcx, 0
+    xgetbv
+    or eax, 7
+    xsetbv
+
+    ret
+
+.no_avx:
+    ret
+
+
 _kernel_early:
     mov esp, stack_top
     mov ebp, esp
 
-    mov rax, 0x2f592f412f4b2f4f
-    mov qword [RAW_VGA_BUFFER], rax
+    call initialize_sse
+    call initialize_avx
+
+
+    extern _init
+    call _init
+
+    extern kernel_main
+    call kernel_main
+
+    extern _fini
+    call _fini
 
     cli
 

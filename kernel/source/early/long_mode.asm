@@ -4,11 +4,11 @@ section .data
 align 0x1000
 
 p4_table: 
-    resb 0x1000
+    times 0x1000 db 0
 p3_table: 
-    resb 0x1000
+    times 0x1000 db 0
 p2_table: 
-    resb 0x1000
+    times 0x1000 db 0
 
 
 
