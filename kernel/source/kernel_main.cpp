@@ -13,10 +13,13 @@ static void print(char* str){
 
 
 
-extern "C" void kernel_main(){
+extern "C" void kernel_main(void* multiboot_information){
+    
     char buf[] = "Welcome to kernel";
 
     print(buf);
+
+
 
 
     asm("cli; hlt");

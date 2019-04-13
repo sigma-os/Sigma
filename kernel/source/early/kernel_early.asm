@@ -68,7 +68,6 @@ initialize_avx:
 .no_avx:
     ret
 
-
 _kernel_early:
     mov esp, stack_top
     mov ebp, esp
@@ -79,6 +78,13 @@ _kernel_early:
 
     extern _init
     call _init
+
+    extern _start_multiboot_info
+
+    mov rax, 0
+    mov eax, dword [_start_multiboot_info]
+
+    push rax
 
     extern kernel_main
     call kernel_main

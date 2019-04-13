@@ -7,6 +7,9 @@ boot_stack_bottom:
     resb 0x100
 boot_stack_top:
 
+global _start_multiboot_info
+_start_multiboot_info: resd 1
+
 
 
 section .text
@@ -20,9 +23,10 @@ global _start
 _start:
     mov esp, boot_stack_top
 
-    pusha
-
     call check_multiboot
+
+    mov dword [_start_multiboot_info], ebx
+
     call check_cpuid
 
     call check_pae
