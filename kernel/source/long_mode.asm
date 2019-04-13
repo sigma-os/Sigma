@@ -16,7 +16,27 @@ section .text
 align 4
 
 global enter_long_mode
+global check_long_mode
 extern error
+
+check_long_mode:
+    mov eax, 0x80000000
+    cpuid
+
+    cmp eax, 0x80000001
+    jb .no_long_mode
+
+    mov eax, 0x80000001
+    cpuid
+    test edx, (1 << 29)
+    jz .no_long_mode
+    ret
+
+.no_long_mode:
+    mov al, '4'
+    ret
+
+
 
 enter_long_mode:
     call set_up_page_tables
@@ -45,7 +65,7 @@ enter_long_mode:
     ret
 
 .paging_already_enabled:
-    mov al, '4'
+    mov al, '5'
     call error
 
 set_up_page_tables:
