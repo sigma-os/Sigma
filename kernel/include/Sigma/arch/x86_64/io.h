@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SIGMA_ARCH_X86_64_IO
+#define SIGMA_ARCH_X86_64_IO
 
 #include <Sigma/common.h>
 
@@ -14,4 +15,4 @@ namespace io
     void outd(uint16_t port, uint32_t value);
 } // io
 
-
+#endif

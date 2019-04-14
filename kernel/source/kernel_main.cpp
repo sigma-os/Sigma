@@ -1,15 +1,6 @@
 #include <Sigma/common.h>
 
-static void print(char* str){
-    char* mem = reinterpret_cast<char*>(0xb8000);
-
-    while(*str){
-        *mem = *str;
-        *(mem + 1) = (unsigned char)0xF;
-        mem += 2;
-        str++;
-    }
-}
+#include <klibc/stdio.h>
 
 
 
@@ -17,9 +8,10 @@ extern "C" void kernel_main(void* multiboot_information){
     
     (void)(multiboot_information);
 
-    char buf[] = "Welcome to kernel";
 
-    print(buf);
+    printf("%d, %i, %x, %s, %c Hello w\borld", 15, 20, 0xABC, "Welcome", 's');
+
+
 
 
 

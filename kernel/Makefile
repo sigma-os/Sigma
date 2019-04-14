@@ -6,7 +6,7 @@ QEMU = qemu-system-x86_64
 
 SOURCE_DIR = source/
 
-CPP_FLAGS = -m64 -g -Wall -Wextra -Werror -pedantic -std=gnu++17 -ffreestanding -fno-exceptions -fno-rtti -mno-red-zone \
+CPP_FLAGS = -m64 -g -Wall -Wextra -Werror -std=gnu++17 -ffreestanding -fno-exceptions -fno-rtti -mno-red-zone \
 			-fno-stack-protector -I include/ -nostdlib
 
 LD_FLAGS = -T build/linker.ld -mno-red-zone -ffreestanding -nostdlib -n -lgcc
@@ -60,5 +60,5 @@ sigma.bin: ${LINK_LIST} #${CPP_OBJECTS} ${ASM_NASM_OBJECTS} ${ASM_GAS_OBJECTS}
 	${G++} -c $< -o $@ ${CPP_FLAGS}
 
 clean:
-	rm -rf source/*.o source/early/*.o
+	rm -rf $(shell find ${SOURCE_DIR} -name '*.o')
 	rm -f sigma.iso sigma.bin
