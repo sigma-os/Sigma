@@ -9,7 +9,8 @@
 #include <klibc/string.h>
 #include <klibc/stdlib.h>
 
-vga::writer main_writer = vga::writer();
+
+x86_64::vga::writer main_writer = x86_64::vga::writer();
 
 static bool print(const char* data, size_t length){
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);

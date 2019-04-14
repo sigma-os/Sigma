@@ -1,5 +1,7 @@
 #include <klibc/stdlib.h>
 
+#include <klibc/stdio.h>
+
 char* itoa(int value, char* str, int base){
     char* rc, *ptr, *low;
 
@@ -28,4 +30,10 @@ char* itoa(int value, char* str, int base){
         *ptr-- = tmp;
     }
     return rc;
+}
+
+void abort(void){
+    printf("Kernel panic, abort\n");
+    asm("cli; hlt");
+    while(true);
 }

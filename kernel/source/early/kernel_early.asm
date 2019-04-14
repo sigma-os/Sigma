@@ -8,7 +8,7 @@ long_mode_start:
     cmp ax, CODE_SEG
     jne .no_correct_code_seg
 
-    mov ax, DATA_SEG
+    mov ax, 0
     mov ss, ax
     mov ds, ax
     mov es, ax

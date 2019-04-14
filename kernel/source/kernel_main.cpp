@@ -1,6 +1,9 @@
 #include <Sigma/common.h>
 
+#include <Sigma/arch/x86_64/gdt.h>
+
 #include <klibc/stdio.h>
+#include <klibc/stdlib.h>
 
 
 
@@ -9,12 +12,11 @@ extern "C" void kernel_main(void* multiboot_information){
     (void)(multiboot_information);
 
 
-    printf("%d, %i, %x, %s, %c Hello w\borld", 15, 20, 0xABC, "Welcome", 's');
+    //x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
+    //gdt.init();
 
+    printf("Sigma: Successfully loaded GDT\n");
 
-
-
-
-
-    asm("cli; hlt");
+    printf("Sigma: reached end of kernel_main?\n");
+    abort();
 }

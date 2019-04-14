@@ -118,10 +118,11 @@ section .rodata
 gdt64:
     dq 0 ; Null Entry
     dq (1 << 43) | (1 << 44) | (1 << 47) | (1 << 53) ; Kernel Code Segment
-    dq (1 << 41) | (1 << 44) | (1 << 47) ; Kernel Data Segment
+
 gdt64_end:
+
 CODE_SEG equ 0x8
-DATA_SEG equ 0x10
+
 
 
 
