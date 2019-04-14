@@ -33,11 +33,12 @@ void vga::writer::print_char(const char c){
             this->scroll();
             y--;
         }
-
+        this->update_hardware_cursor();
         break;
 
     case '\r':
         this->x = 0;
+        this->update_hardware_cursor();
         break;
 
     case '\b':
@@ -50,6 +51,7 @@ void vga::writer::print_char(const char c){
         }
         vga::text_entry_t ent = vga::text_entry_t(' ', this->foreground, this->background);
         vga::write_entry(ent, this->x, this->y);
+        this->update_hardware_cursor();
         }
         break;
 
@@ -66,6 +68,7 @@ void vga::writer::print_char(const char c){
                 y--;
             }
         }
+        this->update_hardware_cursor();
         break;
     }
 }
@@ -85,6 +88,8 @@ void vga::writer::set_cursor(uint8_t x, uint8_t y){
             y--;
         }
     }
+
+    this->update_hardware_cursor();
 }
 
 void vga::writer::scroll(){
@@ -108,4 +113,27 @@ void vga::writer::scroll(){
     for(uint8_t i = 0; i < vga::terminal_width; i++) this->print_char(' ');
 
     this->set_cursor(old_x, old_y);
+}
+
+void vga::writer::update_hardware_cursor(){
+    uint16_t pos = this->y * vga::terminal_width + this->x;
+
+    io::outb(vga::vga_hardware_cursor_command_port, 0x0F);
+    io::outb(vga::vga_hardware_cursor_data_port, (uint8_t)(pos & 0xFF));
+
+    io::outb(vga::vga_hardware_cursor_command_port, 0x0E);
+    io::outb(vga::vga_hardware_cursor_data_port, (uint8_t)((pos >> 8) & 0xFF));
+}
+
+void enable_hardware_cursor(){
+    io::outb(vga::vga_hardware_cursor_command_port, 0x0A);
+    io::outb(vga::vga_hardware_cursor_data_port, (io::inb(vga::vga_hardware_cursor_data_port) & 0xC0) | 0);
+
+    io::outb(vga::vga_hardware_cursor_command_port, 0x0B);
+    io::outb(vga::vga_hardware_cursor_data_port, (io::inb(vga::vga_hardware_cursor_data_port) & 0xE0) | 15);
+}
+
+void disable_hardware_cursor(){
+    io::outb(vga::vga_hardware_cursor_command_port, 0x0A);
+    io::outb(vga::vga_hardware_cursor_data_port, 0x20);
 }
