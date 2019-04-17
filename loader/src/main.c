@@ -1,5 +1,5 @@
-#include <efi.h>
-#include <efilib.h>
+#include <efi/efi.h>
+#include <efi/efilib.h>
 #include <stdint.h>
 #include <sigma_loader.h>
 #include <sigma_file.h>

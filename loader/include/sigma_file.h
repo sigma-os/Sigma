@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include <efi.h>
-#include <efilib.h>
+#include <efi/efi.h>
+#include <efi/efilib.h>
 #include <sigma_loader.h>
 
 typedef EFI_FILE_HANDLE sigma_file_t;

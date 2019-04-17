@@ -1,6 +1,6 @@
 #pragma once
-#include <efi.h>
-#include <efilib.h>
+#include <efi/efi.h>
+#include <efi/efilib.h>
 #include <stdint.h>
 
 typedef struct {

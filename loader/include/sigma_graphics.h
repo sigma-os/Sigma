@@ -1,6 +1,6 @@
 #pragma once
-#include <efi.h>
-#include <efilib.h>
+#include <efi/efi.h>
+#include <efi/efilib.h>
 #include <sigma_loader.h>
 
 void init_sigma_graphics();
