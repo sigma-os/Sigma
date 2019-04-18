@@ -81,10 +81,10 @@ int printf(const char* format, ...){
             int item = va_arg(parameters, int);
 
             char str[32] = "";
-            str[0] = '0';
-            str[1] = 'x';
+            //str[0] = '0';
+            //str[1] = 'x';
 
-            itoa(item, str + 2, 16);
+            htoa(item, str);
             size_t len = strlen(str);
 
             if(maxrem < len) return -1;

@@ -5,10 +5,10 @@
 .section .text
 .globl _start
 _start:
-	leal (_start_multiboot_magic - KERNEL_VMA), %ecx
-    movl %eax, (%ecx)
-	leal (_start_multiboot_info - KERNEL_VMA), %ecx
-    movl %ebx, (%ecx)
+	//leal (_start_multiboot_magic - KERNEL_VMA), %ecx
+    movl %eax, (_start_multiboot_magic - KERNEL_VMA)
+	//leal (_start_multiboot_info - KERNEL_VMA), %ecx
+    movl %ebx, (_start_multiboot_info - KERNEL_VMA)
 
     lgdt (gdt64_pointer - KERNEL_VMA)
 
@@ -28,8 +28,6 @@ _start:
 	orl     $0x00000101, %eax
 	wrmsr
  
-
-	/* enable paging */
 	movl    %cr0, %eax
 	orl     $0x80000000, %eax
 	movl %eax, %cr0
@@ -73,9 +71,6 @@ gdt64_end:
 gdt64_pointer:
     .word gdt64_end - gdt64 - 1
     .quad (gdt64 - KERNEL_VMA)
-
-.set RAW_VGA_BUFFER, $0xb8000
-.set MULTIBOOT_MAGIC, $0x36d76289
 
 
 .section .text

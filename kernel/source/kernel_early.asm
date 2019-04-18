@@ -91,16 +91,12 @@ _kernel_early:
     extern _start_multiboot_info
     extern _start_multiboot_magic
 
-    mov rax, 0
-    mov eax, dword [_start_multiboot_magic]
+    mov rsi, 0
+    mov esi, dword [_start_multiboot_magic]
 
-    push rax
-
-    mov rax, 0
-    mov eax, dword [_start_multiboot_info]
-    add rax, KERNEL_LMA
-
-    push rax
+    mov rdi, 0
+    mov edi, dword [_start_multiboot_info]
+    add rdi, KERNEL_LMA
 
     extern kernel_main
     call kernel_main

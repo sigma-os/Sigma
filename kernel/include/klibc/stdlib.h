@@ -5,8 +5,11 @@
 extern "C" {
 #endif
 
-char* itoa(int value, char* str, int base);
+#include <stdint.h>
+
+char* itoa(int64_t value, char* str, int base);
 __attribute__((__noreturn__)) void abort(void);
+void htoa(int64_t n, char* str);
 
 #ifdef __cplusplus
 }

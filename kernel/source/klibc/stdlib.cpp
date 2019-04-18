@@ -2,7 +2,7 @@
 
 #include <klibc/stdio.h>
 
-char* itoa(int value, char* str, int base){
+char* itoa(int64_t value, char* str, int base){
     char* rc, *ptr, *low;
 
     if(base < 2 || base > 36){
@@ -30,6 +30,28 @@ char* itoa(int value, char* str, int base){
         *ptr-- = tmp;
     }
     return rc;
+}
+
+void htoa(int64_t n, char* str){
+    *str++ = '0';
+    *str++ = 'x';
+
+    int8_t zeros = 0;
+    int64_t tmp;
+    for(int i = 60; i > 0; i -= 4){
+        tmp = (n >> i) & 0xF;
+        if(tmp == 0 && zeros == 0) continue;
+
+        zeros -= 1;
+
+        if(tmp >= 0xA) *str++ = (tmp - 0xA + 'a');
+        else *str++ = (tmp + '0');
+    }
+
+    tmp = n & 0xF;
+
+    if(tmp >= 0xA) *str++ = (tmp - 0xA + 'a');
+    else *str++ = (tmp + '0');
 }
 
 void abort(void){
