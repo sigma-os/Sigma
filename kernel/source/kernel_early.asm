@@ -1,4 +1,4 @@
-bits 64
+[bits 64]
 
 section .text
 
@@ -14,6 +14,12 @@ long_mode_start:
     mov es, ax
     mov fs, ax
     mov gs, ax
+
+
+    mov rax, cr3
+    add rax, KERNEL_LMA
+    mov qword [rax], 0x0
+    invlpg [0]
 
     jmp _kernel_early
 
@@ -69,20 +75,30 @@ initialize_avx:
     ret
 
 _kernel_early:
-    mov esp, stack_top
-    mov ebp, esp
+
+
+
+    mov rsp, stack_top
+    mov rbp, rsp
 
     call initialize_sse
-    call initialize_avx
+    ;call initialize_avx
 
 
     extern _init
     call _init
 
     extern _start_multiboot_info
+    extern _start_multiboot_magic
+
+    mov rax, 0
+    mov eax, dword [_start_multiboot_magic]
+
+    push rax
 
     mov rax, 0
     mov eax, dword [_start_multiboot_info]
+    add rax, KERNEL_LMA
 
     push rax
 
@@ -105,7 +121,9 @@ stack_bottom:
 stack_top:
 
 
-RAW_VGA_BUFFER equ 0xb8000
+RAW_VGA_BUFFER equ (0xb8000 + KERNEL_LMA)
 
 CODE_SEG equ 0x08
 DATA_SEG equ 0x10
+
+KERNEL_LMA equ 0xffffffff80000000

@@ -7,9 +7,10 @@
 
 
 
-extern "C" void kernel_main(void* multiboot_information){
+extern "C" void kernel_main(void* multiboot_information, uint64_t magic){
     
     (void)(multiboot_information);
+    (void)(magic);
 
 
     //x86_64::gdt::gdt gdt = x86_64::gdt::gdt();

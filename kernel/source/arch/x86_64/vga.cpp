@@ -9,7 +9,7 @@ void x86_64::vga::write_entry(text_entry_t character, uint8_t x, uint8_t y){
     *(entry + 1) = character.colour;
 }
 
-const uint64_t x86_64::vga::mmio = 0xb8000;
+const uint64_t x86_64::vga::mmio = (0xb8000 + KERNEL_VBASE);
 
 
 void x86_64::vga::writer::print(const char* str){

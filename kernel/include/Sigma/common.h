@@ -3,4 +3,6 @@
 
 #include <stdint.h>
 
+#define KERNEL_VBASE 0xffffffff80000000
+
 #endif
