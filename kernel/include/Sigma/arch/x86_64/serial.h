@@ -1,0 +1,56 @@
+#ifndef SIGMA_KERNEL_SERIAL
+#define SIGMA_KERNEL_SERIAL
+
+#include <Sigma/common.h>
+#include <Sigma/bitops.h>
+
+#include <Sigma/arch/x86_64/io.h>
+
+namespace x86_64::serial
+{
+    constexpr uint16_t com1_base = 0x3F8;
+
+    constexpr uint8_t interrupt_enable = 1;
+
+    constexpr uint8_t line_control = 3;
+
+    constexpr uint8_t modem_control = 4;
+    constexpr uint8_t line_status = 5;
+
+    constexpr uint8_t modem_control_dlab = 7;
+
+
+    class writer {
+        public:
+        writer(uint16_t base): base(base){
+            x86_64::io::outb(base + line_control, 0x03); // Configure port
+            x86_64::io::outb(base + interrupt_enable, 0); // Disable interrupts
+
+            this->configure_baud_rate(3);
+        }
+
+        void print_char(const char c){
+            while((x86_64::io::inb(base + line_status) & 0x20) == 0);
+            x86_64::io::outb(base, c);
+        }
+
+
+        private:
+
+        void configure_baud_rate(uint16_t divisor){
+            uint8_t cmd = x86_64::io::inb(base + modem_control);
+            bitops<uint8_t>::bit_set(cmd, modem_control_dlab);
+            x86_64::io::outb(base + modem_control, cmd);
+
+            x86_64::io::outb(base, (divisor >> 8) & 0xFF);
+            x86_64::io::outb(base, divisor & 0xFF);
+
+            cmd = x86_64::io::inb(base + modem_control);
+            bitops<uint8_t>::bit_clear(cmd, modem_control_dlab);
+            x86_64::io::outb(base + modem_control, cmd);
+        }
+        uint16_t base;
+    };
+} // x86_64::serial
+
+#endif 
