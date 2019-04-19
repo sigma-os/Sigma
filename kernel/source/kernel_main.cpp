@@ -10,7 +10,7 @@
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
-    (void)(mboot);
+    printf("Booting Sigma, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", mboot.get_memsize_mb());
 
 
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();

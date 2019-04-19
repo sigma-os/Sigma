@@ -11,6 +11,9 @@ multiboot_header:
 
 
     ; Tags
+    dw 6; Type: Page Align Modules
+    dw 0; Flags: 0
+    dd 8; Size: 8
 
     ; End Tag
     dw 0 ; Type
