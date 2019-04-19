@@ -60,6 +60,10 @@ isr_stub:
     push rbp
     push rsi
     push rdi
+    push r8
+    push r9
+    push r10
+    push r11
 
 
     mov ax, ds
@@ -84,6 +88,10 @@ isr_stub:
     mov fs, ax
     mov gs, ax
     
+    pop r11
+    pop r10
+    pop r9
+    pop r8
     pop rdi
     pop rsi
     pop rbp
@@ -94,4 +102,4 @@ isr_stub:
     pop rax
 
     add rsp, 8
-    iret
+    iretq

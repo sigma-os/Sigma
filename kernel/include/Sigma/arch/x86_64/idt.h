@@ -74,7 +74,7 @@ namespace x86_64::idt
 
     struct idt_registers {
         uint64_t ds;
-        uint64_t rdi, rsi, rbp, useless, rbx, rdx, rcx, rax;
+        uint64_t r11, r10, r9, r8, rdi, rsi, rbp, useless, rbx, rdx, rcx, rax;
         uint64_t int_number, error_code;
         uint64_t rip, cs, rflags, rsp, ss;
     } __attribute__((packed));

@@ -20,6 +20,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     idt.init();
 
 
+
     printf("Sigma: reached end of kernel_main?\n");
     abort();
 }
