@@ -12,7 +12,7 @@ void x86_64::gdt::gdt::init(){
     this->pointer.pointer = (uint64_t)&this->entries;
     this->pointer.size = (sizeof(x86_64::gdt::entry) * this->entry_index) - 1;
 
-    asm("lgdt %0" : : "m"(this->pointer));
+    this->pointer.update_gdtr();
 }
 
 uint64_t x86_64::gdt::gdt::add_entry(uint64_t flags){

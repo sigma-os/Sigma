@@ -5,4 +5,6 @@
 
 #define KERNEL_VBASE 0xffffffff80000000
 
+#define C_LINKAGE extern "C"
+
 #endif

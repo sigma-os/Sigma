@@ -15,6 +15,9 @@ namespace x86_64::gdt
     } __attribute__((packed));
 
     struct pointer {
+        void update_gdtr(){
+            asm("lgdt %0" : : "m"(*this));
+        }
         uint16_t size;
         uint64_t pointer;
     } __attribute__((packed));
@@ -50,6 +53,8 @@ namespace x86_64::gdt
             uint64_t entry_index;
         
     };
+
+    constexpr uint16_t code_selector = 0x08; // Manually update this
 } // x86_64::gdt
 
 
