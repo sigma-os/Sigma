@@ -3,6 +3,8 @@
 
 #include <Sigma/common.h>
 
+#include <Sigma/arch/x86_64/tss.h>
+
 #include <klibc/string.h>
 
 namespace x86_64::gdt
@@ -23,6 +25,7 @@ namespace x86_64::gdt
     } __attribute__((packed));
 
 
+    
     constexpr uint64_t entry_read_write_bit = (1ULL << 41);
     constexpr uint64_t entry_conforming_bit = (1ULL << 42);
     constexpr uint64_t entry_executable_bit = (1ULL << 43);
@@ -45,6 +48,9 @@ namespace x86_64::gdt
             void init();
 
             uint64_t add_entry(uint64_t flags);
+
+            uint64_t add_tss(x86_64::tss::table tss);
+
             uint64_t get_offset_by_index(uint64_t index);
         
         private:
