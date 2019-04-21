@@ -22,32 +22,32 @@ namespace x86_64::serial
 
     class writer {
         public:
-        writer(uint16_t base): base(base){
-            x86_64::io::outb(base + line_control, 0x03); // Configure port
-            x86_64::io::outb(base + interrupt_enable, 0); // Disable interrupts
+        explicit writer(uint16_t base): base(base){
+            x86_64::io::outb(this->base + x86_64::serial::line_control, 0x03); // Configure port
+            x86_64::io::outb(this->base + x86_64::serial::interrupt_enable, 0); // Disable interrupts
 
             this->configure_baud_rate(3);
         }
 
         void print_char(const char c){
-            while((x86_64::io::inb(base + line_status) & 0x20) == 0);
-            x86_64::io::outb(base, c);
+            while((x86_64::io::inb(this->base + x86_64::serial::line_status) & 0x20) == 0);
+            x86_64::io::outb(this->base, c);
         }
 
 
         private:
 
         void configure_baud_rate(uint16_t divisor){
-            uint8_t cmd = x86_64::io::inb(base + modem_control);
-            bitops<uint8_t>::bit_set(cmd, modem_control_dlab);
-            x86_64::io::outb(base + modem_control, cmd);
+            uint8_t cmd = x86_64::io::inb(this->base + x86_64::serial::modem_control);
+            bitops<uint8_t>::bit_set(cmd, x86_64::serial::modem_control_dlab);
+            x86_64::io::outb(this->base + x86_64::serial::modem_control, cmd);
 
-            x86_64::io::outb(base, (divisor >> 8) & 0xFF);
-            x86_64::io::outb(base, divisor & 0xFF);
+            x86_64::io::outb(this->base, (divisor >> 8) & 0xFF);
+            x86_64::io::outb(this->base, divisor & 0xFF);
 
-            cmd = x86_64::io::inb(base + modem_control);
-            bitops<uint8_t>::bit_clear(cmd, modem_control_dlab);
-            x86_64::io::outb(base + modem_control, cmd);
+            cmd = x86_64::io::inb(this->base + x86_64::serial::modem_control);
+            bitops<uint8_t>::bit_clear(cmd, x86_64::serial::modem_control_dlab);
+            x86_64::io::outb(this->base + x86_64::serial::modem_control, cmd);
         }
         uint16_t base;
     };

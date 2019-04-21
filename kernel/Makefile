@@ -31,14 +31,16 @@ CRTN_OBJ = source/crtn.o
 
 LINK_LIST = ${CRTI_OBJ} ${CRTBEGIN_OBJ} ${ASM_GAS_OBJECTS} ${ASM_NASM_OBJECTS} ${CPP_OBJECTS} ${CRTEND_OBJ} ${CRTN_OBJ}
 
-.PHONY: clean run
+.PHONY: clean run bochs lint
 
 run: sigma.iso
-	
 	${QEMU} -hda sigma.iso -enable-kvm -monitor stdio -serial file:/dev/stdout
 
 bochs: sigma.iso
 	bochs -f build/.bochsrc -q
+
+lint: 
+	cppcheck --enable=warning,performance,information,style,portability,missingInclude . -Iinclude/ -j4 --platform=unix64 --std=posix --language=c++ -q -v
 
 sigma.iso: sigma.bin
 	mkdir -p build/iso/boot/grub

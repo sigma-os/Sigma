@@ -79,13 +79,13 @@ void x86_64::vga::writer::set_background(x86_64::vga::text_colour colour) {this-
 void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
     this->x = x;
     this->y = y;
-    if(x > 80){
-        x = 0;
-        y++;
-        if(y > 25){
+    if(this->x > 80){
+        this->x = 0;
+        this->y++;
+        if(this->y > 25){
             //TODO: Scrolling
             this->scroll();
-            y--;
+            this->y--;
         }
     }
 

@@ -15,6 +15,12 @@ isr%1:
     jmp isr_stub
 %endmacro
 
+%macro IST_STACK_ENTRY 1
+[global ist_stack%1]
+    resb 0x1000
+ist_stack%1:
+%endmacro
+
 ISR_NOERROR 0
 ISR_NOERROR 1
 ISR_NOERROR 2
@@ -331,3 +337,13 @@ isr_stub:
 
     add rsp, 8
     iretq
+
+section .bss
+
+IST_STACK_ENTRY 1
+IST_STACK_ENTRY 2
+IST_STACK_ENTRY 3
+IST_STACK_ENTRY 4
+IST_STACK_ENTRY 5
+IST_STACK_ENTRY 6
+IST_STACK_ENTRY 7

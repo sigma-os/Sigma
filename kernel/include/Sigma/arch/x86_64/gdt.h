@@ -6,11 +6,12 @@
 #include <Sigma/arch/x86_64/tss.h>
 
 #include <klibc/string.h>
+#include <klibc/stdio.h>
 
 namespace x86_64::gdt
 {
     struct entry {
-        entry(uint64_t ent): ent(ent) {}
+        explicit entry(uint64_t ent): ent(ent) {}
         entry(){}
 
         uint64_t ent;
@@ -49,10 +50,14 @@ namespace x86_64::gdt
 
             uint64_t add_entry(uint64_t flags);
 
-            uint64_t add_tss(x86_64::tss::table tss);
+            uint64_t add_tss(x86_64::tss::table *tss);
 
             uint64_t get_offset_by_index(uint64_t index);
-        
+
+            void update_pointer(){
+                this->pointer.update_gdtr();
+            }
+
         private:
             x86_64::gdt::entry entries[x86_64::gdt::max_entries];
             x86_64::gdt::pointer pointer;
