@@ -34,7 +34,7 @@ LINK_LIST = ${CRTI_OBJ} ${CRTBEGIN_OBJ} ${ASM_GAS_OBJECTS} ${ASM_NASM_OBJECTS} $
 .PHONY: clean run bochs lint
 
 run: sigma.iso
-	${QEMU} -hda sigma.iso -enable-kvm -monitor stdio -serial file:/dev/stdout
+	${QEMU} -hda sigma.iso -enable-kvm -monitor stdio -serial file:/dev/stdout -smp 2
 
 bochs: sigma.iso
 	bochs -f build/.bochsrc -q

@@ -4,6 +4,8 @@
 #include <Sigma/arch/x86_64/gdt.h>
 #include <Sigma/arch/x86_64/idt.h>
 
+#include <Sigma/arch/x86_64/drivers/mp.h>
+
 #include <klibc/stdio.h>
 #include <klibc/stdlib.h>
 
@@ -22,6 +24,10 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
+
+
+    x86_64::mp::mp mp_spec = x86_64::mp::mp();
+    (void)(mp_spec);
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();

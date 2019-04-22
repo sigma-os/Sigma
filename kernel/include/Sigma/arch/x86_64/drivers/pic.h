@@ -32,7 +32,7 @@ namespace x86_64::pic
 
     class pic {
         public:
-            pic(uint8_t base): pic1_int_base(base), pic2_int_base(base + 8){
+            explicit pic(uint8_t base): pic1_int_base(base), pic2_int_base(base + 8){
                 this->enable();
 
                 this->remap(this->pic1_int_base, this->pic2_int_base);
