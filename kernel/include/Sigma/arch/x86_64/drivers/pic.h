@@ -5,6 +5,8 @@
 #include <Sigma/bitops.h>
 #include <Sigma/arch/x86_64/io.h>
 
+#include <Sigma/interfaces/interrupt_source.h>
+
 namespace x86_64::pic
 {
     constexpr uint8_t pic1_cmd_port = 0x20;
@@ -30,15 +32,22 @@ namespace x86_64::pic
     constexpr uint8_t icw4_buf_master = 0xC;
     constexpr uint8_t icw1_sfnm = 0x10;    
 
-    class pic {
-        public:
-            explicit pic(uint8_t base): pic1_int_base(base), pic2_int_base(base + 8){
-                this->enable();
+    constexpr uint8_t bios_default_pic1_vector = 0x8;
+    constexpr uint8_t bios_default_pic2_vector = 0x70;
 
-                this->remap(this->pic1_int_base, this->pic2_int_base);
+    class pic : virtual public IInterruptController{
+        public:
+            explicit pic(): pic1_int_base(bios_default_pic1_vector), pic2_int_base(bios_default_pic2_vector){ }
+
+            void init(){
+                this->enable();
             }
 
-            void remap(uint8_t base){
+            void deinit(){
+                this->disable();
+            }
+
+            void set_base_vector(uint8_t base){
                 this->remap(base, (base + 8));
             }
 
