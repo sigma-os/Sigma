@@ -25,7 +25,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
 
-
     x86_64::mp::mp mp_spec = x86_64::mp::mp();
     (void)(mp_spec);
 

@@ -39,7 +39,7 @@ x86_64::mp::mp::mp(){
         const char product[13] = "";
         memcpy((void*)product, (void*)&header->product_id, 12);
 
-        debug_printf("[MP]: Found Table OEM ID: %s, Product ID: %s", oem, product);
+        debug_printf("[MP]: Found Table OEM ID: %s, Product ID: %s\n", oem, product);
 
         this->parse();
     } else {
