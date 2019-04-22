@@ -14,7 +14,9 @@ x86_64::mp::mp::mp(){
         return;
     }
 
-    debug_printf("[MP]: Found Floating Pointer stucture with revision: 1.%d\n", pointer->revision);
+    debug_printf("[MP]: Found Floating Pointer stucture with revision: 1.%d, APIC Mode: ", pointer->revision);
+    if(bitops<uint8_t>::bit_test(&(pointer->mp_feature_byte2), x86_64::mp::mp_feature_byte2_imcrp)) debug_printf("Virtual Wire\n");
+    else debug_printf("PIC Mode\n");
 
     if(pointer->mp_feature_byte1 == 0){
         this->table = (pointer->physical_pointer_address + KERNEL_VBASE);
@@ -28,6 +30,16 @@ x86_64::mp::mp::mp(){
             printf("[MP]: Table header checksum failed\n");
             return;
         }
+
+        x86_64::mp::configuration_table_header* header = reinterpret_cast<x86_64::mp::configuration_table_header*>(this->table);
+
+        const char oem[9] = "";
+        memcpy((void*)oem, (void*)&header->oem_id, 8);
+
+        const char product[13] = "";
+        memcpy((void*)product, (void*)&header->product_id, 12);
+
+        debug_printf("[MP]: Found Table OEM ID: %s, Product ID: %s", oem, product);
 
         this->parse();
     } else {
