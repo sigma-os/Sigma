@@ -17,7 +17,7 @@ namespace x86_64::serial
     constexpr uint8_t modem_control = 4;
     constexpr uint8_t line_status = 5;
 
-    constexpr uint8_t modem_control_dlab = 7;
+    constexpr uint8_t line_control_dlab = 7;
 
 
     class writer {
@@ -38,16 +38,16 @@ namespace x86_64::serial
         private:
 
         void configure_baud_rate(uint16_t divisor){
-            uint8_t cmd = x86_64::io::inb(this->base + x86_64::serial::modem_control);
-            bitops<uint8_t>::bit_set(cmd, x86_64::serial::modem_control_dlab);
-            x86_64::io::outb(this->base + x86_64::serial::modem_control, cmd);
+            uint8_t cmd = x86_64::io::inb(this->base + x86_64::serial::line_control);
+            bitops<uint8_t>::bit_set(cmd, x86_64::serial::line_control_dlab);
+            x86_64::io::outb(this->base + x86_64::serial::line_control, cmd);
 
             x86_64::io::outb(this->base, (divisor >> 8) & 0xFF);
             x86_64::io::outb(this->base, divisor & 0xFF);
 
-            cmd = x86_64::io::inb(this->base + x86_64::serial::modem_control);
-            bitops<uint8_t>::bit_clear(cmd, x86_64::serial::modem_control_dlab);
-            x86_64::io::outb(this->base + x86_64::serial::modem_control, cmd);
+            cmd = x86_64::io::inb(this->base + x86_64::serial::line_control);
+            bitops<uint8_t>::bit_clear(cmd, x86_64::serial::line_control_dlab);
+            x86_64::io::outb(this->base + x86_64::serial::line_control, cmd);
         }
         uint16_t base;
     };

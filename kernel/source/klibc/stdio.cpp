@@ -122,6 +122,7 @@ int puts(const char* s){
 
 // DEBUG LOG
 
+#ifdef DEBUG
 
 static bool debug_print(const char* data, size_t length){
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
@@ -217,3 +218,12 @@ int debug_printf(const char* format, ...){
     va_end(parameters);
     return written;
 }
+
+#else
+
+int debug_printf(const char* format, ...){
+    (void)(format);
+    return 1;
+}
+
+#endif

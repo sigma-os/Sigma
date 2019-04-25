@@ -33,6 +33,10 @@ void multiboot::parse_mbd(){
             }
             break;
 
+            case MULTIBOOT_TAG_TYPE_MMAP:
+                this->mmap_entry = reinterpret_cast<uint64_t>(type);
+                break;
+
             case MULTIBOOT_TAG_TYPE_ACPI_OLD:
             {
                 multiboot_tag_old_acpi* info = reinterpret_cast<multiboot_tag_old_acpi*>(type);

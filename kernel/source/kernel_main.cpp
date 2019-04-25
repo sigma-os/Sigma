@@ -6,6 +6,8 @@
 
 #include <Sigma/arch/x86_64/drivers/mp.h>
 
+#include <Sigma/mm/pmm.h>
+
 #include <klibc/stdio.h>
 #include <klibc/stdlib.h>
 
@@ -27,6 +29,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     x86_64::mp::mp mp_spec = x86_64::mp::mp();
     (void)(mp_spec);
+
+    mm::pmm::init(mboot);
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();

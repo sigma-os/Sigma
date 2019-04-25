@@ -28,11 +28,21 @@ class multiboot {
         return reinterpret_cast<uint64_t>(rsdp);
     }
 
+    multiboot_tag_mmap* get_mmap_entry(){
+        return reinterpret_cast<multiboot_tag_mmap*>(mmap_entry);
+    }
 
+    uint64_t get_mbd_size(){
+        uint32_t* base = reinterpret_cast<uint32_t*>(this->mbd);
+        uint64_t total_size = *base;
+        return total_size;
+    }
 
     private:
     uint32_t mem_low, mem_high;
     uint64_t* rsdp = nullptr;
+
+    uint64_t mmap_entry;
 
     void parse_mbd();
     void* mbd;
