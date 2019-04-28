@@ -13,6 +13,7 @@ SECTIONS {
     .boot : AT(ADDR(.boot) - (KERNEL_VMA - KERNEL_LMA)) {
         _kernel_boot = .;
         *(.multiboot)
+		. = ALIGN(0x1000);
     }
 
 	.text : AT(ADDR(.text) - (KERNEL_VMA - KERNEL_LMA)) {
@@ -27,22 +28,22 @@ SECTIONS {
 		*(.rodata*)
 		*(.gnu.linkonce.r*)
 
-		. = ALIGN(8);
+		. = ALIGN(0x1000);
 		__CTOR_LIST__ = .;
 		*(.ctors)
 		__CTOR_END__ = .;
 		
-		. = ALIGN(8);
+		. = ALIGN(0x1000);
 		__DTOR_LIST__ = .;
 		*(.dtors)
 		__DTOR_END__ = .;
 		
-		. = ALIGN(8);
+		. = ALIGN(0x1000);
 		__INIT_LIST__ = .;
 		KEEP (*(.init_array))
 		__INIT_END__ = .;
 		
-		. = ALIGN(8);
+		. = ALIGN(0x1000);
 		__FINI_LIST__ = .;
 		KEEP (*(.fini_array))
 		__FINI_END__ = .;

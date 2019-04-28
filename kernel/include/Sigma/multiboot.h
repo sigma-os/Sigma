@@ -8,6 +8,7 @@
 #include <klibc/stdio.h>
 #include <klibc/stdlib.h>
 
+
 class multiboot {
     public:
     multiboot(void* mbd, uint64_t magic): mbd(mbd), magic(magic){
@@ -38,9 +39,19 @@ class multiboot {
         return total_size;
     }
 
+    uint64_t* get_elf_sections(){
+        return this->elf_sections;
+    }
+
+    uint64_t get_elf_n_sections(){
+        return this->n_elf_sections;
+    }
+
     private:
     uint32_t mem_low, mem_high;
     uint64_t* rsdp = nullptr;
+    uint64_t* elf_sections = nullptr;
+    uint64_t n_elf_sections = 0;
 
     uint64_t mmap_entry;
 

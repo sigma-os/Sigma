@@ -50,6 +50,25 @@ void multiboot::parse_mbd(){
                 if(rsdp == nullptr) this->rsdp = reinterpret_cast<uint64_t*>(info->rsdp);
             }
             break;
+
+            case MULTIBOOT_TAG_TYPE_ELF_SECTIONS:
+            {
+                multiboot_tag_elf_sections* info = reinterpret_cast<multiboot_tag_elf_sections*>(type);
+                /*for(uint64_t i = 0; i < info->num; i++){
+                    multiboot_elf::Elf32_Shdr* shdr = reinterpret_cast<multiboot_elf::Elf32_Shdr*>(reinterpret_cast<uint64_t>(info->sections) + (i * info->entsize));
+                    if(shdr->sh_flags & 0x2){
+                        printf("Section: base %x, len: %x, type: %x, ALLOCATED ", shdr->sh_addr, shdr->sh_size, shdr->sh_type);
+                        if(shdr->sh_flags & 0x1) printf("WRITABLE ");
+                        if(shdr->sh_flags & 0x4) printf("EXECUTABLE ");
+                        printf("\n");
+                    }
+                }*/
+                if(this->elf_sections == nullptr){
+                    this->elf_sections = reinterpret_cast<uint64_t*>(info->sections);
+                    this->n_elf_sections = info->num;
+                }
+            }
+            break;
         
             default:
                 break;

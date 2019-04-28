@@ -14,6 +14,8 @@
 
 #include <Sigma/arch/x86_64/drivers/mp.h>
 
+#include <Sigma/multitasking/elf.h>
+
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
     printf("Booting Sigma, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", mboot.get_memsize_mb());
@@ -41,6 +43,26 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
         virt_start += 0x1000;
         phys_start += 0x1000;
+    }
+
+
+    uint64_t* elf_sections_start = mboot.get_elf_sections();
+    uint64_t n_elf_sections = mboot.get_elf_n_sections();
+
+    for(uint64_t i = 0; i < n_elf_sections; i++){
+        multitasking::elf::Elf64_Shdr* shdr = reinterpret_cast<multitasking::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(multitasking::elf::Elf64_Shdr)));
+        if(shdr->sh_flags & multitasking::elf::SHF_ALLOC){
+           uint32_t flags = map_page_flags_present;
+           if(shdr->sh_flags & multitasking::elf::SHF_WRITE) flags |= map_page_flags_writable;
+           if(!(shdr->sh_flags & multitasking::elf::SHF_EXECINSTR)) flags |= map_page_flags_no_execute;
+
+           for(uint64_t i = 0; i < shdr->sh_size; i += mm::pmm::block_size){
+                uint64_t virt = (shdr->sh_addr + i);
+                uint64_t phys = (virt - KERNEL_VBASE);
+
+                vmm.map_page(phys, virt, flags);
+           }
+        }
     }
 
     vmm.set();

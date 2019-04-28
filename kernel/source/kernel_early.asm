@@ -86,6 +86,13 @@ initialize_efer:
     wrmsr
 
     ret
+
+initialize_cr0:
+    mov rax, cr0
+    bts rax, 16 ; Set Write Protect bit so the CPU will enfore the Writable paging bit in kernel mode
+    mov cr0, rax
+
+    ret
  
 
 _kernel_early:
@@ -98,6 +105,7 @@ _kernel_early:
     call initialize_sse
     call initialize_avx
     call initialize_efer
+    call initialize_cr0
 
 
     extern _init
