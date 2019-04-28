@@ -32,26 +32,24 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
 
-    x86_64::mp::mp mp_spec = x86_64::mp::mp();
-    (void)(mp_spec);
-
     mm::pmm::init(mboot);
     
-    mm::vmm::manager<x86_64::paging::paging> man = mm::vmm::manager<x86_64::paging::paging>();
+    mm::vmm::manager<x86_64::paging::paging> vmm = mm::vmm::manager<x86_64::paging::paging>();
 
     uint64_t virt_start = KERNEL_VBASE;
-
     uint64_t phys_start = 0x0;
 
     for(uint32_t i = 0; i < (1024 * 16); i++){
-        man.map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
+        vmm.map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
 
         virt_start += 0x1000;
         phys_start += 0x1000;
     }
 
-    man.set();
+    vmm.set();
 
+    x86_64::mp::mp mp_spec = x86_64::mp::mp();
+    (void)(mp_spec);
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();

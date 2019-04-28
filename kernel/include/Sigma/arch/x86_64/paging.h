@@ -52,6 +52,8 @@ namespace x86_64::paging
 
             uint64_t get_page_size();
 
+            uint64_t get_paging_info();
+
         private:
             // Virtual address!
             pml4* paging_info; 

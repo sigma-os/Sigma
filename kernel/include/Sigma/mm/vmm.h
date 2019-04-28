@@ -26,6 +26,10 @@ namespace mm::vmm
                 this->current_info.set_paging_info();
             }
 
+            void clone_info(T& new_info){
+                this->current_info.clone_paging_info(new_info);
+            }
+
         private:
             T item;
             IPaging& current_info;
