@@ -49,6 +49,8 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
     else {
         if (n < 32) printf("[IDT]: Received interrupt %i, %s\n", n, exeception_msg[n]);
         else printf("[IDT]: Received interrupt %i\n", n);
+
+        printf("RIP: %x", registers->rip);
         asm("cli; hlt");
         return;
     }

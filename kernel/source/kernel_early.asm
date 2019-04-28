@@ -64,6 +64,10 @@ initialize_avx:
     bt ecx, 26
     jnc .no_avx
 
+    mov rax, cr4
+    bts rax, 18 ; Set OSXSAVE bit for access to xgetbv and xsetbv
+    mov cr4, rax
+
     mov rcx, 0
     xgetbv
     or eax, 7
@@ -74,6 +78,16 @@ initialize_avx:
 .no_avx:
     ret
 
+initialize_efer:
+    mov ecx, EFER_MSR
+    rdmsr
+    bts eax, 0 ; Set SCE for the syscall and sysret instructions
+    bts eax, 11 ; Set NXE for No-Execute-Support
+    wrmsr
+
+    ret
+ 
+
 _kernel_early:
 
 
@@ -82,7 +96,8 @@ _kernel_early:
     mov rbp, rsp
 
     call initialize_sse
-    ;call initialize_avx
+    call initialize_avx
+    call initialize_efer
 
 
     extern _init
@@ -123,3 +138,5 @@ CODE_SEG equ 0x08
 DATA_SEG equ 0x10
 
 KERNEL_LMA equ 0xffffffff80000000
+
+EFER_MSR equ 0xC0000080

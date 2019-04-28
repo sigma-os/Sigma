@@ -9,6 +9,8 @@
 // PMM should be fully global between ALL CPU's and threads and everything
 namespace mm::pmm
 {
+    constexpr uint64_t block_size = 0x1000;
+
     void init(multiboot& mb_info);
 
     void* alloc_block();

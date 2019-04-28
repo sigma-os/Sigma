@@ -12,8 +12,8 @@ uint64_t bitmap_size;
 uint64_t n_blocks;
 
 static void enable_region(uint64_t base, uint64_t size){
-    uint64_t align = base / 0x1000;
-    uint64_t blocks = size / 0x1000;
+    uint64_t align = base / mm::pmm::block_size;
+    uint64_t blocks = size / mm::pmm::block_size;
 
     for(; blocks > 0; blocks--){
         bitops<uint64_t>::bit_clear(bitmap[align / 64], align % 64);
@@ -31,8 +31,8 @@ static void enable_region(uint64_t base, uint64_t size){
 }
 
 static void disable_region(uint64_t base, uint64_t size){
-    uint64_t bit = base / 0x1000;
-    for(uint64_t n = (size / 0x1000); n > 0; n--){
+    uint64_t bit = base / mm::pmm::block_size;
+    for(uint64_t n = (size / mm::pmm::block_size); n > 0; n--){
         bitops<uint64_t>::bit_set(bitmap[bit / 64], bit % 64);
         bit++;
     }
@@ -115,7 +115,7 @@ void* mm::pmm::alloc_block(){
         abort();
     }
 
-    uint64_t address = block_bit * 0x1000;
+    uint64_t address = block_bit * mm::pmm::block_size;
     bitops<uint64_t>::bit_set(bitmap[block_bit / 64], block_bit % 64);
 
     return reinterpret_cast<void*>(address);
@@ -124,6 +124,6 @@ void* mm::pmm::alloc_block(){
 void mm::pmm::free_block(void* block){
     uint64_t addr = reinterpret_cast<uint64_t>(block);
 
-    uint64_t bit = addr / 0x1000;
+    uint64_t bit = addr / mm::pmm::block_size;
     bitops<uint64_t>::bit_clear(bitmap[bit / 64], bit % 64);
 }
