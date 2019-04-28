@@ -84,9 +84,6 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     uint64_t pd_index_number = pd_index(virt);
     uint64_t pt_index_number = pt_index(virt);
 
-    debug_printf("%x\n%x\n\n%d\n%d\n%d\n%d\n", phys, virt, pml4_index_number, pdpt_index_number, pd_index_number, pt_index_number);
-
-
     uint64_t entry_flags = 0;
     if(flags & map_page_flags_present){
         bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_present);
@@ -98,41 +95,41 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         return true; // Not present so no reason to map
     }
 
-    uint64_t* pml4_entry = &(this->paging_info->entries[pml4_index_number]);
+    uint64_t& pml4_entry = this->paging_info->entries[pml4_index_number];
 
     if(!bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
         // PML4 entry not present create one
 
         uint64_t new_pml4_entry = entry_flags;
         set_frame(new_pml4_entry, reinterpret_cast<uint64_t>(mm::pmm::alloc_block()));
-        *pml4_entry = new_pml4_entry;
+        pml4_entry = new_pml4_entry;
     }
-    auto pdpt_addr = (get_frame(*pml4_entry) + KERNEL_VBASE);
+    auto pdpt_addr = (get_frame(pml4_entry) + KERNEL_VBASE);
 
-    uint64_t* pdpt_entry = &(reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number]);
+    uint64_t& pdpt_entry = reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number];
     if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
         // PDPT entry not present create one
 
         uint64_t new_pdpt_entry = entry_flags;
         set_frame(new_pdpt_entry, reinterpret_cast<uint64_t>(mm::pmm::alloc_block()));
-        *pdpt_entry = new_pdpt_entry;
+        pdpt_entry = new_pdpt_entry;
     }
-    auto pd_addr = (get_frame(*pdpt_entry) + KERNEL_VBASE);
+    auto pd_addr = (get_frame(pdpt_entry) + KERNEL_VBASE);
 
-    uint64_t* pd_entry = &(reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number]);
+    uint64_t& pd_entry = reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number];
     if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
         // PD entry not present create one
 
         uint64_t new_pd_entry = entry_flags;
         set_frame(new_pd_entry, reinterpret_cast<uint64_t>(mm::pmm::alloc_block()));
-        *pd_entry = new_pd_entry;
+        pd_entry = new_pd_entry;
     }
-    auto pt_addr = (get_frame(*pd_entry) + KERNEL_VBASE);
+    auto pt_addr = (get_frame(pd_entry) + KERNEL_VBASE);
 
-    uint64_t* pt_entry = &(reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number]);
+    uint64_t& pt_entry = reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number];
 
-    *pt_entry = entry_flags;
-    set_frame(*pt_entry, phys);
+    pt_entry = entry_flags;
+    set_frame(pt_entry, phys);
 
     return true;
 }
