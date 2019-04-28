@@ -7,6 +7,7 @@
 #include <Sigma/arch/x86_64/drivers/mp.h>
 
 #include <Sigma/mm/pmm.h>
+#include <Sigma/mm/vmm.h>
 
 #include <klibc/stdio.h>
 #include <klibc/stdlib.h>
@@ -14,6 +15,8 @@
 #include <Sigma/multiboot.h>
 
 #include <Sigma/arch/x86_64/paging.h>
+
+
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
@@ -33,25 +36,21 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     (void)(mp_spec);
 
     mm::pmm::init(mboot);
-
-    x86_64::paging::paging paging;
-
-    IPaging& pag = paging;
-
-    pag.init();
+    
+    mm::vmm::manager<x86_64::paging::paging> man = mm::vmm::manager<x86_64::paging::paging>();
 
     uint64_t virt_start = KERNEL_VBASE;
 
     uint64_t phys_start = 0x0;
 
     for(uint32_t i = 0; i < (1024 * 16); i++){
-        pag.map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
+        man.map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
 
         virt_start += 0x1000;
         phys_start += 0x1000;
     }
 
-    pag.set_paging_info();
+    man.set();
 
 
     printf("Sigma: reached end of kernel_main?\n");

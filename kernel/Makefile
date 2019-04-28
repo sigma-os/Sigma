@@ -6,10 +6,12 @@ QEMU = qemu-system-x86_64
 
 SOURCE_DIR = source/
 
+EXTRA_WARNING_FLAGS = -Wreorder
+
 FLAGS_C_COMMON = -m64 -march=x86-64 -fno-PIC -Wall -Wextra -Werror -ffreestanding -nostdlib \
 				 -mcmodel=kernel -I include/ -fno-stack-protector -g # pedantic
 
-CPP_FLAGS = ${FLAGS_C_COMMON} -std=c++17 -mno-red-zone -fno-exceptions -fno-rtti -fuse-cxa-atexit
+CPP_FLAGS = ${FLAGS_C_COMMON} ${EXTRA_WARNING_FLAGS} -std=c++17 -mno-red-zone -fno-exceptions -fno-rtti -fuse-cxa-atexit
 
 LD_FLAGS = -nostdlib -mcmodel=kernel -fno-PIC -no-pie -Wl,--build-id=none -Wl,-z,max-page-size=0x1000,-n,-T,./build/linker.ld
 
