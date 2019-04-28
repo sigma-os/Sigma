@@ -1,22 +1,18 @@
+#include <klibc/stdio.h>
+#include <klibc/stdlib.h>
+
 #include <Sigma/common.h>
+#include <Sigma/multiboot.h>
 
 #include <Sigma/arch/x86_64/tss.h>
 #include <Sigma/arch/x86_64/gdt.h>
 #include <Sigma/arch/x86_64/idt.h>
-
-#include <Sigma/arch/x86_64/drivers/mp.h>
+#include <Sigma/arch/x86_64/paging.h>
 
 #include <Sigma/mm/pmm.h>
 #include <Sigma/mm/vmm.h>
 
-#include <klibc/stdio.h>
-#include <klibc/stdlib.h>
-
-#include <Sigma/multiboot.h>
-
-#include <Sigma/arch/x86_64/paging.h>
-
-
+#include <Sigma/arch/x86_64/drivers/mp.h>
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
@@ -31,6 +27,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
+    x86_64::idt::register_generic_handlers();
 
     mm::pmm::init(mboot);
     

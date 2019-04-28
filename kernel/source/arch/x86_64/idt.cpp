@@ -39,6 +39,21 @@ const char *exeception_msg[] = {
     "Reserved"
 };
 
+static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers){
+    uint64_t cr2;
+    asm("mov %%cr2, %0" : "=r"(cr2));
+
+    printf("PAGE FAULT: At linear address: %x, RIP: %x\n Errors: ", cr2, registers->rip);
+
+    if(bitops<uint64_t>::bit_test(&(registers->error_code), 0)) printf("Protection violation ");
+    if(bitops<uint64_t>::bit_test(&(registers->error_code), 1)) printf("Write ");
+    if(bitops<uint64_t>::bit_test(&(registers->error_code), 2)) printf("User ");
+    if(bitops<uint64_t>::bit_test(&(registers->error_code), 3)) printf("Malformed table ");
+    if(bitops<uint64_t>::bit_test(&(registers->error_code), 4)) printf("Instruction fetch ");
+
+    asm("cli; hlt");
+}
+
 C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
     uint8_t n = registers->int_number & 0xFF;
 
@@ -59,6 +74,10 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
 void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f){
     if (handlers[n] != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n], (uint64_t)f);
     handlers[n] = f;
+}
+
+void x86_64::idt::register_generic_handlers(){
+    register_interrupt_handler(14, sigma_page_fault_handler);
 }
 
 

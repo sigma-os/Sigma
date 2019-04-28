@@ -87,6 +87,7 @@ namespace x86_64::idt
 
 
     void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f);
+    void register_generic_handlers();
 
 } // x86_64::idt
 
