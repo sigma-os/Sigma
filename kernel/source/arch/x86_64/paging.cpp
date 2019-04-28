@@ -101,7 +101,11 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         // PML4 entry not present create one
 
         uint64_t new_pml4_entry = entry_flags;
-        set_frame(new_pml4_entry, reinterpret_cast<uint64_t>(mm::pmm::alloc_block()));
+
+        uint64_t pdpt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+        memset(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0, sizeof(x86_64::paging::pdpt));
+
+        set_frame(new_pml4_entry, pdpt);
         pml4_entry = new_pml4_entry;
     }
     auto pdpt_addr = (get_frame(pml4_entry) + KERNEL_VBASE);
@@ -111,7 +115,11 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         // PDPT entry not present create one
 
         uint64_t new_pdpt_entry = entry_flags;
-        set_frame(new_pdpt_entry, reinterpret_cast<uint64_t>(mm::pmm::alloc_block()));
+
+        uint64_t pd = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+        memset(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0, sizeof(x86_64::paging::pd));
+
+        set_frame(new_pdpt_entry, pd);
         pdpt_entry = new_pdpt_entry;
     }
     auto pd_addr = (get_frame(pdpt_entry) + KERNEL_VBASE);
@@ -121,7 +129,10 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         // PD entry not present create one
 
         uint64_t new_pd_entry = entry_flags;
-        set_frame(new_pd_entry, reinterpret_cast<uint64_t>(mm::pmm::alloc_block()));
+        uint64_t pt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+        memset(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0, sizeof(x86_64::paging::pt));
+
+        set_frame(new_pd_entry, pt);
         pd_entry = new_pd_entry;
     }
     auto pt_addr = (get_frame(pd_entry) + KERNEL_VBASE);
