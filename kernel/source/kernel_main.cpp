@@ -11,6 +11,7 @@
 
 #include <Sigma/mm/pmm.h>
 #include <Sigma/mm/vmm.h>
+#include <Sigma/mm/hmm.h>
 
 #include <Sigma/arch/x86_64/drivers/mp.h>
 
@@ -66,6 +67,9 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     }
 
     vmm.set();
+
+    mm::hmm::init(vmm.get_paging_provider());   
+
 
     x86_64::mp::mp mp_spec = x86_64::mp::mp();
     (void)(mp_spec);

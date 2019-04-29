@@ -30,6 +30,10 @@ namespace mm::vmm
                 this->current_info.clone_paging_info(new_info);
             }
 
+            IPaging& get_paging_provider(){
+                return this->current_info;
+            }
+
         private:
             T item;
             IPaging& current_info;
