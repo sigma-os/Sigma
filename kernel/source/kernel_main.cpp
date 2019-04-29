@@ -70,6 +70,12 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::hmm::init(vmm.get_paging_provider());   
 
+    uint64_t* a = new uint64_t;
+
+    *a = 90;
+
+    printf("%x", a);
+
 
     x86_64::mp::mp mp_spec = x86_64::mp::mp();
     (void)(mp_spec);

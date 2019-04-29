@@ -2,6 +2,8 @@
 
 #include <klibc/stdio.h>
 
+#include <Sigma/mm/hmm.h>
+
 char* itoa(int64_t value, char* str, int base){
     char* rc, *ptr, *low;
 
@@ -58,4 +60,12 @@ void abort(void){
     printf("Kernel panic, abort\n");
     asm("cli; hlt");
     while(true);
+}
+
+void *malloc(size_t size){
+    return mm::hmm::kmalloc(size);
+}
+
+void free(void* ptr){
+    mm::hmm::kfree(ptr);
 }
