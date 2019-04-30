@@ -17,6 +17,8 @@
 
 #include <Sigma/multitasking/elf.h>
 
+#include <Sigma/types/linked_list.h>
+
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
     printf("Booting Sigma, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", mboot.get_memsize_mb());
@@ -70,15 +72,9 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::hmm::init(vmm.get_paging_provider());   
 
-    uint64_t* a = new uint64_t;
-
-    *a = 90;
-
-    printf("%x", a);
-
-
     x86_64::mp::mp mp_spec = x86_64::mp::mp();
     (void)(mp_spec);
+
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();
