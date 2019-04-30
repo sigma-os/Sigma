@@ -8,6 +8,8 @@
 #include <klibc/stdio.h>
 #include <klibc/string.h>
 
+#include <Sigma/smp/smp.h>
+
 namespace x86_64::mp
 {
     constexpr const char* mp_floating_header_signature = "_MP_";
@@ -194,13 +196,13 @@ namespace x86_64::mp
 
     class mp {
         public:
-        mp();
+        mp(types::linked_list<smp::cpu_entry>& cpus);
 
         private:
-        void parse();
+        void parse(types::linked_list<smp::cpu_entry>& cpus);
 
         void parse_bus(uint64_t pointer);
-        void parse_cpu(uint64_t pointer);
+        void parse_cpu(uint64_t pointer, types::linked_list<smp::cpu_entry>& cpus);
         void parse_ioapic(uint64_t pointer);
         void parse_io_interrupt_entry(uint64_t pointer);
         void parse_local_interrupt_entry(uint64_t pointer);

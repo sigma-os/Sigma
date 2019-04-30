@@ -8,6 +8,7 @@ namespace types
     template<typename T>
     struct linked_list_entry {
         public:
+        linked_list_entry(): item(T()), prev(nullptr), next(nullptr) {}
         T item;
         linked_list_entry<T>* prev;
         linked_list_entry<T>* next;

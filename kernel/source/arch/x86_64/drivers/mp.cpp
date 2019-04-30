@@ -1,6 +1,6 @@
 #include <Sigma/arch/x86_64/drivers/mp.h>
 
-x86_64::mp::mp::mp(){
+x86_64::mp::mp::mp(types::linked_list<smp::cpu_entry>& cpus){
     x86_64::mp::floating_pointer_table* pointer = this->find_pointer();
     if(pointer == nullptr){
         debug_printf("[MP]: Couldn't find floating pointer, add last kilobyte support\n");
@@ -41,7 +41,7 @@ x86_64::mp::mp::mp(){
 
         debug_printf("[MP]: Found Table OEM ID: %s, Product ID: %s\n", oem, product);
 
-        this->parse();
+        this->parse(cpus);
     } else {
         debug_printf("[MP]: Default Configuration: %d", pointer->mp_feature_byte1);
     }
@@ -95,7 +95,7 @@ x86_64::mp::floating_pointer_table* x86_64::mp::mp::find_pointer(){
     return nullptr;
 }
 
-void x86_64::mp::mp::parse(){
+void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
     x86_64::mp::configuration_table_header* table_header = reinterpret_cast<x86_64::mp::configuration_table_header*>(this->table);
 
     uint8_t* entry = reinterpret_cast<uint8_t*>((this->table + sizeof(x86_64::mp::configuration_table_header)));
@@ -113,7 +113,7 @@ void x86_64::mp::mp::parse(){
         switch (type.type)
         {
             case x86_64::mp::configuration_table_entry_type_processor:
-                this->parse_cpu(reinterpret_cast<uint64_t>(entry));
+                this->parse_cpu(reinterpret_cast<uint64_t>(entry), cpus);
                 break;
 
             case x86_64::mp::configuration_table_entry_type_bus:
@@ -150,13 +150,24 @@ void x86_64::mp::mp::parse_bus(uint64_t pointer){
     debug_printf("[MP]: Bus Entry: Bus name: %s, Bus ID: %d\n", bus_name, entry->bus_id);
 }
 
-void x86_64::mp::mp::parse_cpu(uint64_t pointer){
+void x86_64::mp::mp::parse_cpu(uint64_t pointer, types::linked_list<smp::cpu_entry>& cpus){
     auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_processor*>(pointer);
 
     debug_printf("[MP]: CPU Entry: LAPIC ID: %d, Stepping: %x, Model: %x, Family: %x", entry->lapic_id, entry->cpu_signature_stepping, entry->cpu_signature_model, entry->cpu_signature_family);
     if(!bitops<uint8_t>::bit_test(&(entry->cpu_flags), 0)) debug_printf(", CPU is Unusable");
     if(bitops<uint8_t>::bit_test(&(entry->cpu_flags), 1)) debug_printf(", CPU is BSP"); 
     debug_printf("\n");
+
+    if(bitops<uint8_t>::bit_test(&(entry->cpu_flags), 0)){
+        bool bsp = bitops<uint8_t>::bit_test(&(entry->cpu_flags), 1);
+        bool apic = bitops<uint32_t>::bit_test(&(entry->feature_flags), x86_64::mp::configuration_table_entry_processor_feature_flags_bit_apic);
+
+        smp::cpu_entry cpu = smp::cpu_entry(entry->lapic_id, entry->lapic_version, bsp, apic, entry->cpu_signature_stepping, entry->cpu_signature_model, entry->cpu_signature_family);
+
+        cpus.push_back(cpu);
+    }
+
+ 
 }
 
 void x86_64::mp::mp::parse_ioapic(uint64_t pointer){

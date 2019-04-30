@@ -17,6 +17,8 @@
 
 #include <Sigma/multitasking/elf.h>
 
+#include <Sigma/smp/smp.h>
+
 #include <Sigma/types/linked_list.h>
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
@@ -72,9 +74,12 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::hmm::init(vmm.get_paging_provider());   
 
-    x86_64::mp::mp mp_spec = x86_64::mp::mp();
+    auto cpus = types::linked_list<smp::cpu_entry>();
+    x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
     (void)(mp_spec);
 
+    smp::multiprocessing smp = smp::multiprocessing(cpus);
+    (void)(smp);
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();
