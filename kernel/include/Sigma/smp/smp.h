@@ -3,6 +3,13 @@
 
 #include <Sigma/common.h>
 #include <klibc/stdio.h>
+#include <klibc/string.h>
+
+#include <Sigma/interfaces/paging_manager.h>
+
+#include <Sigma/mm/pmm.h>
+
+#include <Sigma/arch/x86_64/drivers/apic.h>
 
 #include <Sigma/types/linked_list.h>
 
@@ -26,13 +33,19 @@ namespace smp
         uint8_t alignment : 4;
     };
 
+    C_LINKAGE uint64_t trampoline_start;
+    C_LINKAGE uint64_t trampoline_end;
+
     class multiprocessing {
         public:
-        multiprocessing(types::linked_list<cpu_entry>& cpus){
-            for(auto& e : cpus){
-                printf("%x\n", e.lapic_id);
-            }
-        }
+        multiprocessing(IPaging& paging, types::linked_list<cpu_entry>& cpus, x86_64::apic::lapic* lapic);
+
+        private:
+        void boot_cpu(cpu_entry& e);
+
+        void send_ipi(uint8_t lapic_id, uint32_t flags);
+
+        x86_64::apic::lapic* bsp_lapic;
     };
 } // smp
 

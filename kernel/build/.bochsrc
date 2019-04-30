@@ -18,7 +18,7 @@ com4: enabled=1, mode=file, dev=build/log/com4.log
 
 
 clock: sync=realtime
-cpu: model=corei7_haswell_4770, ips=1000000, reset_on_triple_fault=0
+cpu: model=corei7_haswell_4770, ips=1000000, count=2, reset_on_triple_fault=0
 megs: 2048
 
 ata0-master: type=disk, path=sigma.iso

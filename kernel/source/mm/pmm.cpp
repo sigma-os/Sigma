@@ -84,6 +84,7 @@ void mm::pmm::init(multiboot& mbi){
     }
 
     bitops<uint64_t>::bit_set(bitmap[0], 0); // Reserve block 1, it stores the IVT and BDA
+    bitops<uint64_t>::bit_set(bitmap[0], 1); // SMP Trampoline code
 
     uint64_t kernel_start_phys = (kernel_start - KERNEL_VBASE);
     uint64_t kernel_end_phys = (kernel_end - KERNEL_VBASE);
