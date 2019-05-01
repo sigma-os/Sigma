@@ -50,6 +50,13 @@ namespace x86_64::apic
             *data = val;
         }
 
+        void send_ipi(uint8_t target_lapic_id, uint32_t flags){
+            this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
+            this->write(x86_64::apic::lapic_icr_low, flags);
+        
+            while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
+        }
+
 
         lapic(IPaging& paging){
             uint64_t apic_base_msr = msr::read(msr::apic_base);
@@ -61,6 +68,8 @@ namespace x86_64::apic
 
             paging.map_page(base, (base + KERNEL_VBASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
         }
+
+
 
         private:
         uint64_t base;

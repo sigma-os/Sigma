@@ -10,6 +10,8 @@
 #include <Sigma/mm/pmm.h>
 
 #include <Sigma/arch/x86_64/drivers/apic.h>
+#include <Sigma/arch/x86_64/drivers/cmos.h>
+#include <Sigma/arch/x86_64/drivers/bios.h>
 
 #include <Sigma/types/linked_list.h>
 
@@ -35,6 +37,10 @@ namespace smp
 
     C_LINKAGE uint64_t trampoline_start;
     C_LINKAGE uint64_t trampoline_end;
+    C_LINKAGE uint64_t trampoline_booted;
+    C_LINKAGE uint64_t trampoline_stack;
+
+    constexpr uint64_t smp_trampoline_base = 0x1000;
 
     class multiprocessing {
         public:
@@ -43,7 +49,8 @@ namespace smp
         private:
         void boot_cpu(cpu_entry& e);
 
-        void send_ipi(uint8_t lapic_id, uint32_t flags);
+        void boot_external_apic(smp::cpu_entry& cpu);
+        void boot_apic(smp::cpu_entry& cpu);
 
         x86_64::apic::lapic* bsp_lapic;
     };

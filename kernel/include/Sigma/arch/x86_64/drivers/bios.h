@@ -13,6 +13,8 @@ namespace x86_64::bios
     constexpr uint64_t rom_space_end = (0xFFFFF + KERNEL_VBASE);
     
 
+    constexpr uint64_t bios_reset_vector = 0x467;
+
     class bios {
         public:
             static void* get_ebda_addr(){
