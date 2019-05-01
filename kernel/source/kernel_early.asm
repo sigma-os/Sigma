@@ -121,6 +121,8 @@ _kernel_early:
     mov edi, dword [_start_multiboot_info]
     add rdi, KERNEL_LMA
 
+    cld
+
     extern kernel_main
     call kernel_main
 
@@ -129,6 +131,21 @@ _kernel_early:
 
     cli
 
+    hlt
+
+global _smp_kernel_early
+_smp_kernel_early:
+    call initialize_sse
+    call initialize_avx
+    call initialize_efer
+    call initialize_cr0
+
+    cld
+
+    extern smp_kernel_main
+    call smp_kernel_main
+
+    cli
     hlt
 
 

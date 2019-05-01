@@ -9,6 +9,8 @@
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/arch/x86_64/paging.h>
 
+#include <Sigma/arch/x86_64/misc/spinlock.h>
+
 #include <Sigma/mm/pmm.h>
 #include <Sigma/mm/vmm.h>
 #include <Sigma/mm/hmm.h>
@@ -86,4 +88,15 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();
+}
+
+C_LINKAGE void smp_kernel_main(){
+    x86_64::spinlock::mutex mut;
+
+    x86_64::spinlock::acquire(&mut);
+
+    printf("Booted CPU\n");
+
+
+    x86_64::spinlock::release(&mut);
 }
