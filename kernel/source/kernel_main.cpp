@@ -64,8 +64,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
            if(shdr->sh_flags & multitasking::elf::SHF_WRITE) flags |= map_page_flags_writable;
            if(!(shdr->sh_flags & multitasking::elf::SHF_EXECINSTR)) flags |= map_page_flags_no_execute;
 
-           for(uint64_t i = 0; i < shdr->sh_size; i += mm::pmm::block_size){
-                uint64_t virt = (shdr->sh_addr + i);
+           for(uint64_t j = 0; j < shdr->sh_size; j += mm::pmm::block_size){
+                uint64_t virt = (shdr->sh_addr + j);
                 uint64_t phys = (virt - KERNEL_VBASE);
 
                 vmm.map_page(phys, virt, flags);

@@ -58,7 +58,7 @@ namespace x86_64::apic
         }
 
 
-        lapic(IPaging& paging){
+        explicit lapic(IPaging& paging){
             uint64_t apic_base_msr = msr::read(msr::apic_base);
 
             base = (apic_base_msr & 0xFFFFFFFFFFFFF000);

@@ -37,13 +37,15 @@ static inline uint64_t get_flags(uint64_t entry){
 }
 
 void x86_64::paging::paging::init(){
+    if(this->paging_info != nullptr) this->deinit();
+
     this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
     memset(reinterpret_cast<void*>(this->paging_info), 0, sizeof(x86_64::paging::pml4));
 }
 
 static void clean_pd(x86_64::paging::pd* pd){
-    for(uint64_t pd_index = 0; pd_index < x86_64::paging::paging_structures_n_entries; pd_index++){
-        uint64_t pt_entry = pd->entries[pd_index];
+    for(uint64_t pd_loop_index = 0; pd_loop_index < x86_64::paging::paging_structures_n_entries; pd_loop_index++){
+        uint64_t pt_entry = pd->entries[pd_loop_index];
 
         if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present)){
             if(!(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_huge))){ // Not a huge page
@@ -55,8 +57,8 @@ static void clean_pd(x86_64::paging::pd* pd){
 }
 
 static void clean_pdpt(x86_64::paging::pdpt* pdpt){
-    for(uint64_t pdpt_index = 0; pdpt_index < x86_64::paging::paging_structures_n_entries; pdpt_index++){
-        uint64_t pd_entry = pdpt->entries[pdpt_index];
+    for(uint64_t pdpt_loop_index = 0; pdpt_loop_index < x86_64::paging::paging_structures_n_entries; pdpt_loop_index++){
+        uint64_t pd_entry = pdpt->entries[pdpt_loop_index];
 
         if(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
             if(!(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_huge))){ // Not a huge page
@@ -73,8 +75,8 @@ void x86_64::paging::paging::deinit(){
     if(this->paging_info == nullptr) return;
 
 
-    for(uint64_t pml4_index = 0; pml4_index < x86_64::paging::paging_structures_n_entries; pml4_index++){
-        uint64_t pdpt_entry = this->paging_info->entries[pml4_index];
+    for(uint64_t pml4_loop_index = 0; pml4_loop_index < x86_64::paging::paging_structures_n_entries; pml4_loop_index++){
+        uint64_t pdpt_entry = this->paging_info->entries[pml4_loop_index];
 
         if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
             if(!(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_huge))){ // Not a huge page

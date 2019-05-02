@@ -40,7 +40,7 @@ namespace x86_64::paging
 
     class paging : public virtual IPaging {
         public:
-
+            paging(): paging_info(nullptr) {}
             void init();
             void deinit();
 

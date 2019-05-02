@@ -24,6 +24,10 @@ static mm::slab::slab* alloc_slab_meta(){
 
 
 void mm::slab::slab::init(uint64_t size){
+    if(size == 0){
+        printf("[SLAB]: Trying to create SLAB with allocation size 0, failing\n");
+        return;
+    }
     this->next_slab = nullptr;    
     this->size = size;
 

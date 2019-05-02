@@ -17,7 +17,7 @@ namespace types
     template<typename T>
     class linked_list_iterator {
         public:
-        linked_list_iterator(linked_list_entry<T>* entry): entry(entry) { }
+        explicit linked_list_iterator(linked_list_entry<T>* entry): entry(entry) { }
         T& operator*(){
             return entry->item;
         }
@@ -36,7 +36,7 @@ namespace types
     template<typename T>
     class linked_list {
         public:
-            linked_list(): head(nullptr), tail(nullptr) {};
+            linked_list(): head(nullptr), tail(nullptr), length(0) {};
             ~linked_list() {
                 for(T& e : *this){
                     delete &e;

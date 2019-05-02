@@ -196,7 +196,7 @@ namespace x86_64::mp
 
     class mp {
         public:
-        mp(types::linked_list<smp::cpu_entry>& cpus);
+        explicit mp(types::linked_list<smp::cpu_entry>& cpus);
 
         private:
         void parse(types::linked_list<smp::cpu_entry>& cpus);
