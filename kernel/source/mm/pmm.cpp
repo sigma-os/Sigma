@@ -11,6 +11,8 @@ uint64_t bitmap_size;
 
 uint64_t n_blocks;
 
+x86_64::spinlock::mutex pmm_mutex = x86_64::spinlock::mutex();
+
 static void enable_region(uint64_t base, uint64_t size){
     uint64_t align = base / mm::pmm::block_size;
     uint64_t blocks = size / mm::pmm::block_size;
@@ -39,6 +41,8 @@ static void disable_region(uint64_t base, uint64_t size){
 }
 
 void mm::pmm::init(multiboot& mbi){
+    x86_64::spinlock::acquire(&pmm_mutex);
+
     n_blocks = (mbi.get_memsize_mb() * 0x100000) / 0x1000;
 
     bitmap_size = n_blocks / 64;
@@ -96,6 +100,8 @@ void mm::pmm::init(multiboot& mbi){
 
     disable_region(kernel_start_phys, (kernel_end_phys - kernel_start_phys));
     disable_region(mbi_phys, mbi.get_mbd_size());
+
+    x86_64::spinlock::release(&pmm_mutex);
 }
 
 static uint64_t first_free(){
@@ -112,22 +118,30 @@ static uint64_t first_free(){
 }
 
 void* mm::pmm::alloc_block(){
+    x86_64::spinlock::acquire(&pmm_mutex);
+
     uint64_t block_bit = first_free();
 
     if(block_bit == (uint64_t)-1){
         printf("[PMM]: Out of blocks!\n");
+        x86_64::spinlock::release(&pmm_mutex);
         abort();
     }
 
     uint64_t address = block_bit * mm::pmm::block_size;
     bitops<uint64_t>::bit_set(bitmap[block_bit / 64], block_bit % 64);
 
+    x86_64::spinlock::release(&pmm_mutex);
+
     return reinterpret_cast<void*>(address);
 }
 
 void mm::pmm::free_block(void* block){
+    x86_64::spinlock::acquire(&pmm_mutex);
     uint64_t addr = reinterpret_cast<uint64_t>(block);
 
     uint64_t bit = addr / mm::pmm::block_size;
     bitops<uint64_t>::bit_clear(bitmap[bit / 64], bit % 64);
+
+    x86_64::spinlock::release(&pmm_mutex);
 }

@@ -6,6 +6,8 @@
 #include <Sigma/interfaces/paging_manager.h>
 #include <Sigma/mm/pmm.h>
 
+#include <Sigma/arch/x86_64/misc/spinlock.h>
+
 namespace mm::slab
 {
     struct slab_entry {
@@ -13,6 +15,7 @@ namespace mm::slab
     };
 
     struct slab {
+        public:
         slab* next_slab;
         slab_entry* free_list;
         uint64_t slab_start;
@@ -21,6 +24,9 @@ namespace mm::slab
         void init(uint64_t size);
         bool alloc(size_t sz, uint64_t& loc);
         bool free(uint64_t location);
+
+        private:
+        x86_64::spinlock::mutex slab_mutex;
     };
 
     void slab_init(IPaging& vmm);

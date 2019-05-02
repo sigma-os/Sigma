@@ -4,6 +4,7 @@
 #include <Sigma/common.h>
 
 #include <Sigma/arch/x86_64/io.h>
+#include <Sigma/arch/x86_64/misc/spinlock.h>
 
 namespace x86_64::vga
 {
@@ -32,7 +33,7 @@ namespace x86_64::vga
 
     class writer {
         public:
-        writer(): x(0), y(0){
+        writer(): x(0), y(0), mutex(x86_64::spinlock::mutex()){
             foreground = vga::text_colour::white;
             background = vga::text_colour::black;
         }
@@ -51,6 +52,9 @@ namespace x86_64::vga
         vga::text_colour foreground, background;
 
         private:
+
+        x86_64::spinlock::mutex mutex;
+
         void scroll();
 
         void enable_hardware_cursor();

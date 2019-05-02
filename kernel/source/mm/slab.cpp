@@ -24,8 +24,13 @@ static mm::slab::slab* alloc_slab_meta(){
 
 
 void mm::slab::slab::init(uint64_t size){
+    this->slab_mutex = x86_64::spinlock::mutex();
+
+    x86_64::spinlock::acquire(&this->slab_mutex);
+
     if(size == 0){
         printf("[SLAB]: Trying to create SLAB with allocation size 0, failing\n");
+        x86_64::spinlock::release(&this->slab_mutex);
         return;
     }
     this->next_slab = nullptr;    
@@ -47,25 +52,31 @@ void mm::slab::slab::init(uint64_t size){
         current->next = reinterpret_cast<mm::slab::slab_entry*>(this->slab_start + (i * size));
         current = current->next;
     }
+    x86_64::spinlock::release(&this->slab_mutex);
 }
 
 bool mm::slab::slab::alloc(size_t sz, uint64_t& loc){
     if(sz != this->size || this->free_list == nullptr) return false;
 
+    x86_64::spinlock::acquire(&this->slab_mutex);
+
     loc = reinterpret_cast<uint64_t>(this->free_list);
     this->free_list = this->free_list->next;
+
+    x86_64::spinlock::release(&this->slab_mutex);
     return true;
 }
 
 bool mm::slab::slab::free(uint64_t location){
     if((location < this->slab_start) || (location >= (this->slab_start + mm::pmm::block_size))) return false;
+    
+    x86_64::spinlock::acquire(&this->slab_mutex);
 
     auto* new_entry = reinterpret_cast<mm::slab::slab_entry*>(location);
-
     new_entry->next = this->free_list;
-
     this->free_list = new_entry;
-
+    
+    x86_64::spinlock::release(&this->slab_mutex);
     return true;
 }
 

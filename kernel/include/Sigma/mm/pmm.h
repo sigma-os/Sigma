@@ -4,6 +4,8 @@
 #include <Sigma/common.h>
 #include <Sigma/multiboot.h>
 
+#include <Sigma/arch/x86_64/misc/spinlock.h>
+
 #include <klibc/string.h>
 
 // PMM should be fully global between ALL CPU's and threads and everything
