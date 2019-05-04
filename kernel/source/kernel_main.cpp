@@ -28,6 +28,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     multiboot mboot = multiboot(multiboot_information, magic);
     printf("Booting Sigma, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", mboot.get_memsize_mb());
 
+    mm::pmm::init(mboot);
+
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
     gdt.init();
@@ -38,8 +40,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
     x86_64::idt::register_generic_handlers();
-
-    mm::pmm::init(mboot);
     
     mm::vmm::manager<x86_64::paging::paging> vmm = mm::vmm::manager<x86_64::paging::paging>();
 
@@ -90,9 +90,9 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     abort();
 }
 
-C_LINKAGE void smp_kernel_main(){
-    x86_64::spinlock::mutex mut;
+x86_64::spinlock::mutex mut;
 
+C_LINKAGE void smp_kernel_main(){
     x86_64::spinlock::acquire(&mut);
 
     printf("Booted CPU\n");

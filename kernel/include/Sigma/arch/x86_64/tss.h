@@ -2,30 +2,24 @@
 #define SIGMA_KERNEL_TSS
 
 #include <Sigma/common.h>
+#include <Sigma/mm/pmm.h>
 
 namespace x86_64::tss
 {
     constexpr uint8_t ist_n_entries = 7;
 
-    C_LINKAGE uint64_t ist_stack1;
-    C_LINKAGE uint64_t ist_stack2;
-    C_LINKAGE uint64_t ist_stack3;
-    C_LINKAGE uint64_t ist_stack4;
-    C_LINKAGE uint64_t ist_stack5;
-    C_LINKAGE uint64_t ist_stack6;
-    C_LINKAGE uint64_t ist_stack7;
 
     struct table
     {
     public:
         table(){
-            this->ist_stack1 = (uint64_t)&ist_stack1;
-            this->ist_stack2 = (uint64_t)&ist_stack2;
-            this->ist_stack3 = (uint64_t)&ist_stack3;
-            this->ist_stack4 = (uint64_t)&ist_stack4;
-            this->ist_stack5 = (uint64_t)&ist_stack5;
-            this->ist_stack6 = (uint64_t)&ist_stack6;
-            this->ist_stack7 = (uint64_t)&ist_stack7;
+            this->ist_stack1 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack2 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack3 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack4 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack5 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack6 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack7 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
 
             this->reserved = 0;
             this->reserved_1 = 0;
@@ -38,6 +32,16 @@ namespace x86_64::tss
             this->rsp2 = 0;
 
             this->io_bitmap_offset = 0;
+        }
+
+        ~table(){
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack1 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack2 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack3 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack4 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack5 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack6 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack7 - KERNEL_VBASE));
         }
 
 
