@@ -5,10 +5,18 @@
 .section .text
 .globl _start
 _start:
-	//leal (_start_multiboot_magic - KERNEL_VMA), %ecx
-    movl %eax, (_start_multiboot_magic - KERNEL_VMA)
-	//leal (_start_multiboot_info - KERNEL_VMA), %ecx
+	movl %eax, (_start_multiboot_magic - KERNEL_VMA)
     movl %ebx, (_start_multiboot_info - KERNEL_VMA)
+
+	movl $0x80000000, %eax
+	cpuid
+	cmpl $0x80000001, %eax
+	jb no_long_mode
+
+	movl $0x80000001, %eax
+	cpuid
+	testl $(1 << 29), %edx
+	jz no_long_mode
 
     lgdt (gdt64_pointer - KERNEL_VMA)
 
@@ -34,6 +42,15 @@ _start:
 	
 
     ljmp $0x08, $(_start_64 - KERNEL_VMA)
+
+	cli
+	hlt
+
+no_long_mode:
+	movb $0x30, (0xb8000)
+
+	cli
+	hlt
 
 .data
 .align 0x1000
