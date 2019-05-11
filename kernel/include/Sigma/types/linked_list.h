@@ -36,10 +36,13 @@ namespace types
     template<typename T>
     class linked_list {
         public:
-            linked_list(): head(nullptr), tail(nullptr), length(0) {};
+            linked_list(): head(nullptr), tail(nullptr), length(0) {}
+
             ~linked_list() {
-                for(T& e : *this){
-                    delete &e;
+                if((this->head != nullptr) && (this->tail != nullptr) && (this->length != 0)){
+                    for(T& e : *this){
+                        delete &e;
+                    }
                 }
             }
 
@@ -73,10 +76,11 @@ namespace types
             }
 
 
+            
+        private:
             linked_list_entry<T>* head;
             linked_list_entry<T>* tail;
             size_t length;
-        private:
     };
 } // types
 

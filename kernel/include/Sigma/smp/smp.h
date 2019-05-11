@@ -44,7 +44,7 @@ namespace smp
 
     class multiprocessing {
         public:
-        multiprocessing(IPaging& paging, types::linked_list<cpu_entry>& cpus, x86_64::apic::lapic* lapic);
+        multiprocessing(types::linked_list<cpu_entry>& cpus, x86_64::apic::lapic* lapic);
 
         private:
         void boot_cpu(cpu_entry& e);

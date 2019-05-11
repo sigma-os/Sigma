@@ -107,7 +107,6 @@ _kernel_early:
     call initialize_efer
     call initialize_cr0
 
-
     extern _init
     call _init
 
@@ -141,7 +140,6 @@ _smp_kernel_early:
     call initialize_cr0
 
     cld
-
     extern smp_kernel_main
     call smp_kernel_main
 

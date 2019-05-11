@@ -36,9 +36,15 @@ int printf(const char* format, ...){
             size_t amount = 1;
             while(format[amount] && format[amount] != '%') amount++;
 
-            if(maxrem < amount) return -1;
+            if(maxrem < amount){
+                va_end(parameters);
+                return -1;
+            } 
 
-            if(!print(format, amount)) return -1;
+            if(!print(format, amount)){
+                va_end(parameters);
+                return -1;
+            } 
 
             format += amount;
             written += amount;
@@ -50,9 +56,15 @@ int printf(const char* format, ...){
         if(*format == 'c'){
             format++;
             char c = (char)va_arg(parameters, int);
-            if(!maxrem) return -1;
+            if(!maxrem){
+                va_end(parameters);
+                return -1;
+            } 
 
-            if(!print(&c, sizeof(c))) return -1;
+            if(!print(&c, sizeof(c))){
+                va_end(parameters);
+                return -1;
+            } 
 
             written++;
         } else if(*format == 's'){
@@ -60,8 +72,14 @@ int printf(const char* format, ...){
             const char* str = va_arg(parameters, const char*);
             size_t len = strlen(str);
 
-            if(maxrem < len) return -1;
-            if(!print(str, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!print(str, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
         } else if(*format == 'i' || *format == 'd'){
@@ -73,8 +91,14 @@ int printf(const char* format, ...){
             itoa(item, str, 10);
             size_t len = strlen(str);
 
-            if(maxrem < len) return -1;
-            if(!print(str, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!print(str, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
         } else if(*format == 'x'){
@@ -88,16 +112,28 @@ int printf(const char* format, ...){
             htoa(item, str);
             size_t len = strlen(str);
 
-            if(maxrem < len) return -1;
-            if(!print(str, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!print(str, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
         } else {
             format = format_begun_at;
             size_t len = strlen(format);
 
-            if(maxrem < len) return -1;
-            if(!print(format, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!print(format, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
             format += len;
@@ -147,9 +183,15 @@ int debug_printf(const char* format, ...){
             size_t amount = 1;
             while(format[amount] && format[amount] != '%') amount++;
 
-            if(maxrem < amount) return -1;
+            if(maxrem < amount){
+                va_end(parameters);
+                return -1;
+            } 
 
-            if(!debug_print(format, amount)) return -1;
+            if(!debug_print(format, amount)){
+                va_end(parameters);
+                return -1;
+            } 
 
             format += amount;
             written += amount;
@@ -161,18 +203,29 @@ int debug_printf(const char* format, ...){
         if(*format == 'c'){
             format++;
             char c = (char)va_arg(parameters, int);
-            if(!maxrem) return -1;
+            if(!maxrem){
+                va_end(parameters);
+                return -1;
+            } 
 
-            if(!debug_print(&c, sizeof(c))) return -1;
-
+            if(!debug_print(&c, sizeof(c))){
+                va_end(parameters);
+                return -1;
+            } 
             written++;
         } else if(*format == 's'){
             format++;
             const char* str = va_arg(parameters, const char*);
             size_t len = strlen(str);
 
-            if(maxrem < len) return -1;
-            if(!debug_print(str, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!debug_print(str, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
         } else if(*format == 'i' || *format == 'd'){
@@ -184,8 +237,14 @@ int debug_printf(const char* format, ...){
             itoa(item, str, 10);
             size_t len = strlen(str);
 
-            if(maxrem < len) return -1;
-            if(!debug_print(str, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!debug_print(str, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
         } else if(*format == 'x'){
@@ -199,16 +258,28 @@ int debug_printf(const char* format, ...){
             htoa(item, str);
             size_t len = strlen(str);
 
-            if(maxrem < len) return -1;
-            if(!debug_print(str, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!debug_print(str, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
         } else {
             format = format_begun_at;
             size_t len = strlen(format);
 
-            if(maxrem < len) return -1;
-            if(!debug_print(format, len)) return -1;
+            if(maxrem < len){
+                va_end(parameters);
+                return -1;
+            } 
+            if(!debug_print(format, len)){
+                va_end(parameters);
+                return -1;
+            } 
 
             written += len;
             format += len;

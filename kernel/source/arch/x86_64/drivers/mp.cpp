@@ -154,13 +154,17 @@ void x86_64::mp::mp::parse_cpu(uint64_t pointer, types::linked_list<smp::cpu_ent
     auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_processor*>(pointer);
 
     debug_printf("[MP]: CPU Entry: LAPIC ID: %d, Stepping: %x, Model: %x, Family: %x", entry->lapic_id, entry->cpu_signature_stepping, entry->cpu_signature_model, entry->cpu_signature_family);
-    if(!bitops<uint8_t>::bit_test(&(entry->cpu_flags), 0)) debug_printf(", CPU is Unusable");
-    if(bitops<uint8_t>::bit_test(&(entry->cpu_flags), 1)) debug_printf(", CPU is BSP"); 
+
+    uint8_t cpu_flags = entry->cpu_flags;
+    uint32_t feature_flags = entry->feature_flags;
+
+    if(!bitops<uint8_t>::bit_test(cpu_flags, 0)) debug_printf(", CPU is Unusable");
+    if(bitops<uint8_t>::bit_test(cpu_flags, 1)) debug_printf(", CPU is BSP"); 
     debug_printf("\n");
 
-    if(bitops<uint8_t>::bit_test(&(entry->cpu_flags), 0)){
-        bool bsp = bitops<uint8_t>::bit_test(&(entry->cpu_flags), 1);
-        bool apic = bitops<uint32_t>::bit_test(&(entry->feature_flags), x86_64::mp::configuration_table_entry_processor_feature_flags_bit_apic);
+    if(bitops<uint8_t>::bit_test(cpu_flags, 0)){
+        bool bsp = bitops<uint8_t>::bit_test(cpu_flags, 1);
+        bool apic = bitops<uint32_t>::bit_test(feature_flags, x86_64::mp::configuration_table_entry_processor_feature_flags_bit_apic);
 
         smp::cpu_entry cpu = smp::cpu_entry(entry->lapic_id, entry->lapic_version, bsp, apic, entry->cpu_signature_stepping, entry->cpu_signature_model, entry->cpu_signature_family);
 

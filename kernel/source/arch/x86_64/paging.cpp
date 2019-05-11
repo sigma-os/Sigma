@@ -108,7 +108,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         return true; // Not present so no reason to map
     }
 
-    uint64_t& pml4_entry = this->paging_info->entries[pml4_index_number];
+    uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
 
     if(!bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
         // PML4 entry not present create one
@@ -116,44 +116,51 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         uint64_t new_pml4_entry = entry_flags;
 
         uint64_t pdpt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+
         memset(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0, sizeof(x86_64::paging::pdpt));
 
         set_frame(new_pml4_entry, pdpt);
-        pml4_entry = new_pml4_entry;
+        this->paging_info->entries[pml4_index_number] = new_pml4_entry;
     }
+    pml4_entry = this->paging_info->entries[pml4_index_number];
     auto pdpt_addr = (get_frame(pml4_entry) + KERNEL_VBASE);
 
-    uint64_t& pdpt_entry = reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number];
+    uint64_t pdpt_entry = reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number];
     if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
         // PDPT entry not present create one
 
         uint64_t new_pdpt_entry = entry_flags;
 
         uint64_t pd = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+
+
         memset(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0, sizeof(x86_64::paging::pd));
 
         set_frame(new_pdpt_entry, pd);
-        pdpt_entry = new_pdpt_entry;
+        reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number] = new_pdpt_entry;
     }
+    pdpt_entry = reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number];
     auto pd_addr = (get_frame(pdpt_entry) + KERNEL_VBASE);
 
-    uint64_t& pd_entry = reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number];
+    uint64_t pd_entry = reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number];
     if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
         // PD entry not present create one
 
         uint64_t new_pd_entry = entry_flags;
         uint64_t pt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+        
         memset(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0, sizeof(x86_64::paging::pt));
 
         set_frame(new_pd_entry, pt);
-        pd_entry = new_pd_entry;
+        reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number] = new_pd_entry;
     }
+    pd_entry = reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number];
     auto pt_addr = (get_frame(pd_entry) + KERNEL_VBASE);
 
-    uint64_t& pt_entry = reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number];
-
-    pt_entry = entry_flags;
+    uint64_t pt_entry = entry_flags;
     set_frame(pt_entry, phys);
+
+    (reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number]) = pt_entry;
 
     return true;
 }
@@ -179,10 +186,7 @@ static x86_64::paging::pt* clone_pt(x86_64::paging::pt* pt){
     memset(reinterpret_cast<void*>(new_info_pt), 0, sizeof(x86_64::paging::pt));
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
-        uint64_t& new_pd_entry = new_info_pt->entries[i];
-        uint64_t old_pd_entry = pt->entries[i];
-
-        new_pd_entry = old_pd_entry; // Just copy it over
+        new_info_pt->entries[i] = pt->entries[i]; // Just copy it over
     }
 
     return reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(new_info_pt) - KERNEL_VBASE);
@@ -193,7 +197,6 @@ static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
     memset(reinterpret_cast<void*>(new_info_pd), 0, sizeof(x86_64::paging::pd));
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
-        uint64_t& new_pd_entry = new_info_pd->entries[i];
         uint64_t old_pd_entry = pd->entries[i];
 
         uint64_t pd_entry_flags = get_flags(old_pd_entry);
@@ -206,9 +209,9 @@ static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
             set_frame(new_entry, pd);
             set_flags(new_entry, get_flags(old_pd_entry));
 
-            new_pd_entry = new_entry;
+            new_info_pd->entries[i] = new_entry;
         } else {
-            new_pd_entry = old_pd_entry; // Just copy the (unused) / huge flags and page over
+            new_info_pd->entries[i] = old_pd_entry; // Just copy the (unused) / huge flags and page over
         }
 
     }
@@ -222,7 +225,6 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
 
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
-        uint64_t& new_pdpt_entry = new_info_pdpt->entries[i];
         uint64_t old_pdpt_entry = pdpt->entries[i];
 
         uint64_t pdpt_entry_flags = get_flags(old_pdpt_entry);
@@ -235,9 +237,9 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
             set_frame(new_entry, pd);
             set_flags(new_entry, get_flags(old_pdpt_entry));
 
-            new_pdpt_entry = new_entry;
+            new_info_pdpt->entries[i] = new_entry;
         } else {
-            new_pdpt_entry = old_pdpt_entry; // Just copy the (unused) / huge flags and page over
+            new_info_pdpt->entries[i] = old_pdpt_entry; // Just copy the (unused) / huge flags and page over
         }
 
     }
@@ -253,7 +255,6 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
     x86_64::paging::pml4* new_info_pml4 = reinterpret_cast<x86_64::paging::pml4*>(new_info.get_paging_info());
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
-        uint64_t& new_pml4_entry = new_info_pml4->entries[i];
         uint64_t old_pml4_entry = this->paging_info->entries[i];
 
         uint64_t pml4_entry_flags = get_flags(old_pml4_entry);
@@ -266,9 +267,9 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
             set_frame(new_entry, pdpt);
             set_flags(new_entry, get_flags(old_pml4_entry));
 
-            new_pml4_entry = new_entry;
+            new_info_pml4->entries[i] = new_entry;
         } else {
-            new_pml4_entry = old_pml4_entry; // Just copy the (unused) / huge flags and page over
+            new_info_pml4->entries[i] = old_pml4_entry; // Just copy the (unused) / huge flags and page over
         }
     }
 }

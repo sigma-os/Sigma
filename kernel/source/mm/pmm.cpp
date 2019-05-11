@@ -33,11 +33,16 @@ static void enable_region(uint64_t base, uint64_t size){
 }
 
 static void disable_region(uint64_t base, uint64_t size){
-    uint64_t bit = base / mm::pmm::block_size;
-    for(uint64_t n = (size / mm::pmm::block_size); n > 0; n--){
-        bitops<uint64_t>::bit_set(bitmap[bit / 64], bit % 64);
-        bit++;
+    uint64_t align = base / mm::pmm::block_size;
+    uint64_t blocks = size / mm::pmm::block_size;
+
+    for(; blocks > 0; blocks--){
+        bitops<uint64_t>::bit_set(bitmap[align / 64], align % 64);
+
+        align++;
     }
+
+    return;
 }
 
 void mm::pmm::init(multiboot& mbi){
@@ -51,7 +56,7 @@ void mm::pmm::init(multiboot& mbi){
     kernel_end += bitmap_size; // Readjust for bitmap, it comes directly after the kernel
 
 
-    memset(reinterpret_cast<void*>(bitmap), 0xFF, n_blocks / 8); // Reserve all blocks
+    memset(reinterpret_cast<void*>(bitmap), 0xF, n_blocks / 8); // Reserve all blocks
 
     multiboot_tag_mmap* ent = mbi.get_mmap_entry();
 
@@ -62,27 +67,34 @@ void mm::pmm::init(multiboot& mbi){
             case MULTIBOOT_MEMORY_AVAILABLE:
                 debug_printf("Available\n");
 
+                debug_printf("ACTIVE: %x, %x\n", entry->addr, entry->len);
+
                 enable_region(entry->addr, entry->len);//(entry->len & 0xFFFFFFFFFFFFF000));
                 break;
 
             case MULTIBOOT_MEMORY_RESERVED:
                 debug_printf("Reserved\n");
+                disable_region(entry->addr, entry->len);
                 break;
 
             case MULTIBOOT_MEMORY_ACPI_RECLAIMABLE:
                 debug_printf("ACPI Reclaimable\n");
+                disable_region(entry->addr, entry->len);
                 break;
 
             case MULTIBOOT_MEMORY_NVS:
                 debug_printf("Non Volatile Storage\n");
+                disable_region(entry->addr, entry->len);
                 break;
 
             case MULTIBOOT_MEMORY_BADRAM:
                 debug_printf("BADRAM\n");
+                disable_region(entry->addr, entry->len);
                 break;
             
             default:
                 debug_printf("Unkown RAM type\n");
+                disable_region(entry->addr, entry->len);
                 break;
         }
     }
@@ -92,6 +104,7 @@ void mm::pmm::init(multiboot& mbi){
     bitops<uint64_t>::bit_set(bitmap[0], 2); // SMP Trampoline PML4
     bitops<uint64_t>::bit_set(bitmap[0], 3); // SMP Trampoline PDPT
     bitops<uint64_t>::bit_set(bitmap[0], 4); // SMP Trampoline PD
+    bitops<uint64_t>::bit_set(bitmap[0], 5); // SMP Extra
 
     uint64_t kernel_start_phys = (kernel_start - KERNEL_VBASE);
     uint64_t kernel_end_phys = (kernel_end - KERNEL_VBASE);

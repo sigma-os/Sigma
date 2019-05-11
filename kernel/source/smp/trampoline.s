@@ -48,7 +48,7 @@ trampoline_enter_32:
 
     lgdt (SMP_START + (trampoline_gdt64_pointer - trampoline_start)) 
 
-    mov $((SMP_START + (pml4_table - trampoline_start)) + 3), %eax
+    mov $((SMP_START + (pml4_table - trampoline_start))), %eax
     mov %eax, %cr3
 
     movl $0xc0000080, %ecx
@@ -59,8 +59,6 @@ trampoline_enter_32:
     movl %cr0, %eax
     bts $31, %eax // set PG (Paging) bit
     movl %eax, %cr0
-
-    
 
     ljmp $0x08, $(SMP_START + (trampoline_enter_64 - trampoline_start))
 
@@ -82,8 +80,6 @@ trampoline_enter_64:
 
     movq (SMP_START + (trampoline_stack - trampoline_start)), %rsp
     movq %rsp, %rbp
-    
-
 
     movb $1, (SMP_START + (trampoline_booted - trampoline_start))
 

@@ -21,8 +21,11 @@
 #include <Sigma/multitasking/elf.h>
 
 #include <Sigma/smp/smp.h>
+#include <Sigma/smp/cpu.h>
 
 #include <Sigma/types/linked_list.h>
+
+IPaging* bsp_paging = nullptr;
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
@@ -42,6 +45,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     x86_64::idt::register_generic_handlers();
     
     mm::vmm::manager<x86_64::paging::paging> vmm = mm::vmm::manager<x86_64::paging::paging>();
+
+    bsp_paging = &(vmm.get_paging_provider());
 
     uint64_t virt_start = KERNEL_VBASE;
     uint64_t phys_start = 0x0;
@@ -77,25 +82,69 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::hmm::init(vmm.get_paging_provider());   
 
+    
+
     auto cpus = types::linked_list<smp::cpu_entry>();
     x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
     (void)(mp_spec);
 
     x86_64::apic::lapic l = x86_64::apic::lapic(vmm.get_paging_provider());
 
-    smp::multiprocessing smp = smp::multiprocessing(vmm.get_paging_provider(), cpus, &l);
+    smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
 
     printf("Sigma: reached end of kernel_main?\n");
     abort();
 }
 
+auto ap_list = types::linked_list<smp::cpu::entry>();
+
 x86_64::spinlock::mutex mut;
 
 C_LINKAGE void smp_kernel_main(){
     x86_64::spinlock::acquire(&mut);
 
+    //debug_printf("HFDLKA");
+
+    //asm("cli; hlt");
+
     printf("Booted CPU\n");
+
+    asm("cli; hlt");
+
+    //debug_printf("\na\n");
+
+    /*auto pag = x86_64::paging::paging();
+    debug_printf("\na\n");
+    IPaging& paging = pag;
+
+        debug_printf("\na\n");
+
+    bsp_paging->clone_paging_info(paging);
+
+        debug_printf("\na\n");
+
+    paging.set_paging_info();
+        debug_printf("\na\n");
+
+
+    asm("cli; hlt");
+    
+
+    auto c = smp::cpu::entry();
+    
+
+    ap_list.push_back(c);
+
+    
+
+    
+
+    auto& cpu = ap_list.end().entry->item;
+
+    cpu.test = 69;*/
+
+
 
 
     x86_64::spinlock::release(&mut);

@@ -48,7 +48,7 @@ namespace x86_64::vga
 
         
 
-        int16_t x, y;
+        int8_t x, y;
         vga::text_colour foreground, background;
 
         private:

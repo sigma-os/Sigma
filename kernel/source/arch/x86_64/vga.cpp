@@ -1,5 +1,7 @@
 #include <Sigma/arch/x86_64/vga.h>
 
+#include <klibc/stdio.h>
+
 void x86_64::vga::write_entry(text_entry_t character, uint8_t x, uint8_t y){
     uint32_t offset = y * vga::terminal_width + x;
 

@@ -45,11 +45,13 @@ static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers){
 
     printf("PAGE FAULT: At linear address: %x, RIP: %x\n Errors: ", cr2, registers->rip);
 
-    if(bitops<uint64_t>::bit_test(&(registers->error_code), 0)) printf("Protection violation ");
-    if(bitops<uint64_t>::bit_test(&(registers->error_code), 1)) printf("Write ");
-    if(bitops<uint64_t>::bit_test(&(registers->error_code), 2)) printf("User ");
-    if(bitops<uint64_t>::bit_test(&(registers->error_code), 3)) printf("Malformed table ");
-    if(bitops<uint64_t>::bit_test(&(registers->error_code), 4)) printf("Instruction fetch ");
+    uint64_t error_code = registers->error_code;
+
+    if(bitops<uint64_t>::bit_test(error_code, 0)) printf("Protection violation ");
+    if(bitops<uint64_t>::bit_test(error_code, 1)) printf("Write ");
+    if(bitops<uint64_t>::bit_test(error_code, 2)) printf("User ");
+    if(bitops<uint64_t>::bit_test(error_code, 3)) printf("Malformed table ");
+    if(bitops<uint64_t>::bit_test(error_code, 4)) printf("Instruction fetch ");
 
     asm("cli; hlt");
 }
@@ -62,7 +64,7 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
         f(registers);
     }
     else {
-        if (n < 32) printf("[IDT]: Received interrupt %i, %s\n", n, exeception_msg[n]);
+        if (n < 32) printf("[IDT]: Received interrupt %i, %s\n Error Code: %x\n", n, exeception_msg[n], registers->error_code);
         else printf("[IDT]: Received interrupt %i\n", n);
 
         printf("RIP: %x", registers->rip);
@@ -95,13 +97,17 @@ x86_64::idt::idt_entry::idt_entry(void* function, uint16_t selector, bool presen
 
     this->gdt_sel = selector;
 
-    this->options = 0;
-    this->options |= (ist_number & 0x7);
-    bitops<uint16_t>::bit_set(&(this->options), 9); // Next 3 bits must be 1
-    bitops<uint16_t>::bit_set(&(this->options), 10);
-    bitops<uint16_t>::bit_set(&(this->options), 11);
+    uint16_t flags = 0;
+    flags |= (ist_number & 0x7);
+    bitops<uint16_t>::bit_set(flags, 9); // Next 3 bits must be 1
+    bitops<uint16_t>::bit_set(flags, 10);
+    bitops<uint16_t>::bit_set(flags, 11);
 
-    if(present) bitops<uint16_t>::bit_set(&(this->options), idt_entry_option_present);
+    
+
+    if(present) bitops<uint16_t>::bit_set(flags, idt_entry_option_present);
+
+    this->options = flags;
 }
 
 
