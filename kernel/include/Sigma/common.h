@@ -2,6 +2,7 @@
 #define SIGMA_KERNEL_COMMON
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include <Sigma/bitops.h>
 

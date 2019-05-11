@@ -104,47 +104,19 @@ x86_64::spinlock::mutex mut;
 C_LINKAGE void smp_kernel_main(){
     x86_64::spinlock::acquire(&mut);
 
-    //debug_printf("HFDLKA");
-
-    //asm("cli; hlt");
 
     printf("Booted CPU\n");
 
-    asm("cli; hlt");
-
-    //debug_printf("\na\n");
-
-    /*auto pag = x86_64::paging::paging();
-    debug_printf("\na\n");
+    auto pag = x86_64::paging::paging();
     IPaging& paging = pag;
-
-        debug_printf("\na\n");
-
     bsp_paging->clone_paging_info(paging);
-
-        debug_printf("\na\n");
-
     paging.set_paging_info();
-        debug_printf("\na\n");
-
-
-    asm("cli; hlt");
+    
     
 
-    auto c = smp::cpu::entry();
-    
+    auto* cpu = ap_list.push_back(smp::cpu::entry());
 
-    ap_list.push_back(c);
-
-    
-
-    
-
-    auto& cpu = ap_list.end().entry->item;
-
-    cpu.test = 69;*/
-
-
+    cpu->test = 432;
 
 
     x86_64::spinlock::release(&mut);

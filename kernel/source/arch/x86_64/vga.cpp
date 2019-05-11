@@ -14,6 +14,17 @@ void x86_64::vga::write_entry(text_entry_t character, uint8_t x, uint8_t y){
 const uint64_t x86_64::vga::mmio = (0xb8000 + KERNEL_VBASE);
 
 
+void x86_64::vga::writer::nprint(const char* str, size_t n){
+    x86_64::spinlock::acquire(&this->mutex);
+
+    for(size_t i = 0; i < n; i++){
+        uint8_t c = str[i];
+
+        this->print_char(c);
+    }
+    x86_64::spinlock::release(&this->mutex);
+}
+
 void x86_64::vga::writer::print(const char* str){
     x86_64::spinlock::acquire(&this->mutex);
 
@@ -26,7 +37,6 @@ void x86_64::vga::writer::print(const char* str){
 }
 
 void x86_64::vga::writer::print_char(const char c){
-    x86_64::spinlock::acquire(&this->mutex);
     switch (c)
     {
     case '\n':
@@ -76,8 +86,6 @@ void x86_64::vga::writer::print_char(const char c){
         this->update_hardware_cursor();
         break;
     }
-
-    x86_64::spinlock::release(&this->mutex);
 }
 
 void x86_64::vga::writer::set_foreground(x86_64::vga::text_colour colour) {

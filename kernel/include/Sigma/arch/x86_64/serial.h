@@ -22,7 +22,7 @@ namespace x86_64::serial
 
     class writer {
         public:
-        explicit writer(uint16_t base): base(base){
+        explicit writer(uint16_t base): base(base), mutex(x86_64::spinlock::mutex()){
             x86_64::io::outb(this->base + x86_64::serial::line_control, 0x03); // Configure port
             x86_64::io::outb(this->base + x86_64::serial::interrupt_enable, 0); // Disable interrupts
 
@@ -32,6 +32,17 @@ namespace x86_64::serial
         void print_char(const char c){
             while((x86_64::io::inb(this->base + x86_64::serial::line_status) & 0x20) == 0);
             x86_64::io::outb(this->base, c);
+        }
+
+        void nprint(const char* str, size_t n){
+            x86_64::spinlock::acquire(&this->mutex);
+
+            for(size_t i = 0; i < n; i++){
+                uint8_t c = str[i];
+
+                this->print_char(c);
+            }
+            x86_64::spinlock::release(&this->mutex);
         }
 
 
@@ -50,6 +61,7 @@ namespace x86_64::serial
             x86_64::io::outb(this->base + x86_64::serial::line_control, cmd);
         }
         uint16_t base;
+        x86_64::spinlock::mutex mutex;
     };
 } // x86_64::serial
 

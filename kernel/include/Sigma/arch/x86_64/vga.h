@@ -39,6 +39,7 @@ namespace x86_64::vga
         }
 
         void print(const char* str);
+        void nprint(const char* str, size_t n);
         void print_char(const char c);
 
         void set_foreground(vga::text_colour colour);

@@ -14,9 +14,9 @@ x86_64::vga::writer main_writer = x86_64::vga::writer();
 x86_64::serial::writer debug_writer = x86_64::serial::writer(x86_64::serial::com1_base);
 
 static bool print(const char* data, size_t length){
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
 
-    for(uint64_t i = 0; i < length; i++) main_writer.print_char(bytes[i]);
+    //for(uint64_t i = 0; i < length; i++) main_writer.print_char(bytes[i]);
+    main_writer.nprint(data, length);
 
     return true;
 }
@@ -161,9 +161,9 @@ int puts(const char* s){
 #ifdef DEBUG
 
 static bool debug_print(const char* data, size_t length){
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
 
-    for(uint64_t i = 0; i < length; i++) debug_writer.print_char(bytes[i]);
+    //for(uint64_t i = 0; i < length; i++) debug_writer.print_char(bytes[i]);
+    debug_writer.nprint(data, length);
 
     return true;
 }
