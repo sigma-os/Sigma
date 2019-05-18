@@ -13,4 +13,6 @@
 
 #define C_LINKAGE extern "C"
 
+#define UNUSED(x) ((void)((x)))
+
 #endif

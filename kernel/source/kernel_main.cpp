@@ -26,6 +26,7 @@
 #include <Sigma/types/linked_list.h>
 
 IPaging* bsp_paging = nullptr;
+auto ap_list = types::linked_list<smp::cpu::entry>();
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
     multiboot mboot = multiboot(multiboot_information, magic);
@@ -82,7 +83,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::hmm::init(vmm.get_paging_provider());   
 
-    
 
     auto cpus = types::linked_list<smp::cpu_entry>();
     x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
@@ -93,31 +93,31 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
 
-    printf("Sigma: reached end of kernel_main?\n");
-    abort();
+    
+
+    asm("cli; hlt");
 }
 
-auto ap_list = types::linked_list<smp::cpu::entry>();
 
-x86_64::spinlock::mutex mut;
+
+x86_64::spinlock::mutex mut = x86_64::spinlock::mutex();
 
 C_LINKAGE void smp_kernel_main(){
     x86_64::spinlock::acquire(&mut);
+    bsp_paging->set_paging_info();
+    
+    x86_64::tss::table tss = x86_64::tss::table();
+    x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
+    gdt.init();
+    uint16_t tss_offset = gdt.add_tss(&tss);
+    gdt.update_pointer();
+    tss.load(tss_offset);
 
+    x86_64::idt::idt idt = x86_64::idt::idt();
+    idt.init();
 
     printf("Booted CPU\n");
 
-    auto pag = x86_64::paging::paging();
-    IPaging& paging = pag;
-    bsp_paging->clone_paging_info(paging);
-    paging.set_paging_info();
-    
-    
-
-    auto* cpu = ap_list.push_back(smp::cpu::entry());
-
-    cpu->test = 432;
-
-
     x86_64::spinlock::release(&mut);
+    asm("cli; hlt");
 }

@@ -69,6 +69,8 @@ namespace x86_64::apic
             paging.map_page(base, (base + KERNEL_VBASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
         }
 
+        lapic() = default;
+
 
 
         private:

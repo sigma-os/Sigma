@@ -3,12 +3,14 @@
 
 #include <Sigma/common.h>
 
+#include <Sigma/arch/x86_64/drivers/apic.h>
+
 namespace smp::cpu
 {
     struct entry {
         public:
         entry() = default;
-        uint64_t test;
+        x86_64::apic::lapic lapic;
     };
 } // smp::cpu
 

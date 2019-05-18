@@ -68,6 +68,27 @@ namespace types
                 return &(new_entry->item);
             }
 
+            T* empty_entry(){
+                linked_list_entry<T>* new_entry = new linked_list_entry<T>;
+                
+                new_entry->next = nullptr;
+
+                
+                if(this->length == 0){
+                    this->head = new_entry;
+                    this->tail = new_entry;
+                    new_entry->prev = nullptr;
+                    this->length++;
+                    return &(new_entry->item);
+                }
+
+                this->tail->next = new_entry;
+                new_entry->prev = this->tail;
+                this->tail = new_entry;
+                this->length++;
+                return &(new_entry->item);
+            }
+
             linked_list_iterator<T> begin(){
                 return linked_list_iterator<T>(head);
             }

@@ -16,7 +16,9 @@ namespace mm::pmm
     void init(multiboot& mb_info);
 
     void* alloc_block();
+    void* alloc_n_blocks(size_t n_blocks);
     void free_block(void* block);
+    void free_blocks(void* blocks, size_t n_blocks);
 } // mm::pmm
 
 
