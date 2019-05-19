@@ -11,6 +11,7 @@ namespace smp::cpu
         public:
         entry() = default;
         x86_64::apic::lapic lapic;
+        uint8_t lapic_id;
     };
 } // smp::cpu
 

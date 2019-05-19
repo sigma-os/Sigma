@@ -40,14 +40,8 @@ namespace x86_64::apic
 
     class lapic {
         public:
-        uint32_t read(uint32_t reg){
-            uint32_t* val = reinterpret_cast<uint32_t*>(base + KERNEL_VBASE + reg);
-            return *val;
-        }
-
-        void write(uint32_t reg, uint32_t val){
-            uint32_t* data = reinterpret_cast<uint32_t*>(base + KERNEL_VBASE + reg);
-            *data = val;
+        uint8_t get_id(){
+            return this->id;
         }
 
         void send_ipi(uint8_t target_lapic_id, uint32_t flags){
@@ -56,7 +50,6 @@ namespace x86_64::apic
         
             while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
         }
-
 
         explicit lapic(IPaging& paging){
             uint64_t apic_base_msr = msr::read(msr::apic_base);
@@ -67,14 +60,25 @@ namespace x86_64::apic
             msr::write(msr::apic_base, apic_base_msr);
 
             paging.map_page(base, (base + KERNEL_VBASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
+
+            this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
         }
 
         lapic() = default;
 
-
-
         private:
         uint64_t base;
+        uint8_t id;
+
+        uint32_t read(uint32_t reg){
+            uint32_t* val = reinterpret_cast<uint32_t*>(base + KERNEL_VBASE + reg);
+            return *val;
+        }
+
+        void write(uint32_t reg, uint32_t val){
+            uint32_t* data = reinterpret_cast<uint32_t*>(base + KERNEL_VBASE + reg);
+            *data = val;
+        }
     };
 } // x86_64::apic
 

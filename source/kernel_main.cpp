@@ -26,9 +26,10 @@
 #include <Sigma/types/linked_list.h>
 
 IPaging* bsp_paging = nullptr;
-auto ap_list = types::linked_list<smp::cpu::entry>();
 
-C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){   
+C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){  
+    FUNCTION_CALL_ONCE();
+
     multiboot mboot = multiboot(multiboot_information, magic);
     printf("Booting Sigma, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", mboot.get_memsize_mb());
 
@@ -99,12 +100,15 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 }
 
 
+auto ap_list = types::linked_list<smp::cpu::entry>();
 
-x86_64::spinlock::mutex mut = x86_64::spinlock::mutex();
+x86_64::spinlock::mutex ap_mutex = x86_64::spinlock::mutex();
 
 C_LINKAGE void smp_kernel_main(){
-    x86_64::spinlock::acquire(&mut);
-    bsp_paging->set_paging_info();
+    x86_64::spinlock::acquire(&ap_mutex);
+
+    if(bsp_paging != nullptr) bsp_paging->set_paging_info();
+    else PANIC("Couldn't set AP paging directory because \'bsp_paging\' == nullptr");
     
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
@@ -116,8 +120,13 @@ C_LINKAGE void smp_kernel_main(){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
 
-    printf("Booted CPU\n");
+    auto* entry = ap_list.empty_entry();
 
-    x86_64::spinlock::release(&mut);
+    entry->lapic = x86_64::apic::lapic(*bsp_paging);
+    entry->lapic_id = entry->lapic.get_id();
+
+    printf("Booted CPU with lapic_id: %d\n", entry->lapic_id);
+
+    x86_64::spinlock::release(&ap_mutex);
     asm("cli; hlt");
 }
