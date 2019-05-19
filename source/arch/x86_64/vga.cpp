@@ -43,8 +43,7 @@ void x86_64::vga::writer::print_char(const char c){
         this->x = 0;
         this->y++;
 
-        if(y > 25){
-            //TODO: Scrolling
+        if(y >= 25){
             this->scroll();
             y--;
         }
@@ -77,8 +76,7 @@ void x86_64::vga::writer::print_char(const char c){
         if(x > 80){
             x = 0;
             y++;
-            if(y > 25){
-                //TODO: Scrolling
+            if(y >= 25){
                 this->scroll();
                 y--;
             }
@@ -106,8 +104,7 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
     if(this->x > 80){
         this->x = 0;
         this->y++;
-        if(this->y > 25){
-            //TODO: Scrolling
+        if(this->y >= 25){
             this->scroll();
             this->y--;
         }
@@ -118,26 +115,21 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
 }
 
 void x86_64::vga::writer::scroll(){
-    for(uint8_t  i = 0; i < x86_64::vga::terminal_height; i++){
-        for(uint8_t j = 0; j < x86_64::vga::terminal_width; j++){
-            uint64_t old_offset = i * vga::terminal_width + j;
-            x86_64::vga::text_entry_t* old_entry = (x86_64::vga::text_entry_t*)(x86_64::vga::mmio + (old_offset * sizeof(x86_64::vga::text_entry_t))); 
+    for(uint64_t i = 1; i < x86_64::vga::terminal_height; i++){
+        uint64_t dest_offset = 2 * ((i - 1) * x86_64::vga::terminal_width);
+        void* dest = reinterpret_cast<void*>(dest_offset + x86_64::vga::mmio);
 
-            uint64_t new_offset = (i - 1) * vga::terminal_width + j;
-            x86_64::vga::text_entry_t* new_entry = (x86_64::vga::text_entry_t*)(x86_64::vga::mmio + (new_offset * sizeof(x86_64::vga::text_entry_t))); 
-
-
-
-            *new_entry = *old_entry;
-        }
+        uint64_t src_offset = 2 * (i * x86_64::vga::terminal_width);
+        void* src = reinterpret_cast<void*>(src_offset + x86_64::vga::mmio);
+        memcpy(dest, src, x86_64::vga::terminal_width * 2);
+    }
+    
+    for(uint64_t i = 0; i < x86_64::vga::terminal_width; i++){
+        x86_64::vga::write_entry(x86_64::vga::text_entry_t(' ', x86_64::vga::text_colour::white, x86_64::vga::text_colour::black), i, x86_64::vga::terminal_height - 1);
     }
 
-    uint8_t old_x = this->x, old_y = this->y;
-    this->set_cursor(0, x86_64::vga::terminal_height - 1);
-
-    for(uint8_t i = 0; i < x86_64::vga::terminal_width; i++) this->print_char(' ');
-
-    this->set_cursor(old_x, old_y);
+    this->x = 0;
+    this->y = 25;
 }
 
 void x86_64::vga::writer::update_hardware_cursor(){
