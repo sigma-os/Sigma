@@ -60,11 +60,19 @@ namespace x86_64::mp
     constexpr uint8_t configuration_table_entry_type_io_interrupt_assignment = 3;
     constexpr uint8_t configuration_table_entry_type_local_interrupt_assignment = 4;
 
+    constexpr uint8_t configuration_table_entry_type_address_space_mapping = 128;
+    constexpr uint8_t configuration_table_entry_type_bus_hierarchy_descriptor = 129;
+    constexpr uint8_t configuration_table_entry_type_compatibility_bus_addressspace_modifier = 130;
+
     constexpr uint8_t configuration_table_entry_size_processor = 20;
     constexpr uint8_t configuration_table_entry_size_bus = 8;
     constexpr uint8_t configuration_table_entry_size_ioapic = 8;
     constexpr uint8_t configuration_table_entry_size_io_interrupt_assignment = 8;
     constexpr uint8_t configuration_table_entry_size_local_interrupt_assignment = 8;
+
+    constexpr uint8_t configuration_table_entry_size_address_space_mapping = 20;
+    constexpr uint8_t configuration_table_entry_size_bus_hierarchy_descriptor = 8;
+    constexpr uint8_t configuration_table_entry_size_compatibility_bus_addressspace_modifier = 8;
 
 
     constexpr configuration_table_entry_type entry_types[] = {
@@ -192,7 +200,44 @@ namespace x86_64::mp
     constexpr uint8_t configuration_table_entry_local_interrupt_assignment_trigger_mode_reserved = 2;
     constexpr uint8_t configuration_table_entry_local_interrupt_assignment_trigger_mode_level_triggered = 3;
 
+    struct configuration_table_entry_address_space_mapping {
+        uint8_t entry_type; // = configuration_table_entry_type_local_interrupt_assignment
+        uint8_t entry_length;
 
+        uint8_t bus_id;
+        uint8_t address_type;
+        uint64_t base;
+        uint64_t length;
+    } __attribute__((packed));
+
+    constexpr uint8_t configuration_table_entry_address_space_mapping_address_type_io = 0;
+    constexpr uint8_t configuration_table_entry_address_space_mapping_address_type_memory = 1;
+    constexpr uint8_t configuration_table_entry_address_space_mapping_address_type_prefetch = 2;
+
+    struct configuration_table_entry_bus_hierarchy_descriptor {
+        uint8_t entry_type; // = configuration_table_entry_type_local_interrupt_assignment
+        uint8_t entry_length;
+
+        uint8_t bus_id;
+        uint8_t bus_information;
+        uint8_t parent_bus;
+    } __attribute__((packed));
+
+    constexpr uint8_t configuration_table_entry_bus_hierarchy_descriptor_bus_information_subtractive_decode_bit = 0;
+
+    struct configuration_table_entry_compatibility_bus_addressspace_modifier {
+        uint8_t entry_type; // = configuration_table_entry_type_local_interrupt_assignment
+        uint8_t entry_length;
+
+        uint8_t bus_id;
+        uint8_t address_modifier;
+        uint32_t predefined_range_list;
+    } __attribute__((packed));
+
+    constexpr uint8_t configuration_table_entry_compatibility_bus_addressspace_modifier_address_modifier_subtract_bit = 0;
+
+    constexpr uint32_t configuration_table_entry_compatibility_bus_addressspace_modifier_predefined_range_list_isa_io = 0;
+    constexpr uint32_t configuration_table_entry_compatibility_bus_addressspace_modifier_predefined_range_list_vga_io = 1;
 
     class mp {
         public:
@@ -207,8 +252,13 @@ namespace x86_64::mp
         void parse_io_interrupt_entry(uint64_t pointer);
         void parse_local_interrupt_entry(uint64_t pointer);
 
+        void parse_address_space_mapping(uint64_t pointer);
+        void parse_bus_hierarchy_descriptor(uint64_t pointer);
+        void parse_compatibility_bus_addressspace_modifier(uint64_t pointer);
+
         bool check_floating_pointer();
         bool check_table_header();
+        bool check_extended_table();
 
 
 

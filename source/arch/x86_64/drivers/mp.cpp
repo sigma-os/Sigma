@@ -68,6 +68,20 @@ bool x86_64::mp::mp::check_table_header(){
     return (sum == 0) ? (true) : (false);
 }
 
+bool x86_64::mp::mp::check_extended_table(){
+    x86_64::mp::configuration_table_header* header = reinterpret_cast<x86_64::mp::configuration_table_header*>(this->table);
+
+    uint8_t* check_pointer = reinterpret_cast<uint8_t*>(this->table + header->base_table_length);
+
+    uint8_t sum = 0;
+
+    for(size_t i = 0; i < (header->extended_table_length); i++) sum += check_pointer[i];
+
+    sum += header->extended_table_checksum;
+
+    return (sum == 0) ? (true) : (false);
+}
+
 x86_64::mp::floating_pointer_table* x86_64::mp::mp::find_pointer(){
     uint8_t* ebda_search = reinterpret_cast<uint8_t*>(x86_64::bios::bios::get_ebda_addr());
     uint8_t* ebda_search_end = reinterpret_cast<uint8_t*>(x86_64::bios::ebda_end);
@@ -97,6 +111,17 @@ x86_64::mp::floating_pointer_table* x86_64::mp::mp::find_pointer(){
 
 void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
     x86_64::mp::configuration_table_header* table_header = reinterpret_cast<x86_64::mp::configuration_table_header*>(this->table);
+
+    bool parse_extended_table = false;
+    if(table_header->extended_table_length == 0){
+        debug_printf("[MP]: Didn't detect extended table\n");
+    } else {
+        if(!this->check_extended_table()){
+            printf("[MP]: Extended table checksum failed");
+        } else {
+            parse_extended_table = true;
+        }
+    }
 
     uint8_t* entry = reinterpret_cast<uint8_t*>((this->table + sizeof(x86_64::mp::configuration_table_header)));
 
@@ -139,6 +164,34 @@ void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
         entry += type.size;
     }
 
+
+    if(parse_extended_table){
+        entry = reinterpret_cast<uint8_t*>(this->table + table_header->base_table_length);
+
+        uint64_t extended_table_end = reinterpret_cast<uint64_t>(reinterpret_cast<uint64_t>(entry) + table_header->extended_table_length);
+        bool done = false;
+        while(!done){
+            //debug_printf("[MP]: Found entry %d: Type: %x, Name: %s, Size: %d\n", i, type.type, type.name, type.size);
+
+            switch (*entry)
+            {
+                case configuration_table_entry_type_address_space_mapping:
+                    this->parse_address_space_mapping(reinterpret_cast<uint64_t>(entry));
+                    break;
+                case configuration_table_entry_type_bus_hierarchy_descriptor:
+                    break;
+                case configuration_table_entry_type_compatibility_bus_addressspace_modifier:
+                    break;
+                default:
+                    break;
+            }
+
+            entry += *(entry + 1);
+
+            uint64_t ent = reinterpret_cast<uint64_t>(entry);
+            if(ent >= extended_table_end) done = true;
+        }
+    }
 }
 
 void x86_64::mp::mp::parse_bus(uint64_t pointer){
@@ -209,7 +262,7 @@ void x86_64::mp::mp::parse_io_interrupt_entry(uint64_t pointer){
 
 
 void x86_64::mp::mp::parse_local_interrupt_entry(uint64_t pointer){
-        auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_local_interrupt_assignment*>(pointer);
+    auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_local_interrupt_assignment*>(pointer);
 
     debug_printf("[MP]: Local Interrupt Asignment: Destinantion LAPIC ID: %x, Destinantion LAPIC LINTIN#: %x, Source Bus ID: %x, Source Bus IRQ: %d", entry->destination_lapic_id, entry->destination_lapic_lintin, entry->source_bus_id, entry->source_bus_irq);
 
@@ -228,6 +281,37 @@ void x86_64::mp::mp::parse_local_interrupt_entry(uint64_t pointer){
     else if(entry->trigger_mode == x86_64::mp::configuration_table_entry_local_interrupt_assignment_trigger_mode_edge_triggered) debug_printf(", Trigger mode: Edge triggered");
     else if(entry->trigger_mode == x86_64::mp::configuration_table_entry_local_interrupt_assignment_trigger_mode_level_triggered) debug_printf(", Trigger mode: Leved triggered");
     else debug_printf(" Trigger mode: Reserved");
+
+    debug_printf("\n");
+}
+
+void x86_64::mp::mp::parse_address_space_mapping(uint64_t pointer){
+    auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_address_space_mapping*>(pointer);
+    debug_printf("[MP]: Address space mapping: Bus ID: %d, Base %x, Length: %x", entry->bus_id, entry->base, entry->length);
+
+    if(entry->address_type == x86_64::mp::configuration_table_entry_address_space_mapping_address_type_io) debug_printf(", Type: IO");
+    else if(entry->address_type == x86_64::mp::configuration_table_entry_address_space_mapping_address_type_memory) debug_printf(", Type: Memory");
+    else if(entry->address_type == x86_64::mp::configuration_table_entry_address_space_mapping_address_type_prefetch) debug_printf(", Type: Prefetch");
+    debug_printf("\n");
+}
+
+void x86_64::mp::mp::parse_bus_hierarchy_descriptor(uint64_t pointer){
+    auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_bus_hierarchy_descriptor*>(pointer);
+    debug_printf("[MP]: Bus Hierarchy descriptor: Bus ID: %d, Parent Bus ID: %d");
+    uint8_t bus_information = entry->bus_information;
+
+    if(bitops<uint8_t>::bit_test(bus_information, x86_64::mp::configuration_table_entry_bus_hierarchy_descriptor_bus_information_subtractive_decode_bit)) debug_printf(", With Subtractive decode");
+
+    debug_printf("\n");
+}
+
+void x86_64::mp::mp::parse_compatibility_bus_addressspace_modifier(uint64_t pointer){
+    auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_compatibility_bus_addressspace_modifier*>(pointer);
+    
+    debug_printf("[MP]: Compatibility Bus Address-space modifier: Bus ID: %d", entry->bus_id);
+
+    if(entry->predefined_range_list == x86_64::mp::configuration_table_entry_compatibility_bus_addressspace_modifier_predefined_range_list_isa_io) debug_printf(", Type: ISA I/O");
+    else if(entry->predefined_range_list == x86_64::mp::configuration_table_entry_compatibility_bus_addressspace_modifier_predefined_range_list_vga_io) debug_printf(", Type: VGA I/O");
 
     debug_printf("\n");
 }
