@@ -7,8 +7,7 @@ ISR stubs are created using the ISR_NOERROR and ISR_ERROR macros
 
 
 ISR 255 is *always* reserved for APIC Spurious interrupts, *even* if for some reason the APIC driver fails
-    
-    - Therefore the only thing it does is *immediately* 
+- Therefore the only thing it does is *immediately* 
         ```
             iretq
         ```
