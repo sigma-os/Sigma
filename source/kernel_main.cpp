@@ -94,8 +94,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
 
-    
-
     asm("cli; hlt");
 }
 

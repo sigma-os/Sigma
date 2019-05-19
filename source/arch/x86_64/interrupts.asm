@@ -273,7 +273,10 @@ ISR_NOERROR 251
 ISR_NOERROR 252
 ISR_NOERROR 253
 ISR_NOERROR 254
-ISR_NOERROR 255
+
+[global isr255]
+isr255: ; APIC Spurious
+    iretq
 
 
 isr_stub:

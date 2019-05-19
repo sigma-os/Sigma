@@ -179,8 +179,10 @@ void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
                     this->parse_address_space_mapping(reinterpret_cast<uint64_t>(entry));
                     break;
                 case configuration_table_entry_type_bus_hierarchy_descriptor:
-                    break;
+                    this->parse_bus_hierarchy_descriptor(reinterpret_cast<uint64_t>(entry));
+                    break;  
                 case configuration_table_entry_type_compatibility_bus_addressspace_modifier:
+                    this->parse_compatibility_bus_addressspace_modifier(reinterpret_cast<uint64_t>(entry));
                     break;
                 default:
                     break;
@@ -297,7 +299,7 @@ void x86_64::mp::mp::parse_address_space_mapping(uint64_t pointer){
 
 void x86_64::mp::mp::parse_bus_hierarchy_descriptor(uint64_t pointer){
     auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_bus_hierarchy_descriptor*>(pointer);
-    debug_printf("[MP]: Bus Hierarchy descriptor: Bus ID: %d, Parent Bus ID: %d");
+    debug_printf("[MP]: Bus Hierarchy descriptor: Bus ID: %d, Parent Bus ID: %d", entry->bus_id, entry->parent_bus);
     uint8_t bus_information = entry->bus_information;
 
     if(bitops<uint8_t>::bit_test(bus_information, x86_64::mp::configuration_table_entry_bus_hierarchy_descriptor_bus_information_subtractive_decode_bit)) debug_printf(", With Subtractive decode");
