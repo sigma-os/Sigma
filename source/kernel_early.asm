@@ -44,7 +44,7 @@ initialize_sse:
     jnc .no_sse
 
     mov rax, cr0
-    btc eax, 2
+    btr eax, 2
     bts eax, 1
     mov cr0, rax
 
