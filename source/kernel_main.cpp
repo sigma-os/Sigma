@@ -92,12 +92,11 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
     (void)(mp_spec);
 
-    x86_64::pic::pic p = x86_64::pic::pic();
-    p.disable();
+    
 
     x86_64::apic::lapic l = x86_64::apic::lapic(vmm.get_paging_provider());
 
-
+    x86_64::pic::disable();
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);

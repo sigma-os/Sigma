@@ -35,48 +35,17 @@ namespace x86_64::pic
     constexpr uint8_t bios_default_pic1_vector = 0x8;
     constexpr uint8_t bios_default_pic2_vector = 0x70;
 
-    class pic : virtual public IInterruptController{
-        public:
-            explicit pic(): pic1_int_base(bios_default_pic1_vector), pic2_int_base(bios_default_pic2_vector){ }
 
-            void init(){
-                this->enable();
-            }
+    void set_base_vector(uint8_t base);
 
-            void deinit(){
-                this->disable();
-            }
+    void remap(uint8_t pic1_base, uint8_t pic2_base);
 
-            void set_base_vector(uint8_t base){
-                this->remap(base, (base + 8));
-            }
+    void disable();
 
-            void remap(uint8_t pic1_base, uint8_t pic2_base);
+    void enable();
 
-            void disable() {
-                x86_64::io::outb(x86_64::pic::pic1_data_port, 0xFF); // Mask all interrupts as to "disable" it
-                x86_64::io::outb(x86_64::pic::pic2_data_port, 0xFF);
-            }
+    void send_eoi();
 
-            void enable() {
-                x86_64::io::outb(x86_64::pic::pic1_data_port, 0x0); // Unmask all interrupts to enable it
-                x86_64::io::outb(x86_64::pic::pic2_data_port, 0x0);
-            }
-
-            void send_eoi();
-
-
-        private:
-            uint16_t get_irq_reg(uint8_t ocw3);
-
-            uint16_t get_isr(){
-                return this->get_irq_reg(x86_64::pic::read_isr);
-            }
-
-
-            uint8_t pic1_int_base;
-            uint8_t pic2_int_base;
-    };
 } // x86_64::pic
 
 
