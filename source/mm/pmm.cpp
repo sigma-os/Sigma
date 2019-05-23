@@ -152,13 +152,13 @@ static uint64_t first_free_n(size_t n_frames){
 
                     starting_bit += bit;
 
-                    uint64_t free = 0;
+                    uint64_t free_bits = 0;
                     for(uint64_t count = 0; count <= n_frames; count++){
                         if(!bitmap_test(starting_bit + count)){
-                            free++;
+                            free_bits++;
                         }
 
-                        if(free == n_frames){
+                        if(free_bits == n_frames){
                             return i * 64 + j;
                         }
                     }

@@ -117,7 +117,7 @@ x86_64::idt::idt_entry::idt_entry(void* function, uint16_t selector, bool presen
     this->pointer_low = (pointer & 0xFFFF);
     this->pointer_mid = ((pointer >> 16) & 0xFFFF);
     this->pointer_high = ((pointer >> 32) & 0xFFFFFFFF);
-
+    this->reserved = 0;
     this->gdt_sel = selector;
 
     uint16_t flags = 0;
