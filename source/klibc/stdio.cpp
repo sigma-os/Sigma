@@ -9,9 +9,13 @@
 #include <klibc/string.h>
 #include <klibc/stdlib.h>
 
+#include <Sigma/arch/x86_64/misc/spinlock.h>
+
 
 x86_64::vga::writer main_writer = x86_64::vga::writer();
 x86_64::serial::writer debug_writer = x86_64::serial::writer(x86_64::serial::com1_base);
+
+x86_64::spinlock::mutex printf_lock = x86_64::spinlock::mutex();
 
 static bool print(const char* data, size_t length){
 
@@ -22,6 +26,8 @@ static bool print(const char* data, size_t length){
 }
 
 int printf(const char* format, ...){
+    x86_64::spinlock::acquire(&printf_lock);
+
     va_list parameters;
     va_start(parameters, format);
 
@@ -38,11 +44,13 @@ int printf(const char* format, ...){
 
             if(maxrem < amount){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
             if(!print(format, amount)){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
@@ -58,11 +66,13 @@ int printf(const char* format, ...){
             char c = (char)va_arg(parameters, int);
             if(!maxrem){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
             if(!print(&c, sizeof(c))){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
@@ -74,10 +84,12 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
             if(!print(str, len)){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
@@ -93,10 +105,12 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
             if(!print(str, len)){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
@@ -114,10 +128,12 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
             if(!print(str, len)){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
@@ -128,10 +144,12 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
             if(!print(format, len)){
                 va_end(parameters);
+                x86_64::spinlock::release(&printf_lock);
                 return -1;
             } 
 
@@ -141,6 +159,7 @@ int printf(const char* format, ...){
     }
 
     va_end(parameters);
+    x86_64::spinlock::release(&printf_lock);
     return written;
 }
 

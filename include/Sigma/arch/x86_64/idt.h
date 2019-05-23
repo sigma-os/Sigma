@@ -6,6 +6,8 @@
 
 #include <Sigma/arch/x86_64/gdt.h>
 
+#include <Sigma/smp/cpu.h>
+
 #include <klibc/stdio.h>
 
 namespace x86_64::idt
@@ -87,7 +89,18 @@ namespace x86_64::idt
 
 
     void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f);
+    void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq);
+
+    void register_irq_status(uint16_t n, bool is_irq);
+
     void register_generic_handlers();
+
+    struct handler {
+        handler(): callback(nullptr), is_irq(false) {}
+
+        x86_64::idt::idt_function callback;
+        bool is_irq;
+    };
 
 } // x86_64::idt
 

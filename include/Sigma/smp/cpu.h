@@ -9,10 +9,31 @@ namespace smp::cpu
 {
     struct entry {
         public:
-        entry() = default;
+        entry(): lapic(x86_64::apic::lapic()), lapic_id(0), gs_pointer(nullptr){}
+        ~entry(){
+            if(gs_pointer != nullptr) delete gs_pointer;
+        }
         x86_64::apic::lapic lapic;
         uint8_t lapic_id;
+
+        uint64_t* gs_pointer;
+
+        void set_gs(){
+            if(gs_pointer != nullptr) delete gs_pointer;
+
+            gs_pointer = new uint64_t;
+
+            *gs_pointer = reinterpret_cast<uint64_t>(this);
+
+
+            x86_64::msr::write(x86_64::msr::kernelgs_base, reinterpret_cast<uint64_t>(gs_pointer));
+            x86_64::msr::write(x86_64::msr::gs_base, 0);
+            asm("swapgs");
+        }
     };
+
+
+    C_LINKAGE smp::cpu::entry* get_current_cpu();
 } // smp::cpu
 
 

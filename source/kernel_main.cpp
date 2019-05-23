@@ -17,6 +17,7 @@
 
 #include <Sigma/arch/x86_64/drivers/mp.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
+#include <Sigma/arch/x86_64/drivers/pic.h>
 
 #include <Sigma/multitasking/elf.h>
 
@@ -26,6 +27,8 @@
 #include <Sigma/types/linked_list.h>
 
 IPaging* bsp_paging = nullptr;
+
+auto cpu_list = types::linked_list<smp::cpu::entry>();
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){  
     FUNCTION_CALL_ONCE();
@@ -89,16 +92,30 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
     (void)(mp_spec);
 
+    x86_64::pic::pic p = x86_64::pic::pic();
+    p.disable();
+
     x86_64::apic::lapic l = x86_64::apic::lapic(vmm.get_paging_provider());
+
+
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
 
-    asm("cli; hlt");
-}
+    auto* entry = cpu_list.empty_entry();
+
+    entry->lapic = l;
+    entry->lapic_id = entry->lapic.get_id();
+    entry->set_gs();
 
 
-auto ap_list = types::linked_list<smp::cpu::entry>();
+
+    // TODO: Create function in idt.cpp to mark isr as IRQ, if isr is IRQ read per-cpu-struct and send lapic eoi
+    while(1);
+    //asm("cli; hlt");
+}   
+
+
 
 x86_64::spinlock::mutex ap_mutex = x86_64::spinlock::mutex();
 
@@ -118,10 +135,11 @@ C_LINKAGE void smp_kernel_main(){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
 
-    auto* entry = ap_list.empty_entry();
+    auto* entry = cpu_list.empty_entry();
 
     entry->lapic = x86_64::apic::lapic(*bsp_paging);
     entry->lapic_id = entry->lapic.get_id();
+    entry->set_gs();
 
     printf("Booted CPU with lapic_id: %d\n", entry->lapic_id);
 

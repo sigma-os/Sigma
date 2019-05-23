@@ -302,8 +302,6 @@ isr_stub:
     mov ax, 0x0
     mov ds, ax
     mov es, ax
-    mov fs, ax
-    mov gs, ax
 
     mov rdi, rsp
 
@@ -313,11 +311,8 @@ isr_stub:
     call sigma_isr_handler
 
     pop rax
-    pop rax
     mov ds, ax
     mov es, ax
-    mov fs, ax
-    mov gs, ax
     
     pop r11
     pop r10
@@ -332,5 +327,5 @@ isr_stub:
     pop rcx
     pop rax
 
-    add rsp, 8
+    add rsp, 16
     iretq

@@ -7,6 +7,10 @@
 
 #include <Sigma/arch/x86_64/msr.h>
 
+#include <Sigma/arch/x86_64/misc/spinlock.h>
+
+#include <Sigma/arch/x86_64/drivers/pit.h>
+
 namespace x86_64::apic
 {
     constexpr uint64_t lapic_id = 0x20;
@@ -84,6 +88,14 @@ namespace x86_64::apic
     constexpr uint64_t lapic_icr_dm_init = 0x500;
     constexpr uint64_t lapic_icr_dm_sipi = 0x600;
 
+    constexpr uint64_t lapic_lvt_mask = 16;
+
+    enum class lapic_timer_modes { 
+        ONE_SHOT = 0,
+        PERIODIC = 1,
+        TSC_DEADLINE = 2
+    };
+
     //TODO: x2APIC support
     class lapic {
         public:
@@ -98,6 +110,8 @@ namespace x86_64::apic
         void send_ipi(uint8_t target_lapic_id, uint32_t flags);
         void send_eoi();
 
+        void enable_timer(uint8_t vector, uint64_t hz, x86_64::apic::lapic_timer_modes mode);
+
         explicit lapic(IPaging& paging);
 
         lapic() = default;
@@ -110,6 +124,10 @@ namespace x86_64::apic
 
         uint32_t read(uint32_t reg);
         void write(uint32_t reg, uint32_t val);
+
+        void set_timer_mode(x86_64::apic::lapic_timer_modes mode);
+        void set_timer_vector(uint8_t vector);
+        void set_timer_mask(bool state);
     };
 } // x86_64::apic
 
