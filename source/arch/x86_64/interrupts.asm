@@ -280,9 +280,6 @@ isr255: ; APIC Spurious
 
 
 isr_stub:
-
-
-
     push rax
     push rcx
     push rdx
@@ -295,17 +292,20 @@ isr_stub:
     push r9
     push r10
     push r11
+    push r12
+    push r13
+    push r14
+    push r15
 
-
+    xor rax, rax
     mov ax, ds
     push rax
     mov ax, 0x0
     mov ds, ax
     mov es, ax
 
-    mov rdi, rsp
-
     cld
+    mov rdi, rsp
 
     extern sigma_isr_handler
     call sigma_isr_handler
@@ -314,6 +314,10 @@ isr_stub:
     mov ds, ax
     mov es, ax
     
+    pop r15
+    pop r14
+    pop r13
+    pop r12
     pop r11
     pop r10
     pop r9

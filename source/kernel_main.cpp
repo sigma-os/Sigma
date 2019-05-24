@@ -96,6 +96,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     x86_64::apic::lapic l = x86_64::apic::lapic(vmm.get_paging_provider());
 
+    x86_64::pic::set_base_vector(32);
     x86_64::pic::disable();
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
@@ -107,9 +108,12 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 
+    x86_64::idt::register_irq_status(128, true);
+    l.enable_timer(128, 1000, x86_64::apic::lapic_timer_modes::PERIODIC);
+    asm("sti");
 
 
-    // TODO: Create function in idt.cpp to mark isr as IRQ, if isr is IRQ read per-cpu-struct and send lapic eoi
+
     while(1);
     //asm("cli; hlt");
 }   

@@ -10,7 +10,7 @@ EXTRA_WARNING_FLAGS = -Wreorder
 
 FLAGS_C_COMMON = -m64 -march=x86-64 -fno-PIC -Wall -Wextra -Werror -ffreestanding -nostdlib \
 				 -mcmodel=kernel -I include/ -fno-stack-protector -g -O2 \
-				 -mno-sse3 -mno-sse4 -mno-sse4.1 -mno-sse4.2
+				 -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-sse4.1 -mno-sse4.2 -mno-sse4a
 
 CPP_FLAGS = ${FLAGS_C_COMMON} ${EXTRA_WARNING_FLAGS} -std=c++17 -mno-red-zone -fno-exceptions -fno-rtti -fuse-cxa-atexit
 

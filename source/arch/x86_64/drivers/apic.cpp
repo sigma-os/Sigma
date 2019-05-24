@@ -1,13 +1,13 @@
 #include <Sigma/arch/x86_64/drivers/apic.h>
 
 uint32_t x86_64::apic::lapic::read(uint32_t reg){
-    uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_VBASE + reg);
+    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_VBASE + reg);
     return *val;
 }
 
-void x86_64::apic::lapic::write(uint32_t reg, uint32_t val){
-    uint32_t* data = reinterpret_cast<uint32_t*>(this->base + KERNEL_VBASE + reg);
-    *data = val;
+void x86_64::apic::lapic::write(uint32_t reg, uint32_t data){
+    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_VBASE + reg);
+    *val = data;
 }
 
 x86_64::apic::lapic::lapic(IPaging& paging){
@@ -103,12 +103,7 @@ void x86_64::apic::lapic::set_timer_mode(x86_64::apic::lapic_timer_modes mode){
 }
 
 void x86_64::apic::lapic::set_timer_vector(uint8_t vector){
-    uint32_t lint_entry = this->read(x86_64::apic::lapic_lvt_timer);
-
-    lint_entry &= 0xFFFFFFF0;
-    lint_entry |= vector;
-
-    this->write(x86_64::apic::lapic_lvt_timer, lint_entry);
+    this->write(x86_64::apic::lapic_lvt_timer, ((this->read(x86_64::apic::lapic_lvt_timer) & 0xFFFFFF00) | vector));
 }
 
 void x86_64::apic::lapic::set_timer_mask(bool state){
