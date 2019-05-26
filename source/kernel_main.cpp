@@ -24,6 +24,8 @@
 #include <Sigma/smp/smp.h>
 #include <Sigma/smp/cpu.h>
 
+#include <Sigma/acpi/acpi.h>
+
 #include <Sigma/types/linked_list.h>
 
 IPaging* bsp_paging = nullptr;
@@ -108,10 +110,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 
-    x86_64::idt::register_irq_status(128, true);
-    l.enable_timer(128, 1000, x86_64::apic::lapic_timer_modes::PERIODIC);
-    asm("sti");
-
+    acpi::init(mboot, *bsp_paging);
 
 
     while(1);
