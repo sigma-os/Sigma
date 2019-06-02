@@ -36,6 +36,17 @@ static inline uint64_t get_flags(uint64_t entry){
     return (entry & 0xFFF0000000000FFF);
 }
 
+x86_64::paging::paging* x86_64::paging::get_current_info(){
+        uint64_t pointer = 0;
+        asm("mov %%cr3, %0" : "=r"(pointer));
+        return reinterpret_cast<x86_64::paging::paging*>(pointer);
+}
+
+void x86_64::paging::set_current_info(x86_64::paging::paging* info){
+        uint64_t pointer = reinterpret_cast<uint64_t>(info);
+        asm("mov %0, %%cr3" : : "r"(pointer));
+}
+
 void x86_64::paging::paging::init(){
     if(this->paging_info != nullptr) this->deinit();
 

@@ -112,7 +112,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     acpi::init(mboot, *bsp_paging);
 
-
     while(1);
     //asm("cli; hlt");
 }   

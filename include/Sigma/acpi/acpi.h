@@ -3,6 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/multiboot.h>
+#include <Sigma/arch/x86_64/paging.h>
 #include <Sigma/interfaces/paging_manager.h>
 #include <Sigma/acpi/tables.h>
 
