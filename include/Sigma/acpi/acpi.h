@@ -6,6 +6,7 @@
 #include <Sigma/arch/x86_64/paging.h>
 #include <Sigma/interfaces/paging_manager.h>
 #include <Sigma/acpi/tables.h>
+#include <Sigma/acpi/fadt.h>
 
 #include <Sigma/types/linked_list.h>
 
@@ -21,6 +22,7 @@ namespace acpi
     // Physical! Address
     acpi::table* get_table(const char* signature);
 
+    uint16_t get_arch_boot_flags();
 } // namespace acpi
 
 

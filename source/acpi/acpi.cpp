@@ -38,7 +38,22 @@ acpi::table* acpi::get_table(const char* signature){
     return nullptr;
 }
 
-// TODO: Improve paging
+uint16_t acpi::get_arch_boot_flags(){
+    acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(reinterpret_cast<uint64_t>(acpi::get_table(acpi::fadt_signature)) + KERNEL_VBASE);
+
+    enter_subsystem();
+    uint16_t flags = 0;
+
+    #ifdef ARCH_X86_64
+    flags = fadt->iapc_boot_arch;
+    #elif ARCH_ARM
+    flags = fadt->arm_boot_arch;
+    #endif
+
+    leave_subsystem();
+    return flags;
+}
+
 void acpi::init(multiboot& mbd, IPaging& paging){
     paging.clone_paging_info(subsystem);
 
@@ -90,7 +105,7 @@ void acpi::init(multiboot& mbd, IPaging& paging){
             subsystem.map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_VBASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_VBASE);
             if(do_checksum(h)){
-                debug_printf("[ACPI]: Found table: %c%c%c%c\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3]);
+                debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id:%c%c%c%c%c%c, Revision: %d\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision);
 
                 acpi_tables.push_back(reinterpret_cast<uint64_t>(h));
             }
@@ -119,7 +134,8 @@ void acpi::init(multiboot& mbd, IPaging& paging){
             subsystem.map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_VBASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
             auto* h = reinterpret_cast<acpi::sdt_header*>(rsdt->tables[i] + KERNEL_VBASE);
             if(do_checksum(h)){
-                debug_printf("[ACPI]: Found table: %c%c%c%c\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3]);
+                //debug_printf("[ACPI]: Found table: %c%c%c%c\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3]);
+                debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id:%c%c%c%c%c%c, Revision: %d\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision);
 
                 acpi_tables.push_back(reinterpret_cast<uint64_t>(h));
             }

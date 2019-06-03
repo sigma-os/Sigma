@@ -25,4 +25,8 @@
     else PANIC("Tried to reenter call-once function"); \
     })
 
+
+#define ARCH_X86_64 // get the possibility of multiple platforms working
+//#define ARCH_ARM
+
 #endif
