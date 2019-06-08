@@ -3,8 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/multiboot.h>
-#include <Sigma/arch/x86_64/paging.h>
-#include <Sigma/interfaces/paging_manager.h>
+#include <Sigma/mm/vmm.h>
 #include <Sigma/acpi/tables.h>
 #include <Sigma/acpi/fadt.h>
 
@@ -17,7 +16,7 @@ namespace acpi
         uint8_t data[1];
     };
 
-    void init(multiboot& mbd, IPaging& paging);
+    void init(multiboot& mbd);
 
     // Physical! Address
     acpi::table* get_table(const char* signature);

@@ -1,10 +1,7 @@
 #include <Sigma/mm/hmm.h>
 
-IPaging* paging;
-
-void mm::hmm::init(IPaging& vmm){
-    paging = &vmm;
-    mm::slab::slab_init(vmm);
+void mm::hmm::init(){
+    mm::slab::slab_init();
 }
 
 void* mm::hmm::kmalloc(size_t size){

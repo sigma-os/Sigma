@@ -10,7 +10,7 @@ void x86_64::apic::lapic::write(uint32_t reg, uint32_t data){
     *val = data;
 }
 
-x86_64::apic::lapic::lapic(IPaging& paging){
+void x86_64::apic::lapic::init(){
     uint64_t apic_base_msr = msr::read(msr::apic_base);
 
     base = (apic_base_msr & 0xFFFFFFFFFFFFF000);
@@ -18,7 +18,7 @@ x86_64::apic::lapic::lapic(IPaging& paging){
     bitops<uint64_t>::bit_set(apic_base_msr, 11); // Set Enable bit
     msr::write(msr::apic_base, apic_base_msr);
 
-    paging.map_page(base, (base + KERNEL_VBASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_VBASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
 
     this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
 

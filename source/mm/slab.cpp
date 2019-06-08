@@ -1,7 +1,6 @@
 #include <Sigma/mm/slab.h>
 
 uint64_t slab_addr = 0xffffffffD0000000;
-IPaging* virtual_mem;
 
 mm::slab::slab* slab_list;
 
@@ -36,7 +35,7 @@ void mm::slab::slab::init(uint64_t size){
     this->next_slab = nullptr;    
     this->size = size;
 
-    virtual_mem->map_page(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()), slab_addr, map_page_flags_present | map_page_flags_writable);
+    mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()), slab_addr, map_page_flags_present | map_page_flags_writable);
 
     this->slab_start = slab_addr;
     slab_addr += mm::pmm::block_size;
@@ -80,9 +79,7 @@ bool mm::slab::slab::free(uint64_t location){
     return true;
 }
 
-void mm::slab::slab_init(IPaging& vmm){
-    virtual_mem = &vmm;
-
+void mm::slab::slab_init(){
     slab_list = nullptr;
 
     slab_metadata = alloc_slab_meta();

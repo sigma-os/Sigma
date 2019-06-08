@@ -7,7 +7,7 @@
 // Just using the SLAB allocator now, implement another type for array allocations
 namespace mm::hmm
 {
-    void init(IPaging& vmm);
+    void init();
     void* kmalloc(size_t size);
     void kfree(void* ptr);
 } // mm::hmm

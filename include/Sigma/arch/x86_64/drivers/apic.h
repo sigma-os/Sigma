@@ -2,13 +2,12 @@
 #define SIGMA_KERNEL_X86_64_APIC
 
 #include <Sigma/common.h>
-#include <Sigma/interfaces/interrupt_source.h>
+#include <Sigma/mm/vmm.h>
+
 #include <Sigma/interfaces/paging_manager.h>
 
 #include <Sigma/arch/x86_64/msr.h>
-
 #include <Sigma/arch/x86_64/misc/spinlock.h>
-
 #include <Sigma/arch/x86_64/drivers/pit.h>
 
 namespace x86_64::apic
@@ -112,7 +111,7 @@ namespace x86_64::apic
 
         void enable_timer(uint8_t vector, uint64_t hz, x86_64::apic::lapic_timer_modes mode);
 
-        explicit lapic(IPaging& paging);
+        void init();
 
         lapic() = default;
 

@@ -54,14 +54,14 @@ uint16_t acpi::get_arch_boot_flags(){
     return flags;
 }
 
-void acpi::init(multiboot& mbd, IPaging& paging){
-    paging.clone_paging_info(subsystem);
+void acpi::init(multiboot& mbd){
+    mm::vmm::kernel_vmm::get_instance().clone_info(subsystem);
 
     enter_subsystem();
 
     acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(mbd.get_rsdp());
 
-    paging.map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_VBASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+    subsystem.map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_VBASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
 
     uint8_t rsdp_checksum = 0;
     for(size_t i = 0; i > sizeof(acpi::rsdp); i++) rsdp_checksum += ((uint8_t*)rsdp)[i];

@@ -28,7 +28,6 @@
 
 #include <Sigma/types/linked_list.h>
 
-IPaging* bsp_paging = nullptr;
 
 auto cpu_list = types::linked_list<smp::cpu::entry>();
 
@@ -49,17 +48,13 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
-    x86_64::idt::register_generic_handlers();
-    
-    mm::vmm::manager<x86_64::paging::paging> vmm = mm::vmm::manager<x86_64::paging::paging>();
-
-    bsp_paging = &(vmm.get_paging_provider());
+    x86_64::idt::register_generic_handlers();    
 
     uint64_t virt_start = KERNEL_VBASE;
     uint64_t phys_start = 0x0;
-
+    
     for(uint32_t i = 0; i < (1024 * 16); i++){
-        vmm.map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
+        mm::vmm::kernel_vmm::get_instance().map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
 
         virt_start += 0x1000;
         phys_start += 0x1000;
@@ -80,23 +75,21 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
                 uint64_t virt = (shdr->sh_addr + j);
                 uint64_t phys = (virt - KERNEL_VBASE);
 
-                vmm.map_page(phys, virt, flags);
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, flags);
            }
         }
     }
 
-    vmm.set();
+    mm::vmm::kernel_vmm::get_instance().set();
 
-    mm::hmm::init(vmm.get_paging_provider());   
-
+    mm::hmm::init();   
 
     auto cpus = types::linked_list<smp::cpu_entry>();
     x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
     (void)(mp_spec);
 
-    
-
-    x86_64::apic::lapic l = x86_64::apic::lapic(vmm.get_paging_provider());
+    x86_64::apic::lapic l = x86_64::apic::lapic();
+    l.init();
 
     x86_64::pic::set_base_vector(32);
     x86_64::pic::disable();
@@ -110,7 +103,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 
-    acpi::init(mboot, *bsp_paging);
+    acpi::init(mboot);
 
     while(1);
     //asm("cli; hlt");
@@ -123,8 +116,7 @@ x86_64::spinlock::mutex ap_mutex = x86_64::spinlock::mutex();
 C_LINKAGE void smp_kernel_main(){
     x86_64::spinlock::acquire(&ap_mutex);
 
-    if(bsp_paging != nullptr) bsp_paging->set_paging_info();
-    else PANIC("Couldn't set AP paging directory because \'bsp_paging\' == nullptr");
+    mm::vmm::kernel_vmm::get_instance().set();
     
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
@@ -138,7 +130,8 @@ C_LINKAGE void smp_kernel_main(){
 
     auto* entry = cpu_list.empty_entry();
 
-    entry->lapic = x86_64::apic::lapic(*bsp_paging);
+    entry->lapic = x86_64::apic::lapic();
+    entry->lapic.init();
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 

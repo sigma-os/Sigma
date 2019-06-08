@@ -3,8 +3,8 @@
 
 #include <Sigma/common.h>
 
-#include <Sigma/interfaces/paging_manager.h>
 #include <Sigma/mm/pmm.h>
+#include <Sigma/mm/vmm.h>
 
 #include <Sigma/arch/x86_64/misc/spinlock.h>
 
@@ -29,7 +29,7 @@ namespace mm::slab
         x86_64::spinlock::mutex slab_mutex;
     };
 
-    void slab_init(IPaging& vmm);
+    void slab_init();
     void* slab_alloc(size_t size);
     void slab_free(void* ptr);
 } // mm::slab

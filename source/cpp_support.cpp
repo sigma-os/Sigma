@@ -15,24 +15,19 @@ extern "C" int __cxa_atexit(void (*func) (void *), void * arg, void * dso_handle
 }
 
 extern "C" int __cxxabiv1::__cxa_guard_acquire(__guard *g){
-    while(g != 0) asm("pause");
-    *g = 1;
-    return *g;
+    x86_64::spinlock::acquire(reinterpret_cast<x86_64::spinlock::mutex*>(g));
+    return *reinterpret_cast<int*>(g);
 }
 
 extern "C" void __cxxabiv1::__cxa_guard_release(__guard *g){
-    *g = 0;
+    x86_64::spinlock::release(reinterpret_cast<x86_64::spinlock::mutex*>(g));
 }
 
 extern "C" void __cxxabiv1::__cxa_guard_abort(__guard *g){
+    PANIC("__cxa_guard_abort was called\n");
     (void)(g);
     asm("cli; hlt");
 }
-
-inline void *operator new(size_t, void *p)     throw() { return p; }
-inline void *operator new[](size_t, void *p)   throw() { return p; }
-inline void  operator delete  (void *, void *) throw() { };
-inline void  operator delete[](void *, void *) throw() { };
 
 void* operator new(size_t size){
     return malloc(size);
