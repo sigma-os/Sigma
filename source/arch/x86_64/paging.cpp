@@ -1,5 +1,10 @@
 #include <Sigma/arch/x86_64/paging.h>
 
+static inline void flush_tlb_entry(uint64_t addr)
+{
+    asm("invlpg (%0)" ::"r"(addr));
+}
+
 static inline uint64_t pml4_index(uint64_t address){
     //return (address >> 27) & 0x1FF;
     return (address >> 39) & 0x1FF;
@@ -173,6 +178,8 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     set_frame(pt_entry, phys);
 
     (reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number]) = pt_entry;
+
+    flush_tlb_entry(virt);
 
     return true;
 }
