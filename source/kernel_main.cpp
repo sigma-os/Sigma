@@ -18,6 +18,8 @@
 #include <Sigma/arch/x86_64/drivers/mp.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/drivers/pic.h>
+#include <Sigma/arch/x86_64/misc/misc.h>
+
 
 #include <Sigma/multitasking/elf.h>
 
@@ -105,6 +107,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     entry->set_gs();
 
     acpi::init(mboot);
+
+    printf("%x", x86_64::read_tsc());
 
     while(1);
     //asm("cli; hlt");
