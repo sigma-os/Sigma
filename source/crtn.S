@@ -1,8 +1,8 @@
-.section .init
+.section .init_end
 	popq %rbp
 	ret
 
-.section .fini
+.section .fini_end
 	popq %rbp
 	ret
 	

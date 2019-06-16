@@ -11,6 +11,7 @@ const uint64_t map_page_flags_cache_disable = (1 << 4);
 
 class IPaging {
     public:
+        virtual ~IPaging() {}
         virtual void init() = 0;
         virtual void deinit() = 0;
 
@@ -26,7 +27,6 @@ class IPaging {
         virtual void clone_paging_info(IPaging& new_info) = 0;
 
     protected:
-        ~IPaging() { }
 };
 
 #endif

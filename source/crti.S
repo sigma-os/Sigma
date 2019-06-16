@@ -1,11 +1,11 @@
-.section .init
+.section .init_start
 .global _init
 .type _init, @function
 _init:
     push %rbp
     movq %rsp, %rbp
 
-.section .fini
+.section .fini_start
 .global _fini
 .type _fini, @function
 _fini:
