@@ -1,25 +1,10 @@
 project('Sigma OS', 'cpp', version: '0.1.0')
 
-deps = []
-
 conf_data = configuration_data()
 conf_data.set('version', meson.project_version())
 configure_file(input: 'include/Sigma/config.h.in', output: 'config.h', configuration: conf_data)
 
-crtbegin_obj_command = run_command(meson.get_compiler('cpp'), '-print-file-name=crtbegin.o')
-if crtbegin_obj_command.returncode() != 0
-    error('Could not find crtbegin.o')
-endif
-crtbegin_obj = crtbegin_obj_command.stdout().strip()
-
-crtend_obj_command = run_command(meson.get_compiler('cpp'), '-print-file-name=crtend.o')
-if crtend_obj_command.returncode() != 0
-    error('Could not find crtend.o')
-endif
-crtend_obj = crtend_obj_command.stdout().strip()
-
-crt_files = files(crtbegin_obj, 
-                  crtend_obj)
+deps = []
 
 main_sources = files(
     'source/acpi/acpi.cpp',
@@ -63,6 +48,21 @@ nasm_sources = files(
 nasm = find_program('nasm')
 nasm_gen = generator(nasm, output: '@BASENAME@.o', arguments: ['-f', 'elf64', '@INPUT@', '-o', '@OUTPUT@'])
 nasm_objects = nasm_gen.process(nasm_sources)
+
+crtbegin_obj_command = run_command(meson.get_compiler('cpp'), '-print-file-name=crtbegin.o')
+if crtbegin_obj_command.returncode() != 0
+    error('Could not find crtbegin.o')
+endif
+crtbegin_obj = crtbegin_obj_command.stdout().strip()
+
+crtend_obj_command = run_command(meson.get_compiler('cpp'), '-print-file-name=crtend.o')
+if crtend_obj_command.returncode() != 0
+    error('Could not find crtend.o')
+endif
+crtend_obj = crtend_obj_command.stdout().strip()
+
+crt_files = files(crtbegin_obj, 
+                  crtend_obj)
 
 extra_warning_flags = ['-Wreorder']
 
