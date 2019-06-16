@@ -36,7 +36,7 @@ namespace x86_64::paging
     constexpr uint64_t page_entry_dirty = 6;
     constexpr uint64_t page_entry_huge = 7;
     constexpr uint64_t page_entry_global = 8;
-    constexpr uint64_t page_entry_no_exectute = 63;
+    constexpr uint64_t page_entry_no_execute = 63;
 
     class paging : public virtual IPaging {
         public:

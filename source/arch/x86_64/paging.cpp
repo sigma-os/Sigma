@@ -113,8 +113,9 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_present);
         if(flags & map_page_flags_cache_disable) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_cache_disable);
         if(flags & map_page_flags_user) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_user);
-        if(flags & map_page_flags_no_execute) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_no_exectute);
+        if(flags & map_page_flags_no_execute) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_no_execute);
         if(flags & map_page_flags_writable) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_writeable);
+        if(flags & map_page_flags_global) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_global);
     } else {
         return true; // Not present so no reason to map
     }

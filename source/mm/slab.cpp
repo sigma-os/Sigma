@@ -35,7 +35,7 @@ void mm::slab::slab::init(uint64_t size){
     this->next_slab = nullptr;    
     this->size = size;
 
-    mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()), slab_addr, map_page_flags_present | map_page_flags_writable);
+    mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()), slab_addr, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute | map_page_flags_global);
 
     this->slab_start = slab_addr;
     slab_addr += mm::pmm::block_size;

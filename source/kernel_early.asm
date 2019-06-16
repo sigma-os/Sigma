@@ -94,6 +94,19 @@ initialize_cr0:
 
     ret
  
+initialize_cr4:
+    xor rax, rax
+    mov eax, 1
+    cpuid
+    bt edx, 13
+    jnc .no_pge
+
+    mov rax, cr4
+    bts rax, 7 ; Set Page Global Enable
+    mov cr4, rax
+
+.no_pge:
+    ret
 
 _kernel_early:
 
@@ -106,6 +119,7 @@ _kernel_early:
     call initialize_avx
     call initialize_efer
     call initialize_cr0
+    call initialize_cr4
 
     extern _init
     call _init
