@@ -14,10 +14,14 @@ namespace x86_64::cmos
 
     constexpr uint8_t reg_reset_code_jump = 0xA;
 
+    constexpr uint8_t reg_seconds = 0x00;
+
 
 
     uint8_t read(uint8_t reg);
     void write(uint8_t reg, uint8_t val);
+
+    void sleep_second();
 } // x86_64::cmos
 
 

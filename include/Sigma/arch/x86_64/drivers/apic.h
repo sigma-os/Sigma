@@ -4,11 +4,9 @@
 #include <Sigma/common.h>
 #include <Sigma/mm/vmm.h>
 
-#include <Sigma/interfaces/paging_manager.h>
-
 #include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
-#include <Sigma/arch/x86_64/drivers/pit.h>
+#include <Sigma/arch/x86_64/drivers/cmos.h>
 
 namespace x86_64::apic
 {
@@ -109,17 +107,18 @@ namespace x86_64::apic
         void send_ipi(uint8_t target_lapic_id, uint32_t flags);
         void send_eoi();
 
-        void enable_timer(uint8_t vector, uint64_t hz, x86_64::apic::lapic_timer_modes mode);
+        void enable_timer(uint8_t vector, uint64_t ms, x86_64::apic::lapic_timer_modes mode);
 
         void init();
 
-        lapic() = default;
+        lapic(): timer_ticks_per_ms(0) {};
 
         private:
         uint64_t base;
         uint8_t id;
         uint8_t version;
         uint8_t max_lvt_entries;
+        uint64_t timer_ticks_per_ms;
 
         uint32_t read(uint32_t reg);
         void write(uint32_t reg, uint32_t val);

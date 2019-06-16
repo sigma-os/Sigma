@@ -49,27 +49,31 @@ void x86_64::apic::lapic::send_eoi(){
 
 auto timer_mutex = x86_64::spinlock::mutex();
 
-void x86_64::apic::lapic::enable_timer(uint8_t vector, uint64_t hz, x86_64::apic::lapic_timer_modes mode){    
+void x86_64::apic::lapic::enable_timer(uint8_t vector, uint64_t ms, x86_64::apic::lapic_timer_modes mode){  
     x86_64::spinlock::acquire(&timer_mutex);
+    uint32_t ticks_per_second;
 
-    x86_64::pit::setup_sleep(hz);
+    if(this->timer_ticks_per_ms != 0) goto finalize;
 
     this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
-    this->write(x86_64::apic::lapic_timer_initial_count, 0xFFFFFFFF);
 
+    x86_64::cmos::sleep_second(); // Align sleep time
+
+    this->write(x86_64::apic::lapic_timer_initial_count, 0xFFFFFFFF);
     this->set_timer_mask(false);
 
-    // sleep for hz
-
-    x86_64::pit::msleep_poll();
-
+    x86_64::cmos::sleep_second(); // Time 1 second
 
     this->set_timer_mask(true);
 
-    uint32_t ticks = 0xFFFFFFFF - this->read(x86_64::apic::lapic_timer_current_count);
+    ticks_per_second = 0xFFFFFFFF - this->read(x86_64::apic::lapic_timer_current_count);
+    this->timer_ticks_per_ms = ticks_per_second / 1000; // Seconds to milliseconds
+
+finalize:
+    this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
     this->set_timer_mode(mode);
     this->set_timer_vector(vector);
-    this->write(x86_64::apic::lapic_timer_initial_count, ticks);
+    this->write(x86_64::apic::lapic_timer_initial_count, this->timer_ticks_per_ms * ms);
 
     this->set_timer_mask(false);
 
