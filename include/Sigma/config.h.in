@@ -1,0 +1,7 @@
+
+#ifndef SIGMA_CONFIG
+#define SIGMA_CONFIG
+
+#define VERSION_STR "@version@"
+
+#endif

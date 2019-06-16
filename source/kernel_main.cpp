@@ -28,6 +28,7 @@
 
 #include <Sigma/types/linked_list.h>
 
+#include <config.h>
 
 auto cpu_list = types::linked_list<smp::cpu::entry>();
 
@@ -35,7 +36,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     FUNCTION_CALL_ONCE();
 
     multiboot mboot = multiboot(multiboot_information, magic);
-    printf("Booting Sigma, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", mboot.get_memsize_mb());
+    printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, mboot.get_memsize_mb());
 
     mm::pmm::init(mboot);
 

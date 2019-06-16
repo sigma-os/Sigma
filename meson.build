@@ -2,6 +2,10 @@ project('Sigma OS', 'cpp', version: '0.1.0')
 
 deps = []
 
+conf_data = configuration_data()
+conf_data.set('version', meson.project_version())
+configure_file(input: 'include/Sigma/config.h.in', output: 'config.h', configuration: conf_data)
+
 crtbegin_obj_command = run_command(meson.get_compiler('cpp'), '-print-file-name=crtbegin.o')
 if crtbegin_obj_command.returncode() != 0
     error('Could not find crtbegin.o')
