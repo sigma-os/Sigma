@@ -174,7 +174,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     auto pt_addr = (get_frame(pd_entry) + KERNEL_VBASE);
 
     uint64_t pt_entry = entry_flags;
-    if(flags & map_page_flags_global) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_global);
+    if(flags & map_page_flags_global) bitops<uint64_t>::bit_set(pt_entry, x86_64::paging::page_entry_global);
 
     set_frame(pt_entry, phys);
 
