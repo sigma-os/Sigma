@@ -85,30 +85,27 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::vmm::kernel_vmm::get_instance().set();
 
-    mm::hmm::init();   
+    mm::hmm::init(); 
+
+    acpi::init(mboot);
+
+    x86_64::pic::set_base_vector(32);
+    x86_64::pic::disable(); 
+
+    x86_64::apic::lapic l = x86_64::apic::lapic();
+    l.init(); 
+
+    auto* entry = cpu_list.empty_entry();
+    entry->lapic = l;
+    entry->lapic_id = entry->lapic.get_id();
+    entry->set_gs();
 
     auto cpus = types::linked_list<smp::cpu_entry>();
     x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
     (void)(mp_spec);
 
-    x86_64::apic::lapic l = x86_64::apic::lapic();
-    l.init();
-
-    x86_64::pic::set_base_vector(32);
-    x86_64::pic::disable();
-
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
-
-    auto* entry = cpu_list.empty_entry();
-
-    entry->lapic = l;
-    entry->lapic_id = entry->lapic.get_id();
-    entry->set_gs();
-
-    acpi::init(mboot);
-
-    printf("%x", x86_64::read_tsc());
 
     while(1);
     //asm("cli; hlt");

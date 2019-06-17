@@ -15,6 +15,8 @@ inline void  operator delete[](void *, void *) throw() { };
 
 #define DEBUG
 
+
+#define KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE 0xffffe00000000000
 #define KERNEL_VBASE 0xffffffff80000000
 #define KERNEL_PBASE 0x0000000000100000
 
