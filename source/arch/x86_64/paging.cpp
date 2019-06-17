@@ -2,7 +2,7 @@
 
 static inline void flush_tlb_entry(uint64_t addr)
 {
-    asm("invlpg (%0)" ::"r"(addr));
+    asm volatile("invlpg (%0)" ::"r" (addr) : "memory");
 }
 
 static inline uint64_t pml4_index(uint64_t address){
@@ -220,17 +220,19 @@ static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
 
         uint64_t pd_entry_flags = get_flags(old_pd_entry);
 
-        if(bitops<uint64_t>::bit_test(pd_entry_flags, x86_64::paging::page_entry_present) && !bitops<uint64_t>::bit_test(pd_entry_flags, x86_64::paging::page_entry_huge)){
-            // Present and not huge, copy PT
-            uint64_t pd = reinterpret_cast<uint64_t>(clone_pt(reinterpret_cast<x86_64::paging::pt*>(get_frame(old_pd_entry) + KERNEL_VBASE)));
+        if(bitops<uint64_t>::bit_test(pd_entry_flags, x86_64::paging::page_entry_present)){
+            if(!bitops<uint64_t>::bit_test(pd_entry_flags, x86_64::paging::page_entry_huge)){
+                // Present and not huge, copy PT
+                uint64_t pd = reinterpret_cast<uint64_t>(clone_pt(reinterpret_cast<x86_64::paging::pt*>(get_frame(old_pd_entry) + KERNEL_VBASE)));
 
-            uint64_t new_entry = 0;
-            set_frame(new_entry, pd);
-            set_flags(new_entry, get_flags(old_pd_entry));
+                uint64_t new_entry = 0;
+                set_frame(new_entry, pd);
+                set_flags(new_entry, get_flags(old_pd_entry));
 
-            new_info_pd->entries[i] = new_entry;
-        } else {
-            new_info_pd->entries[i] = old_pd_entry; // Just copy the (unused) / huge flags and page over
+                new_info_pd->entries[i] = new_entry;
+            } else {
+                new_info_pd->entries[i] = old_pd_entry; // Just copy the (unused) / huge flags and page over
+            }
         }
 
     }
@@ -247,20 +249,20 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
         uint64_t old_pdpt_entry = pdpt->entries[i];
 
         uint64_t pdpt_entry_flags = get_flags(old_pdpt_entry);
+        if(bitops<uint64_t>::bit_test(pdpt_entry_flags, x86_64::paging::page_entry_present)){
+            if(!bitops<uint64_t>::bit_test(pdpt_entry_flags, x86_64::paging::page_entry_huge)){
+                // Present and not huge, copy PD
+                uint64_t pd = reinterpret_cast<uint64_t>(clone_pd(reinterpret_cast<x86_64::paging::pd*>(get_frame(old_pdpt_entry) + KERNEL_VBASE)));
 
-        if(bitops<uint64_t>::bit_test(pdpt_entry_flags, x86_64::paging::page_entry_present) && !bitops<uint64_t>::bit_test(pdpt_entry_flags, x86_64::paging::page_entry_huge)){
-            // Present and not huge, copy PD
-            uint64_t pd = reinterpret_cast<uint64_t>(clone_pd(reinterpret_cast<x86_64::paging::pd*>(get_frame(old_pdpt_entry) + KERNEL_VBASE)));
+                uint64_t new_entry = 0;
+                set_frame(new_entry, pd);
+                set_flags(new_entry, get_flags(old_pdpt_entry));
 
-            uint64_t new_entry = 0;
-            set_frame(new_entry, pd);
-            set_flags(new_entry, get_flags(old_pdpt_entry));
-
-            new_info_pdpt->entries[i] = new_entry;
-        } else {
-            new_info_pdpt->entries[i] = old_pdpt_entry; // Just copy the (unused) / huge flags and page over
+                new_info_pdpt->entries[i] = new_entry;
+            } else {
+                new_info_pdpt->entries[i] = old_pdpt_entry; // Just copy the (unused) / huge flags and page over
+            }
         }
-
     }
 
     return reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(new_info_pdpt) - KERNEL_VBASE);
@@ -277,18 +279,21 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
         uint64_t old_pml4_entry = this->paging_info->entries[i];
 
         uint64_t pml4_entry_flags = get_flags(old_pml4_entry);
+        if(bitops<uint64_t>::bit_test(pml4_entry_flags, x86_64::paging::page_entry_present)){
+            if(!bitops<uint64_t>::bit_test(pml4_entry_flags, x86_64::paging::page_entry_huge)){
+                // Present and not huge, copy PDPT
+                uint64_t pdpt = reinterpret_cast<uint64_t>(clone_pdpt(reinterpret_cast<x86_64::paging::pdpt*>(get_frame(old_pml4_entry) + KERNEL_VBASE)));
 
-        if(bitops<uint64_t>::bit_test(pml4_entry_flags, x86_64::paging::page_entry_present) && !bitops<uint64_t>::bit_test(pml4_entry_flags, x86_64::paging::page_entry_huge)){
-            // Present and not huge, copy PDPT
-            uint64_t pdpt = reinterpret_cast<uint64_t>(clone_pdpt(reinterpret_cast<x86_64::paging::pdpt*>(get_frame(old_pml4_entry) + KERNEL_VBASE)));
+                uint64_t new_entry = 0;
+                set_frame(new_entry, pdpt);
+                set_flags(new_entry, get_flags(old_pml4_entry));
 
-            uint64_t new_entry = 0;
-            set_frame(new_entry, pdpt);
-            set_flags(new_entry, get_flags(old_pml4_entry));
+                new_info_pml4->entries[i] = new_entry;
+            } else {
+                printf("[PAGING]: Illegal Huge Flag in PML4 entry\n");
+                new_info_pml4->entries[i] = old_pml4_entry; // Just copy the huge flags and page over
+            }
+        } // Don't do anything with non-present entries, swapping is not implemented yet
 
-            new_info_pml4->entries[i] = new_entry;
-        } else {
-            new_info_pml4->entries[i] = old_pml4_entry; // Just copy the (unused) / huge flags and page over
-        }
     }
 }
