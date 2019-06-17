@@ -2,7 +2,7 @@
 
 auto acpi_tables = types::linked_list<uint64_t>();
 
-x86_64::paging::paging* previous_subsystem;
+x86_64::paging::pml4* previous_subsystem;
 auto subsystem = x86_64::paging::paging();
 
 static void enter_subsystem(){
@@ -55,6 +55,7 @@ uint16_t acpi::get_arch_boot_flags(){
 }
 
 void acpi::init(multiboot& mbd){
+    FUNCTION_CALL_ONCE();
     mm::vmm::kernel_vmm::get_instance().clone_info(subsystem);
 
     enter_subsystem();
@@ -64,7 +65,7 @@ void acpi::init(multiboot& mbd){
     subsystem.map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_VBASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
 
     uint8_t rsdp_checksum = 0;
-    for(size_t i = 0; i > sizeof(acpi::rsdp); i++) rsdp_checksum += ((uint8_t*)rsdp)[i];
+    for(size_t i = 0; i < sizeof(acpi::rsdp); i++) rsdp_checksum += ((uint8_t*)rsdp)[i];
 
     if(rsdp_checksum != 0){
         printf("[ACPI]: Failed RSDP checksum\n");
@@ -77,7 +78,7 @@ void acpi::init(multiboot& mbd){
         acpi::xsdp* xsdp = reinterpret_cast<acpi::xsdp*>(rsdp);
 
         uint8_t xsdp_checksum = 0;
-        for(size_t i = 0; i > sizeof(acpi::xsdp); i++) xsdp_checksum += ((uint8_t*)xsdp)[i];
+        for(size_t i = 0; i < sizeof(acpi::xsdp); i++) xsdp_checksum += ((uint8_t*)xsdp)[i];
 
         if(xsdp_checksum != 0){
             printf("[ACPI]: Failed XSDP checksum\n");

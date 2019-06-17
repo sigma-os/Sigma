@@ -60,8 +60,8 @@ namespace x86_64::paging
             pml4* paging_info; 
     };
 
-    x86_64::paging::paging* get_current_info();
-    void set_current_info(x86_64::paging::paging* info);
+    x86_64::paging::pml4* get_current_info();
+    void set_current_info(x86_64::paging::pml4* info);
 
 
 } // x86_64::paging
