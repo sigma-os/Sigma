@@ -86,6 +86,9 @@ void acpi::init(multiboot& mbd){
 
             if(reinterpret_cast<uint64_t*>(xsdt->tables[i]) == nullptr) continue;
 
+            uint64_t page_addr = xsdt->tables[i] & 0xFFFFFFFFFFFFF000;
+            mm::vmm::kernel_vmm::get_instance().map_page((page_addr + 0x1000), ((page_addr + 0x1000) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+
             mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
 
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);

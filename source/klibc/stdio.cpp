@@ -117,7 +117,7 @@ int printf(const char* format, ...){
             written += len;
         } else if(*format == 'x'){
             format++;
-            int item = va_arg(parameters, int);
+            uint64_t item = va_arg(parameters, uint64_t);
 
             char str[32] = "";
             //str[0] = '0';
@@ -268,7 +268,7 @@ int debug_printf(const char* format, ...){
             written += len;
         } else if(*format == 'x'){
             format++;
-            int item = va_arg(parameters, int);
+            uint64_t item = va_arg(parameters, uint64_t);
 
             char str[32] = "";
             //str[0] = '0';
