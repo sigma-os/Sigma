@@ -47,6 +47,8 @@ namespace x86_64::paging
 
             bool map_page(uint64_t phys, uint64_t virt, uint64_t flags);
 
+            uint64_t get_phys(uint64_t virt);
+
             void set_paging_info();
 
             void clone_paging_info(IPaging& new_info);

@@ -78,6 +78,8 @@ namespace acpi
     constexpr uint8_t generic_address_structure_access_size_word = 2; // 2 bytes
     constexpr uint8_t generic_address_structure_access_size_dword = 3; // 4 bytes
     constexpr uint8_t generic_address_structure_access_size_qword = 4; // 8 bytes
+
+    constexpr const char* dsdt_signature = "DSDT";
 } // namespace acpi
 
 

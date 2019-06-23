@@ -39,6 +39,10 @@ class multiboot {
         return total_size;
     }
 
+    uint64_t get_mbd_ptr(){
+        return reinterpret_cast<uint64_t>(this->mbd);
+    }
+
     uint64_t* get_elf_sections(){
         return this->elf_sections;
     }

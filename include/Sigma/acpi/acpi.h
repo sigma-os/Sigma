@@ -20,6 +20,7 @@ namespace acpi
 
     // Physical! Address
     acpi::table* get_table(const char* signature);
+    acpi::table* get_table(const char* signature, uint64_t index);
 
     uint16_t get_arch_boot_flags();
 } // namespace acpi

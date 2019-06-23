@@ -1,13 +1,18 @@
 #include <Sigma/mm/hmm.h>
 
 void mm::hmm::init(){
-    mm::slab::slab_init();
+    alloc::init();
+    return;
 }
 
 void* mm::hmm::kmalloc(size_t size){
-    return mm::slab::slab_alloc(size);
+    return alloc::alloc(size);
 }
 
 void mm::hmm::kfree(void* ptr){
-    mm::slab::slab_free(ptr);
+    alloc::free(ptr);
+}
+
+void* mm::hmm::realloc(void* ptr, size_t size){
+   return alloc::realloc(ptr, size);
 }

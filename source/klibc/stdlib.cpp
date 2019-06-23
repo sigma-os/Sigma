@@ -66,6 +66,10 @@ void *malloc(size_t size){
     return mm::hmm::kmalloc(size);
 }
 
+void *realloc(void* ptr, size_t size){
+    return mm::hmm::realloc(ptr, size);
+}
+
 void free(void* ptr){
     mm::hmm::kfree(ptr);
 }

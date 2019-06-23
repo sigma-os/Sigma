@@ -87,7 +87,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     mm::hmm::init(); 
 
-    acpi::init(mboot);
+
+
 
     x86_64::pic::set_base_vector(32);
     x86_64::pic::disable(); 
@@ -106,6 +107,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
+
+    acpi::init(mboot);
 
     while(1);
     //asm("cli; hlt");

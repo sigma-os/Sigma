@@ -1,5 +1,8 @@
 #include <Sigma/acpi/acpi.h>
 
+extern "C" {
+#include <lai/core.h>
+}
 
 
 auto acpi_tables = types::linked_list<uint64_t>();
@@ -12,12 +15,60 @@ static bool do_checksum(acpi::sdt_header* header){
     return (sum == 0) ? (true) : (false);
 }
 
-acpi::table* acpi::get_table(const char* signature){
+acpi::table* acpi::get_table(const char* signature, uint64_t index){
+    if(signature == acpi::dsdt_signature){
+        acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
+        uint64_t dsdt_phys_addr = 0;
+
+        if(IS_CANONICAL(fadt->x_dsdt)) dsdt_phys_addr = fadt->x_dsdt;
+        else dsdt_phys_addr = fadt->dsdt;
+
+        uint64_t dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+
+        mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr, map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+        for (size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++){
+            mm::vmm::kernel_vmm::get_instance().map_page((dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+        }
+
+        return reinterpret_cast<acpi::table*>(dsdt_addr);
+    }
+
+    uint64_t curr = 0;
     for(auto table : acpi_tables){
         acpi::sdt_header* header = reinterpret_cast<acpi::sdt_header*>(table);
 
         if((signature[0] == header->signature[0]) && (signature[1] == header->signature[1]) && (signature[2] == header->signature[2]) && (signature[3] == header->signature[3])){
-            return reinterpret_cast<acpi::table*>(reinterpret_cast<uint64_t>(header) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+            if(curr != index) curr++;
+            else return reinterpret_cast<acpi::table*>(header);
+        }
+    }
+
+    debug_printf("[ACPI]: Couldn't find table %c%c%c%c, index: %d\n", signature[0], signature[1], signature[2], signature[3], index);
+    return nullptr;
+}
+
+acpi::table* acpi::get_table(const char* signature){
+    if(signature == acpi::dsdt_signature){
+        acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
+        uint64_t dsdt_phys_addr = 0;
+
+        if(fadt->x_dsdt != 0) dsdt_phys_addr = fadt->x_dsdt;
+        else dsdt_phys_addr = fadt->dsdt;
+
+        uint64_t dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+
+        mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr, map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+        for (size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++){
+            mm::vmm::kernel_vmm::get_instance().map_page((dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+        }
+
+        return reinterpret_cast<acpi::table*>(dsdt_addr);
+    }
+    for(auto table : acpi_tables){
+        acpi::sdt_header* header = reinterpret_cast<acpi::sdt_header*>(table);
+
+        if((signature[0] == header->signature[0]) && (signature[1] == header->signature[1]) && (signature[2] == header->signature[2]) && (signature[3] == header->signature[3])){
+            return reinterpret_cast<acpi::table*>(header);
         }
     }
 
@@ -124,7 +175,6 @@ void acpi::init(multiboot& mbd){
             mm::vmm::kernel_vmm::get_instance().map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
             auto* h = reinterpret_cast<acpi::sdt_header*>(rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
             if(do_checksum(h)){
-                //debug_printf("[ACPI]: Found table: %c%c%c%c\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3]);
                 debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id:%c%c%c%c%c%c, Revision: %d\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision);
 
                 acpi_tables.push_back(reinterpret_cast<uint64_t>(h));
@@ -133,5 +183,6 @@ void acpi::init(multiboot& mbd){
         }
 
     }
-
+    //lai_enable_tracing(1);
+    lai_create_namespace();
 }

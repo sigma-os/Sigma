@@ -36,6 +36,10 @@ namespace mm::vmm
                 return *(this->current_info);
             }
 
+            uint64_t phys_to_virt(uint64_t virt){
+                return this->current_info->get_phys(virt);
+            }
+
             
 
         private:

@@ -298,3 +298,35 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
 
     }
 }
+
+uint64_t x86_64::paging::paging::get_phys(uint64_t virt){
+    uint64_t pml4_index_number = pml4_index(virt);
+    uint64_t pdpt_index_number = pdpt_index(virt);
+    uint64_t pd_index_number = pd_index(virt);
+    uint64_t pt_index_number = pt_index(virt);
+
+    uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
+
+    if(!bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
+        return 0;
+    }   
+
+    x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(this->paging_info->entries[pml4_index_number] + KERNEL_VBASE);
+    uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
+    if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
+        return 0;
+    }   
+
+    x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(pdpt->entries[pdpt_index_number] + KERNEL_VBASE);
+    uint64_t pd_entry = pd->entries[pd_index_number];
+    if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
+        return 0;
+    }   
+    x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(pd->entries[pt_index_number] + KERNEL_VBASE);
+    uint64_t pt_entry = pt->entries[pt_index_number];
+    if(!bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present)){
+        return 0;
+    }   
+
+    return get_frame(pt_entry);
+}

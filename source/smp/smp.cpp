@@ -51,7 +51,7 @@ void smp::multiprocessing::boot_cpu(cpu_entry& e){
     uint64_t off = (((uint64_t)&smp::trampoline_stack) - ((uint64_t)&smp::trampoline_start));
     uint64_t* trampoline_stack_addr = (uint64_t*)((smp::smp_trampoline_base + off) + KERNEL_VBASE);
 
-    void* cpu_stack = mm::pmm::alloc_n_blocks(4); // 16kb
+    void* cpu_stack = mm::pmm::alloc_block(); // 4kb stack
 
     *trampoline_stack_addr = (reinterpret_cast<uint64_t>(cpu_stack) + (0x1000 * 4) + KERNEL_VBASE);
 
@@ -69,7 +69,7 @@ void smp::multiprocessing::boot_cpu(cpu_entry& e){
         debug_printf("[SMP]: Booted CPU with lapic_id: %d, stack: %x\n", e.lapic_id, *trampoline_stack_addr);
     } else {
         debug_printf("[SMP]: Failed to boot CPU with lapic_id: %d\n", e.lapic_id);
-        mm::pmm::free_blocks(cpu_stack, 4);
+        mm::pmm::free_block(cpu_stack);
     }
 
     

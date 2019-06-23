@@ -20,6 +20,8 @@ class IPaging {
 
         virtual uint64_t get_paging_info() = 0;
 
+        virtual uint64_t get_phys(uint64_t virt) = 0;
+
         virtual bool map_page(uint64_t phys, uint64_t virt, uint64_t flags) = 0;
 
         // Update the paging in the hardware, on x86_64 load cr3

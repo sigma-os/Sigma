@@ -26,11 +26,24 @@ int memcmp(const void* s1, const void* s2, size_t n){
     return 0;
 }
 
-void* memcpy(void* dest, void* src, size_t n){
+void* memcpy(void* dest, const void* src, size_t n){
     uint8_t* destination = (uint8_t*)dest;
     uint8_t* source = (uint8_t*)src;
 
     for(size_t i = 0; i < n; i++) destination[i] = source[i];
 
     return dest;
+}
+
+void* memmove(void* dstptr, const void* srcptr, size_t size) {
+	unsigned char* dst = (unsigned char*) dstptr;
+	const unsigned char* src = (const unsigned char*) srcptr;
+	if (dst < src) {
+		for (size_t i = 0; i < size; i++)
+			dst[i] = src[i];
+	} else {
+		for (size_t i = size; i != 0; i--)
+			dst[i-1] = src[i-1];
+	}
+	return dstptr;
 }

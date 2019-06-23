@@ -13,6 +13,7 @@ __attribute__((__noreturn__)) void abort(void);
 void htoa(int64_t n, char* str);
 
 void *malloc(size_t size);
+void *realloc(void* ptr, size_t size);
 void free(void* ptr);
 
 

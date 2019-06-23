@@ -36,4 +36,9 @@ inline void  operator delete[](void *, void *) throw() { };
 #define ARCH_X86_64 // get the possibility of multiple platforms working
 //#define ARCH_ARM
 
+#define ALIGN_DOWN(val, align) (((uint64_t)(val)) & ~((align) - 1))
+#define ALIGN_UP(val, align) (ALIGN_DOWN((((uint64_t)(val)) + (align) - 1), (align)))
+
+#define IS_CANONICAL(addr) ((((addr) <= 0x00007fffffffffff)) || (((addr) >= 0xffff800000000000) && ((addr) <= 0xffffffffffffffff)))
+
 #endif

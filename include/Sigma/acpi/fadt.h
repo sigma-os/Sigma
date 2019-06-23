@@ -53,8 +53,8 @@ namespace acpi
         uint8_t reset_value;
         uint16_t arm_boot_arch;
         uint8_t minor_version;
-        acpi::generic_address_structure x_firmware_ctrl;
-        acpi::generic_address_structure x_dsdt;
+        uint64_t x_firmware_ctrl;
+        uint64_t x_dsdt;
         acpi::generic_address_structure x_pm1a_evt_blk;
         acpi::generic_address_structure x_pm1b_evt_blk;
         acpi::generic_address_structure x_pm1a_cnt_blk;
