@@ -8,6 +8,14 @@
 #include <Sigma/arch/x86_64/misc/spinlock.h>
 #include <Sigma/arch/x86_64/drivers/cmos.h>
 
+#include <Sigma/types/linked_list.h>
+
+namespace acpi
+{   
+    class madt;
+} // namespace acpi
+
+
 namespace x86_64::apic
 {
     constexpr uint64_t lapic_id = 0x20;
@@ -127,7 +135,58 @@ namespace x86_64::apic
         void set_timer_vector(uint8_t vector);
         void set_timer_mask(bool state);
     };
-} // x86_64::apic
 
+    constexpr uint8_t ioapic_register_select = 0x0;
+    constexpr uint8_t ioapic_register_data = 0x10;
+
+    constexpr uint32_t ioapic_id = 0;
+    constexpr uint32_t ioapic_ver = 1;
+    constexpr uint32_t ioapic_arb = 2;
+
+    constexpr uint32_t ioapic_redirection_table = 0x10;
+
+    enum class ioapic_delivery_modes { 
+        FIXED = 0b000,
+        LOW_PRIORITY = 0b001,
+        SMI = 0b010,
+        NMI = 0b100,
+        INIT = 0b101,
+        EXTINT = 0b111
+    };
+
+    enum class ioapic_destination_modes { 
+        PHYSICAL = 0,
+        LOGICAL = 1
+    };
+
+    struct interrupt_override {
+        uint8_t source;
+        uint32_t gsi;
+        uint8_t polarity;
+        uint8_t trigger_mode;
+    };
+
+    class ioapic {
+        public:
+        uint8_t get_id(){
+            return id;
+        }
+        uint8_t get_version(){
+            return version;
+        }
+        ioapic() = default;
+        void init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos);
+        void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
+
+        private:
+        uint8_t id;
+        uint8_t max_redirection_entries;
+        uint8_t version;
+        uint64_t base;
+        uint32_t read(uint32_t reg);
+        void write(uint32_t reg, uint32_t value);
+        void set_entry(uint8_t index, uint64_t data);
+    };
+} // x86_64::apic
 
 #endif

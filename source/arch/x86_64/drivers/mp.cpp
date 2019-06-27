@@ -1,6 +1,7 @@
 #include <Sigma/arch/x86_64/drivers/mp.h>
 
-x86_64::mp::mp::mp(types::linked_list<smp::cpu_entry>& cpus){
+void x86_64::mp::mp::init(types::linked_list<smp::cpu_entry>& cpus, types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics, types::linked_list<x86_64::apic::interrupt_override>& interrupt_overrides){
+    this->pic = true;
     x86_64::mp::floating_pointer_table* pointer = this->find_pointer();
     if(pointer == nullptr){
         debug_printf("[MP]: Couldn't find floating pointer, add last kilobyte support\n");
@@ -41,7 +42,7 @@ x86_64::mp::mp::mp(types::linked_list<smp::cpu_entry>& cpus){
 
         debug_printf("[MP]: Found Table OEM ID: %s, Product ID: %s\n", oem, product);
 
-        this->parse(cpus);
+        this->parse(cpus, ioapics, interrupt_overrides);
     } else {
         debug_printf("[MP]: Default Configuration: %d", pointer->mp_feature_byte1);
     }
@@ -109,7 +110,7 @@ x86_64::mp::floating_pointer_table* x86_64::mp::mp::find_pointer(){
     return nullptr;
 }
 
-void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
+void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus, types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics, types::linked_list<x86_64::apic::interrupt_override>& interrupt_overrides){
     x86_64::mp::configuration_table_header* table_header = reinterpret_cast<x86_64::mp::configuration_table_header*>(this->table);
 
     bool parse_extended_table = false;
@@ -146,11 +147,11 @@ void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
                 break;
 
             case x86_64::mp::configuration_table_entry_type_ioapic:
-                this->parse_ioapic(reinterpret_cast<uint64_t>(entry));
+                this->parse_ioapic(reinterpret_cast<uint64_t>(entry), ioapics);
                 break;
             
             case x86_64::mp::configuration_table_entry_type_io_interrupt_assignment:
-                this->parse_io_interrupt_entry(reinterpret_cast<uint64_t>(entry));
+                this->parse_io_interrupt_entry(reinterpret_cast<uint64_t>(entry), interrupt_overrides);
                 break;
 
             case x86_64::mp::configuration_table_entry_type_local_interrupt_assignment:
@@ -196,11 +197,20 @@ void x86_64::mp::mp::parse(types::linked_list<smp::cpu_entry>& cpus){
     }
 }
 
+uint8_t isa_bus_id;
+
 void x86_64::mp::mp::parse_bus(uint64_t pointer){
     auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_bus*>(pointer);
     
     const char bus_name[7] = "";
     memcpy((void*)&bus_name, (void*)&entry->bus_type_string, 6);
+
+    {
+        const char isa_name[7] = "ISA   ";
+        if(memcpy(reinterpret_cast<void*>(const_cast<char*>(isa_name)), reinterpret_cast<void*>(const_cast<char*>(bus_name)), 6)){
+            isa_bus_id = entry->bus_id;
+        }
+    };
 
     debug_printf("[MP]: Bus Entry: Bus name: %s, Bus ID: %d\n", bus_name, entry->bus_id);
 }
@@ -229,16 +239,20 @@ void x86_64::mp::mp::parse_cpu(uint64_t pointer, types::linked_list<smp::cpu_ent
  
 }
 
-void x86_64::mp::mp::parse_ioapic(uint64_t pointer){
+void x86_64::mp::mp::parse_ioapic(uint64_t pointer, types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics){
     auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_ioapic*>(pointer);
-
     debug_printf("[MP]: I/O APIC Entry: I/O APIC ID: %x, I/O APIC Version: %d, I/O APIC BASE %x", entry->ioapic_id, entry->ioapic_version, entry->ioapic_base_addr);
 
     if(!bitops<uint8_t>::bit_test(&(entry->ioapic_flags), 0)) debug_printf(", I/O APIC is Unusable");
     debug_printf("\n");
+
+    if(bitops<uint8_t>::bit_test(&(entry->ioapic_flags), 0)){
+        // If usable
+        ioapics.push_back({entry->ioapic_base_addr, 0});
+    }
 }
 
-void x86_64::mp::mp::parse_io_interrupt_entry(uint64_t pointer){
+void x86_64::mp::mp::parse_io_interrupt_entry(uint64_t pointer, types::linked_list<x86_64::apic::interrupt_override>& interrupt_overrides){
     auto* entry = reinterpret_cast<x86_64::mp::configuration_table_entry_io_interrupt_assignment*>(pointer);
 
     debug_printf("[MP]: I/O Interrupt Asignment: Destinantion I/O APIC ID: %x, Destinantion I/O APIC INTIN#: %x, Source Bus ID: %x, Source Bus IRQ: %d", entry->destination_ioapic_id, entry->destination_ioapic_intin, entry->source_bus_id, entry->source_bus_irq);
@@ -260,6 +274,10 @@ void x86_64::mp::mp::parse_io_interrupt_entry(uint64_t pointer){
     else debug_printf(" Trigger mode: Reserved");
 
     debug_printf("\n");
+
+    if(entry->source_bus_id == isa_bus_id){
+        interrupt_overrides.push_back({entry->source_bus_irq, entry->destination_ioapic_intin, entry->polarity, entry->trigger_mode});
+    }
 }
 
 

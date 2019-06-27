@@ -27,12 +27,14 @@
 #include <Sigma/smp/cpu.h>
 
 #include <Sigma/acpi/acpi.h>
+#include <Sigma/acpi/madt.h>
 
 #include <Sigma/types/linked_list.h>
 
 #include <config.h>
 
 auto cpu_list = types::linked_list<smp::cpu::entry>();
+auto ioapics = types::linked_list<x86_64::apic::ioapic>();
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){  
     FUNCTION_CALL_ONCE();
@@ -88,10 +90,36 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     mm::hmm::init(); 
 
 
+    auto cpus = types::linked_list<smp::cpu_entry>();
+    auto ioapics_base = types::linked_list<types::pair<uint64_t, uint64_t>>();
+    auto interrupt_overrides = types::linked_list<x86_64::apic::interrupt_override>();
 
+    acpi::init(mboot);
+    acpi::madt madt = acpi::madt();
+    bool using_madt = false;
 
-    x86_64::pic::set_base_vector(32);
-    x86_64::pic::disable(); 
+    x86_64::mp::mp mp_spec;
+
+    if(madt.found_table()){
+        madt.parse();
+
+        madt.get_cpus(cpus);
+        madt.get_ioapics(ioapics_base);
+        madt.get_interrupt_overrides(interrupt_overrides);
+
+        if(madt.supports_legacy_pic()){
+            x86_64::pic::set_base_vector(32);
+            x86_64::pic::disable(); 
+        }
+        using_madt = true;
+    } else {
+        mp_spec.init(cpus, ioapics_base, interrupt_overrides);
+
+        if(mp_spec.legacy_pic()){
+            x86_64::pic::set_base_vector(32);
+            x86_64::pic::disable(); 
+        }
+    }
 
     x86_64::apic::lapic l = x86_64::apic::lapic();
     l.init(); 
@@ -101,14 +129,14 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 
-    auto cpus = types::linked_list<smp::cpu_entry>();
-    x86_64::mp::mp mp_spec = x86_64::mp::mp(cpus);
-    (void)(mp_spec);
+    for(auto a : ioapics_base){
+        auto* ioapic = ioapics.empty_entry();
+        if(using_madt) ioapic->init(a.a, a.b, madt.supports_legacy_pic(), interrupt_overrides);
+        else ioapic->init(a.a, a.b, mp_spec.legacy_pic(), interrupt_overrides); // get isos
+    }
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
     (void)(smp);
-
-    acpi::init(mboot);
 
     while(1);
     //asm("cli; hlt");

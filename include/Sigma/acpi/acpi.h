@@ -1,4 +1,4 @@
-#ifndef SIGMA_KERNEL_APCI
+#ifndef SIGMA_KERNEL_ACPI
 #define SIGMA_KERNEL_ACPI
 
 #include <Sigma/common.h>

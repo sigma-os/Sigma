@@ -1,12 +1,14 @@
+#include <Sigma/acpi/madt.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 
+
 uint32_t x86_64::apic::lapic::read(uint32_t reg){
-    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_VBASE + reg);
+    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
     return *val;
 }
 
 void x86_64::apic::lapic::write(uint32_t reg, uint32_t data){
-    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_VBASE + reg);
+    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
     *val = data;
 }
 
@@ -18,7 +20,7 @@ void x86_64::apic::lapic::init(){
     bitops<uint64_t>::bit_set(apic_base_msr, 11); // Set Enable bit
     msr::write(msr::apic_base, apic_base_msr);
 
-    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_VBASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
 
     this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
 
@@ -117,4 +119,111 @@ void x86_64::apic::lapic::set_timer_mask(bool state){
     else bitops<uint32_t>::bit_clear(lint_entry, x86_64::apic::lapic_lvt_mask);
 
     this->write(x86_64::apic::lapic_lvt_timer, lint_entry);
+}
+
+// IOAPIC
+
+static inline uint32_t get_redirection_entry(uint32_t entry){
+    return (x86_64::apic::ioapic_redirection_table + entry * 2);
+}
+
+void x86_64::apic::ioapic::init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos){
+    this->base = base;
+
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
+
+    this->id = ((this->read(x86_64::apic::ioapic_id) >> 24) & 0xF);
+    uint32_t ver = this->read(x86_64::apic::ioapic_ver);
+    this->version = (ver & 0xFF);
+    this->max_redirection_entries = ((ver >> 16) & 0xFF) + 1;
+
+    for(size_t i = 0; i < this->max_redirection_entries; i++){
+        this->set_entry(i, (0 | (1 << 16))); // Mask all unused interrupts
+    }
+
+    if(pic && gsi_base == 0){ // TODO: Don't assume that this IOAPIC has all interrupt entries
+        // First 16 GSI's are mapped to PIC interrupts, with ISO exceptions
+        for(size_t i = 0; i < 16; i++){
+            if(i == 2) continue; // Skip mapping Slave Cascade
+
+            bool found = false;
+            for(auto& entry : isos){
+                if(entry.source == i){
+                    // Found ISO for this interrupt
+                    this->set_entry(entry.gsi, (entry.source + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::PHYSICAL, ((entry.polarity == 3) ? (1) : (0)), ((entry.trigger_mode == 3) ? (1) : (0)), 0x0F); // Target all LAPIC's
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                // Assume GSI = IRQ
+                this->set_entry(i, (i + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::PHYSICAL, 0, 0, 0x0F); // Target all LAPIC's
+            }
+        }
+    }
+
+    debug_printf("[IOAPIC]: Initialized I/OAPIC: ID: %x, Version: %x, n_redirection entries: %d\n", this->id, this->version, this->max_redirection_entries);
+}
+
+uint32_t x86_64::apic::ioapic::read(uint32_t reg){
+    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_select);
+    *val = reg;
+    volatile uint32_t* dat = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_data);
+    return *dat;
+}
+
+void x86_64::apic::ioapic::write(uint32_t reg, uint32_t data){
+    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_select);
+    *val = reg;
+    volatile uint32_t* dat = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_data);
+    *dat = data;
+}
+
+void x86_64::apic::ioapic::set_entry(uint8_t index, uint64_t data){
+    uint8_t offset = get_redirection_entry(index);
+    this->write(offset, (data & 0xFFFFFFFF));
+    this->write(offset + 1, ((data >> 32) & 0xFFFFFFFF));
+}
+
+void x86_64::apic::ioapic::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination){
+    uint64_t data = 0;
+    data |= vector;
+    switch (delivery_mode)
+    {
+    case x86_64::apic::ioapic_delivery_modes::FIXED:
+        data |= (0b000 << 8);
+        break;
+    case x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY:
+        data |= (0b001 << 8);
+        break;
+    case x86_64::apic::ioapic_delivery_modes::SMI:
+        data |= (0b010 << 8);
+        break;
+    case x86_64::apic::ioapic_delivery_modes::NMI:
+        data |= (0b100 << 8);
+        break;
+    case x86_64::apic::ioapic_delivery_modes::INIT:
+        data |= (0b101 << 8);
+        break;
+    case x86_64::apic::ioapic_delivery_modes::EXTINT:
+        data |= (0b111 << 8);
+        break;
+    }
+    
+    switch (destination_mode)
+    {
+    case x86_64::apic::ioapic_destination_modes::PHYSICAL:
+        data |= (0 << 11);
+        break;
+
+    case x86_64::apic::ioapic_destination_modes::LOGICAL:
+        data |= (1 << 11);
+        break;
+    
+    }
+    
+    data |= ((uint64_t)pin_polarity << 13);
+    data |= ((uint64_t)trigger_mode << 15);
+    data |= ((uint64_t)destination << 56);
+    this->set_entry(index, data);
 }

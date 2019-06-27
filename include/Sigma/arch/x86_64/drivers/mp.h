@@ -4,10 +4,10 @@
 #include <Sigma/common.h>
 
 #include <Sigma/arch/x86_64/drivers/bios.h>
-
+#include <Sigma/arch/x86_64/drivers/apic.h>
 #include <klibc/stdio.h>
 #include <klibc/string.h>
-
+#include <Sigma/types/pair.h>
 #include <Sigma/smp/smp.h>
 
 namespace x86_64::mp
@@ -241,15 +241,20 @@ namespace x86_64::mp
 
     class mp {
         public:
-        explicit mp(types::linked_list<smp::cpu_entry>& cpus);
+        mp(){}
 
+        void init(types::linked_list<smp::cpu_entry>& cpus, types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics, types::linked_list<x86_64::apic::interrupt_override>& interrupt_overrides);
+
+        bool legacy_pic(){
+            return this->pic;
+        }
         private:
-        void parse(types::linked_list<smp::cpu_entry>& cpus);
+        void parse(types::linked_list<smp::cpu_entry>& cpus, types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics, types::linked_list<x86_64::apic::interrupt_override>& interrupt_overrides);
 
         void parse_bus(uint64_t pointer);
         void parse_cpu(uint64_t pointer, types::linked_list<smp::cpu_entry>& cpus);
-        void parse_ioapic(uint64_t pointer);
-        void parse_io_interrupt_entry(uint64_t pointer);
+        void parse_ioapic(uint64_t pointer, types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics);
+        void parse_io_interrupt_entry(uint64_t pointer, types::linked_list<x86_64::apic::interrupt_override>& interrupt_overrides);
         void parse_local_interrupt_entry(uint64_t pointer);
 
         void parse_address_space_mapping(uint64_t pointer);
@@ -264,7 +269,7 @@ namespace x86_64::mp
 
         floating_pointer_table* find_pointer();
 
-
+        bool pic;
         uint64_t floating_pointer;
         uint64_t table;
     };

@@ -6,6 +6,7 @@ configure_file(input: 'include/Sigma/config.h.in', output: 'config.h', configura
 
 main_sources = files(
     'source/acpi/acpi.cpp',
+    'source/acpi/madt.cpp',
     'source/acpi/laihost.cpp',
     'source/arch/x86_64/drivers/apic.cpp',
     'source/arch/x86_64/drivers/cmos.cpp',
