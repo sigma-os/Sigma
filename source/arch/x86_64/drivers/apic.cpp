@@ -1,6 +1,6 @@
 #include <Sigma/acpi/madt.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
-
+#include <Sigma/arch/x86_64/idt.h>
 
 uint32_t x86_64::apic::lapic::read(uint32_t reg){
     volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
@@ -30,6 +30,8 @@ void x86_64::apic::lapic::init(){
     this->max_lvt_entries = (((version_reg >> 16) & 0xFF) + 1);
 
     this->write(x86_64::apic::lapic_tpr, 0); // Enable all interrupts
+    this->write(x86_64::apic::lapic_ldr, (this->get_id() << 16));
+    this->write(x86_64::apic::lapic_dfr, 0xFFFFFFFF);
 
     uint32_t spurious_reg = 0;
     spurious_reg |= 0xFF; // Hardcoded spurious vector
@@ -127,7 +129,7 @@ static inline uint32_t get_redirection_entry(uint32_t entry){
     return (x86_64::apic::ioapic_redirection_table + entry * 2);
 }
 
-void x86_64::apic::ioapic::init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos){
+void x86_64::apic::ioapic_device::init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos){
     this->base = base;
 
     mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
@@ -150,42 +152,44 @@ void x86_64::apic::ioapic::init(uint64_t base, uint32_t gsi_base, bool pic, type
             for(auto& entry : isos){
                 if(entry.source == i){
                     // Found ISO for this interrupt
-                    this->set_entry(entry.gsi, (entry.source + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::PHYSICAL, ((entry.polarity == 3) ? (1) : (0)), ((entry.trigger_mode == 3) ? (1) : (0)), 0x0F); // Target all LAPIC's
+                    this->set_entry(entry.gsi, (entry.source + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, ((entry.polarity == 3) ? (1) : (0)), ((entry.trigger_mode == 3) ? (1) : (0)), 0xFF); // Target all LAPIC's
+
                     found = true;
                     break;
                 }
             }
             if(!found){
                 // Assume GSI = IRQ
-                this->set_entry(i, (i + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::PHYSICAL, 0, 0, 0x0F); // Target all LAPIC's
+                this->set_entry(i, (i + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, 0, 0, 0xFF); // Target all LAPIC's
             }
+            x86_64::idt::register_irq_status(i, true); // Set IRQ status to true
         }
     }
 
     debug_printf("[IOAPIC]: Initialized I/OAPIC: ID: %x, Version: %x, n_redirection entries: %d\n", this->id, this->version, this->max_redirection_entries);
 }
 
-uint32_t x86_64::apic::ioapic::read(uint32_t reg){
+uint32_t x86_64::apic::ioapic_device::read(uint32_t reg){
     volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_select);
     *val = reg;
     volatile uint32_t* dat = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_data);
     return *dat;
 }
 
-void x86_64::apic::ioapic::write(uint32_t reg, uint32_t data){
+void x86_64::apic::ioapic_device::write(uint32_t reg, uint32_t data){
     volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_select);
     *val = reg;
     volatile uint32_t* dat = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_data);
     *dat = data;
 }
 
-void x86_64::apic::ioapic::set_entry(uint8_t index, uint64_t data){
+void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint64_t data){
     uint8_t offset = get_redirection_entry(index);
     this->write(offset, (data & 0xFFFFFFFF));
     this->write(offset + 1, ((data >> 32) & 0xFFFFFFFF));
 }
 
-void x86_64::apic::ioapic::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination){
+void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination){
     uint64_t data = 0;
     data |= vector;
     switch (delivery_mode)
@@ -226,4 +230,31 @@ void x86_64::apic::ioapic::set_entry(uint8_t index, uint8_t vector, x86_64::apic
     data |= ((uint64_t)trigger_mode << 15);
     data |= ((uint64_t)destination << 56);
     this->set_entry(index, data);
+}
+
+auto ioapics_base = types::linked_list<types::pair<uint64_t, uint64_t>>(); // base, and gsi_base
+auto interrupt_overrides = types::linked_list<x86_64::apic::interrupt_override>();
+
+auto ioapics = types::linked_list<types::pair<x86_64::apic::ioapic_device, uint64_t>>(); // ioapic, and gsi_base
+
+void x86_64::apic::ioapic::init(acpi::madt& madt){
+    madt.get_ioapics(ioapics_base);
+    madt.get_interrupt_overrides(interrupt_overrides);
+
+    for(auto& a : ioapics_base){
+        auto* ioapic = ioapics.empty_entry();
+        ioapic->a.init(a.a, a.b, madt.supports_legacy_pic(), interrupt_overrides);
+        ioapic->b = a.b;
+    }
+}
+
+void x86_64::apic::ioapic::set_entry(uint8_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination){
+    for(auto& entry : ioapics){
+        if((gsi >= entry.b) && (gsi <= (entry.a.get_max_redirection_entries() + entry.b))){
+            // Found correct ioapic
+            entry.a.set_entry((gsi - entry.b), vector, delivery_mode, destination_mode, pin_polarity, trigger_mode, destination);
+            return;
+        }
+    }
+    debug_printf("[I/OAPIC]: Couldn't find IOAPIC with gsi: %x\n", gsi);
 }

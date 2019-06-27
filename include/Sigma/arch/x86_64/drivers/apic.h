@@ -7,7 +7,6 @@
 #include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
 #include <Sigma/arch/x86_64/drivers/cmos.h>
-
 #include <Sigma/types/linked_list.h>
 
 namespace acpi
@@ -166,15 +165,18 @@ namespace x86_64::apic
         uint8_t trigger_mode;
     };
 
-    class ioapic {
+    class ioapic_device {
         public:
         uint8_t get_id(){
-            return id;
+            return this->id;
         }
         uint8_t get_version(){
-            return version;
+            return this->version;
         }
-        ioapic() = default;
+        uint8_t get_max_redirection_entries(){
+            return this->max_redirection_entries;
+        }
+        ioapic_device() = default;
         void init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos);
         void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
 
@@ -186,6 +188,11 @@ namespace x86_64::apic
         uint32_t read(uint32_t reg);
         void write(uint32_t reg, uint32_t value);
         void set_entry(uint8_t index, uint64_t data);
+    };
+
+    namespace ioapic {
+        void init(acpi::madt& madt);
+        void set_entry(uint8_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
     };
 } // x86_64::apic
 

@@ -33,7 +33,6 @@
 #include <config.h>
 
 auto cpu_list = types::linked_list<smp::cpu::entry>();
-auto ioapics = types::linked_list<x86_64::apic::ioapic>();
 
 C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){  
     FUNCTION_CALL_ONCE();
@@ -90,8 +89,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
 
     auto cpus = types::linked_list<smp::cpu_entry>();
-    auto ioapics_base = types::linked_list<types::pair<uint64_t, uint64_t>>();
-    auto interrupt_overrides = types::linked_list<x86_64::apic::interrupt_override>();
 
     acpi::init(mboot);
     acpi::madt madt = acpi::madt();
@@ -100,8 +97,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
         madt.parse();
 
         madt.get_cpus(cpus);
-        madt.get_ioapics(ioapics_base);
-        madt.get_interrupt_overrides(interrupt_overrides);
 
         if(madt.supports_legacy_pic()){
             x86_64::pic::set_base_vector(32);
@@ -111,20 +106,17 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
         PANIC("Didn't find MADT table\n Can't continue boot");
     }
 
-    x86_64::apic::lapic l = x86_64::apic::lapic();
-    l.init(); 
+    x86_64::apic::lapic lapic = x86_64::apic::lapic();
+    lapic.init(); 
 
     auto* entry = cpu_list.empty_entry();
-    entry->lapic = l;
+    entry->lapic = lapic;
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 
-    for(auto a : ioapics_base){
-        auto* ioapic = ioapics.empty_entry();
-        ioapic->init(a.a, a.b, madt.supports_legacy_pic(), interrupt_overrides);
-    }
+    x86_64::apic::ioapic::init(madt);
 
-    smp::multiprocessing smp = smp::multiprocessing(cpus, &l);
+    smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
     (void)(smp);
 
     while(1);
