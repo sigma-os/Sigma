@@ -15,7 +15,6 @@
 #include <Sigma/mm/vmm.h>
 #include <Sigma/mm/hmm.h>
 
-#include <Sigma/arch/x86_64/drivers/mp.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/drivers/pic.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
@@ -96,9 +95,6 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     acpi::init(mboot);
     acpi::madt madt = acpi::madt();
-    bool using_madt = false;
-
-    x86_64::mp::mp mp_spec;
 
     if(madt.found_table()){
         madt.parse();
@@ -111,14 +107,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
             x86_64::pic::set_base_vector(32);
             x86_64::pic::disable(); 
         }
-        using_madt = true;
     } else {
-        mp_spec.init(cpus, ioapics_base, interrupt_overrides);
-
-        if(mp_spec.legacy_pic()){
-            x86_64::pic::set_base_vector(32);
-            x86_64::pic::disable(); 
-        }
+        PANIC("Didn't find MADT table\n Can't continue boot");
     }
 
     x86_64::apic::lapic l = x86_64::apic::lapic();
@@ -131,8 +121,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     for(auto a : ioapics_base){
         auto* ioapic = ioapics.empty_entry();
-        if(using_madt) ioapic->init(a.a, a.b, madt.supports_legacy_pic(), interrupt_overrides);
-        else ioapic->init(a.a, a.b, mp_spec.legacy_pic(), interrupt_overrides); // get isos
+        ioapic->init(a.a, a.b, madt.supports_legacy_pic(), interrupt_overrides);
     }
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &l);

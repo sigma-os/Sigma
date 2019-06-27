@@ -10,7 +10,6 @@ main_sources = files(
     'source/acpi/laihost.cpp',
     'source/arch/x86_64/drivers/apic.cpp',
     'source/arch/x86_64/drivers/cmos.cpp',
-    'source/arch/x86_64/drivers/mp.cpp',
     'source/arch/x86_64/drivers/pic.cpp',
     'source/arch/x86_64/gdt.cpp',
     'source/arch/x86_64/idt.cpp',
