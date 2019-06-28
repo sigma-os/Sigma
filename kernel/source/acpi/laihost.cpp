@@ -2,6 +2,7 @@
 #include <klibc/stdlib.h>
 #include <Sigma/acpi/acpi.h>
 #include <Sigma/arch/x86_64/io.h>
+#include <Sigma/arch/x86_64/drivers/pci.h>
 #include <Sigma/mm/vmm.h>
 
 extern "C" {
@@ -80,6 +81,19 @@ uint16_t laihost_inw(uint16_t port){
 
 uint32_t laihost_ind(uint16_t port){
     return x86_64::io::ind(port);
+}
+
+void laihost_pci_write(uint8_t bus, uint8_t device, uint8_t function, uint16_t offset , uint32_t value){
+    x86_64::pci::write(bus, device, function, offset, value);
+}
+
+uint32_t laihost_pci_read(uint8_t bus, uint8_t device, uint8_t function, uint16_t offset){
+    return x86_64::pci::read(bus, device, function, offset);
+}
+
+void laihost_sleep(uint64_t time){
+    UNUSED(time);
+    debug_printf("[ACPI]: Stubbed function called: name: %s\n", __func__);
 }
 
 }

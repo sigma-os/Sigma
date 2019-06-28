@@ -153,7 +153,7 @@ void x86_64::apic::ioapic_device::init(uint64_t base, uint32_t gsi_base, bool pi
                 if(entry.source == i){
                     // Found ISO for this interrupt
                     this->set_entry(entry.gsi, (entry.source + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, ((entry.polarity == 3) ? (1) : (0)), ((entry.trigger_mode == 3) ? (1) : (0)), 0xFF); // Target all LAPIC's
-
+                    this->set_entry(entry.gsi, (this->read_entry(entry.gsi) | (1 << 16))); // Mask all entries
                     found = true;
                     break;
                 }
@@ -161,6 +161,8 @@ void x86_64::apic::ioapic_device::init(uint64_t base, uint32_t gsi_base, bool pi
             if(!found){
                 // Assume GSI = IRQ
                 this->set_entry(i, (i + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, 0, 0, 0xFF); // Target all LAPIC's
+                this->set_entry(i, (this->read_entry(i) | (1 << 16))); // Mask all entries
+
             }
             x86_64::idt::register_irq_status(i, true); // Set IRQ status to true
         }
@@ -181,6 +183,16 @@ void x86_64::apic::ioapic_device::write(uint32_t reg, uint32_t data){
     *val = reg;
     volatile uint32_t* dat = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + x86_64::apic::ioapic_register_data);
     *dat = data;
+}
+void x86_64::apic::ioapic_device::unmask(uint8_t index){
+    this->set_entry(index, (this->read_entry(index) & ~(1 << 16)));
+}
+
+uint64_t x86_64::apic::ioapic_device::read_entry(uint8_t index){
+    uint8_t offset = get_redirection_entry(index);
+    uint32_t low = this->read(offset);
+    uint32_t high = this->read(offset + 1);
+    return (low | ((uint64_t)high << 32));
 }
 
 void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint64_t data){
@@ -257,4 +269,24 @@ void x86_64::apic::ioapic::set_entry(uint8_t gsi, uint8_t vector, ioapic_deliver
         }
     }
     debug_printf("[I/OAPIC]: Couldn't find IOAPIC with gsi: %x\n", gsi);
+}
+
+void x86_64::apic::ioapic::mask_gsi(uint8_t gsi){
+    for(auto& entry : ioapics){
+        if((gsi >= entry.b) && (gsi <= (entry.a.get_max_redirection_entries() + entry.b))){
+            // Found correct ioapic
+            entry.a.set_entry((gsi - entry.b), (entry.a.read_entry((gsi - entry.b)) | (1 << 16))); // Mask
+            return;
+        }
+    }
+}
+
+void x86_64::apic::ioapic::unmask_gsi(uint8_t gsi){
+    for(auto& entry : ioapics){
+        if((gsi >= entry.b) && (gsi <= (entry.a.get_max_redirection_entries() + entry.b))){
+            // Found correct ioapic
+            entry.a.unmask((gsi - entry.b));
+            return;
+        }
+    }
 }

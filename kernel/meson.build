@@ -11,6 +11,7 @@ main_sources = files(
     'source/arch/x86_64/drivers/apic.cpp',
     'source/arch/x86_64/drivers/cmos.cpp',
     'source/arch/x86_64/drivers/pic.cpp',
+    'source/arch/x86_64/drivers/pci.cpp',
     'source/arch/x86_64/gdt.cpp',
     'source/arch/x86_64/idt.cpp',
     'source/arch/x86_64/io.cpp',

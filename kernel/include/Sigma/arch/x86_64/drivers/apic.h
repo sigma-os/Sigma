@@ -179,20 +179,23 @@ namespace x86_64::apic
         ioapic_device() = default;
         void init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos);
         void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
-
+        uint64_t read_entry(uint8_t index);
+        void set_entry(uint8_t index, uint64_t data);
+        void unmask(uint8_t index);
         private:
         uint8_t id;
         uint8_t max_redirection_entries;
         uint8_t version;
         uint64_t base;
         uint32_t read(uint32_t reg);
-        void write(uint32_t reg, uint32_t value);
-        void set_entry(uint8_t index, uint64_t data);
+        void write(uint32_t reg, uint32_t value);        
     };
 
     namespace ioapic {
         void init(acpi::madt& madt);
         void set_entry(uint8_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
+        void mask_gsi(uint8_t gsi);
+        void unmask_gsi(uint8_t gsi);
     };
 } // x86_64::apic
 

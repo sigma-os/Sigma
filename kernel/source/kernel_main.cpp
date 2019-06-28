@@ -113,10 +113,16 @@ C_LINKAGE void kernel_main(){
     entry->lapic_id = entry->lapic.get_id();
     entry->set_gs();
 
+
+    entry->lapic.send_eoi(); // Clear any remaining interrupt
     x86_64::apic::ioapic::init(madt);
+
+    acpi::init_sci(madt);
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
     (void)(smp);
+
+    asm("sti");
 
     while(1);
     //asm("cli; hlt");
@@ -151,5 +157,9 @@ C_LINKAGE void smp_kernel_main(){
     printf("Booted CPU with lapic_id: %d\n", entry->lapic_id);
 
     x86_64::spinlock::release(&ap_mutex);
-    asm("cli; hlt");
+
+    asm("sti");
+
+    while(true);
+    //asm("cli; hlt");
 }
