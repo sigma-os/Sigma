@@ -84,10 +84,10 @@
 
 
 
-build/iso/
+kernel/build/iso/
 
 *.log
 
-bx_enh_dbg.ini
+kernel/bx_enh_dbg.ini
 
-build_meson/
+kernel/build_meson/
