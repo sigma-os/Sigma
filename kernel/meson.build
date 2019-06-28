@@ -18,7 +18,6 @@ main_sources = files(
     'source/arch/x86_64/paging.cpp',
     'source/arch/x86_64/vga.cpp',
     'source/arch/x86_64/misc/misc.cpp',
-    'source/early/_start.S',
     'source/klibc/stdio.cpp',
     'source/klibc/stdlib.cpp',
     'source/klibc/string.cpp',
@@ -32,7 +31,6 @@ main_sources = files(
     'source/crti.S',
     'source/crtn.S',
     'source/kernel_main.cpp',
-    'source/multiboot.cpp',
     'source/panic.cpp',
     'source/debug.cpp')
 
@@ -41,7 +39,6 @@ cpp_includes = include_directories('include')
 nasm_sources = files(
     'source/arch/x86_64/misc/spinlock.asm',
     'source/arch/x86_64/interrupts.asm',
-    'source/early/multiboot.asm',
     'source/smp/gs.asm',
     'source/kernel_early.asm',)
 
@@ -91,6 +88,11 @@ add_global_link_arguments(ld_flags, language: 'cpp')
 
 lai = subproject('lai')
 lai_dependency = lai.get_variable('dependency')
-deps = [lai_dependency]
 
-executable('sigma.bin', main_sources, nasm_objects, dependencies: deps, include_directories: cpp_includes, link_depends: ld_script, objects: crt_files)
+loader = subproject('multiboot_loader')
+loader_dependency = loader.get_variable('dependency')
+loader_extra_objects = loader.get_variable('extra_object_files')
+
+deps = [lai_dependency, loader_dependency]
+
+executable('sigma.bin', main_sources, nasm_objects, loader_extra_objects, dependencies: deps, include_directories: cpp_includes, link_depends: ld_script, objects: crt_files)

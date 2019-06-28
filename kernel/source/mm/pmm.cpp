@@ -46,20 +46,20 @@ void mm::pmm::print_stack(){
     }
 }
 
-void mm::pmm::init(multiboot& mb_info){
+void mm::pmm::init(boot::boot_protocol* boot_protocol){
     x86_64::spinlock::acquire(&pmm_global_mutex);
 
     stack_base = reinterpret_cast<rle_stack_entry*>(kernel_end);
     stack_pointer = stack_base;
 
-    uint64_t n_blocks = (mb_info.get_memsize_mb() * 0x100);
+    uint64_t n_blocks = (boot_protocol->memsize * 0x100);
     uint64_t worst_case_size = (n_blocks * sizeof(rle_stack_entry));
     kernel_end += worst_case_size;
 
-    mbd_start = mb_info.get_mbd_ptr();
-    mbd_end = (mb_info.get_mbd_ptr() + mb_info.get_mbd_size());
+    mbd_start = boot_protocol->reserve_start;
+    mbd_end = (boot_protocol->reserve_start + boot_protocol->reserve_length);
 
-    multiboot_tag_mmap* ent = mb_info.get_mmap_entry();
+    multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
     for(multiboot_memory_map_t* entry = ent->entries; (uintptr_t)entry < (uintptr_t)((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
         if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
         {

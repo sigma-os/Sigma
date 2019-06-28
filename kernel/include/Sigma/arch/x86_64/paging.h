@@ -3,7 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/interfaces/paging_manager.h>
-
+#include <klibc/stdio.h>
 #include <Sigma/mm/pmm.h>
 
 namespace x86_64::paging

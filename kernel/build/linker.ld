@@ -3,7 +3,7 @@ OUTPUT_FORMAT(elf64-x86-64)
 KERNEL_LMA = 0x0000000000100000; /* 1 MEG */
 KERNEL_VMA = 0xffffffff80000000 + KERNEL_LMA;
 
-ENTRY(_start)
+ENTRY(_loader_start)
 
 SECTIONS {
 	. = KERNEL_VMA;
@@ -12,7 +12,7 @@ SECTIONS {
 
     .boot : AT(ADDR(.boot) - (KERNEL_VMA - KERNEL_LMA)) {
         _kernel_boot = .;
-        *(.multiboot)
+        *(.loader_header*)
 		. = ALIGN(0x1000);
     }
 

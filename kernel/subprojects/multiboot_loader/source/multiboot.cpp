@@ -1,9 +1,6 @@
-#include <Sigma/multiboot.h>
+#include <loader/multiboot.h>
 
-void multiboot::parse_mbd(){
-
-    debug_printf("[MULTIBOOT]: Parsing info structure\n");
-
+void loader::multiboot::parse_mbd(){
     uint32_t* base = reinterpret_cast<uint32_t*>(this->mbd);
     uint64_t total_size = *base;
 
@@ -20,8 +17,6 @@ void multiboot::parse_mbd(){
         add_size = *size;
 
         if((add_size % 8)!= 0) add_size += (8 - add_size % 8); // Align 8byte
-
-        debug_printf("Found tag with type %i, size %i\n", *type, *size);
 
         switch (*type)
         {
@@ -74,6 +69,4 @@ void multiboot::parse_mbd(){
                 break;
         }
     }
-
-    debug_printf("[MULTIBOOT]: Parsed info structure\n");
 }

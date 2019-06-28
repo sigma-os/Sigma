@@ -90,10 +90,10 @@ uint16_t acpi::get_arch_boot_flags(){
     return flags;
 }
 
-void acpi::init(multiboot& mbd){
+void acpi::init(boot::boot_protocol* boot_protocol){
     FUNCTION_CALL_ONCE();
 
-    acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(mbd.get_rsdp());
+    acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(boot_protocol->acpi_pointer);
 
     mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
 

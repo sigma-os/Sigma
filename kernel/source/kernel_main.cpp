@@ -2,7 +2,6 @@
 #include <klibc/stdlib.h>
 
 #include <Sigma/common.h>
-#include <Sigma/multiboot.h>
 
 #include <Sigma/arch/x86_64/tss.h>
 #include <Sigma/arch/x86_64/gdt.h>
@@ -29,18 +28,18 @@
 #include <Sigma/acpi/madt.h>
 
 #include <Sigma/types/linked_list.h>
-
+#include <Sigma/boot_protocol.h>
 #include <config.h>
 
 auto cpu_list = types::linked_list<smp::cpu::entry>();
-
-C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){  
+extern "C" boot::boot_protocol boot_data;
+C_LINKAGE void kernel_main(){  
     FUNCTION_CALL_ONCE();
 
-    multiboot mboot = multiboot(multiboot_information, magic);
-    printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, mboot.get_memsize_mb());
+    auto* boot_protocol = &boot_data;
+    printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, boot_protocol->memsize);
 
-    mm::pmm::init(mboot);
+    mm::pmm::init(boot_protocol);
 
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
@@ -64,8 +63,8 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
     }
 
 
-    uint64_t* elf_sections_start = mboot.get_elf_sections();
-    uint64_t n_elf_sections = mboot.get_elf_n_sections();
+    uint64_t* elf_sections_start = reinterpret_cast<uint64_t*>(boot_protocol->kernel_elf_sections);
+    uint64_t n_elf_sections = boot_protocol->kernel_n_elf_sections;
 
     for(uint64_t i = 0; i < n_elf_sections; i++){
         multitasking::elf::Elf64_Shdr* shdr = reinterpret_cast<multitasking::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(multitasking::elf::Elf64_Shdr)));
@@ -90,7 +89,7 @@ C_LINKAGE void kernel_main(void* multiboot_information, uint64_t magic){
 
     auto cpus = types::linked_list<smp::cpu_entry>();
 
-    acpi::init(mboot);
+    acpi::init(boot_protocol);
     acpi::madt madt = acpi::madt();
 
     if(madt.found_table()){

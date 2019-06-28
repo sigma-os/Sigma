@@ -3,8 +3,8 @@
 .set KERNEL_VMA, 0xffffffff80000000
 
 .section .text
-.globl _start
-_start:
+.globl _loader_start
+_loader_start:
 	movl %eax, (_start_multiboot_magic - KERNEL_VMA)
     movl %ebx, (_start_multiboot_info - KERNEL_VMA)
 

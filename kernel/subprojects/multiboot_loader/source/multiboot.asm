@@ -1,8 +1,9 @@
 MULTIBOOT2_HEADER_MAGIC equ 0xE85250D6
 MULTIBOOT2_ARCHITECTURE_i386 equ 0
 
-[section .multiboot]
+section .loader_header
 align 4
+global multiboot_header
 multiboot_header:
     dd MULTIBOOT2_HEADER_MAGIC ; MAGIC
     dd MULTIBOOT2_ARCHITECTURE_i386 ; ARCHITECTURE

@@ -2,11 +2,11 @@
 #define SIGMA_KERNEL_ACPI
 
 #include <Sigma/common.h>
-#include <Sigma/multiboot.h>
+#include <Sigma/boot_protocol.h>
 #include <Sigma/mm/vmm.h>
 #include <Sigma/acpi/tables.h>
 #include <Sigma/acpi/fadt.h>
-
+#include <klibc/stdio.h>
 #include <Sigma/types/linked_list.h>
 
 namespace acpi
@@ -16,7 +16,7 @@ namespace acpi
         uint8_t data[1];
     };
 
-    void init(multiboot& mbd);
+    void init(boot::boot_protocol* boot_protocol);
 
     // Physical! Address
     acpi::table* get_table(const char* signature);
