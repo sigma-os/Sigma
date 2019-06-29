@@ -81,9 +81,9 @@
 *.iso
 *.img
 *.bin
+*.tar
 
-
-
+build/
 kernel/build/iso/
 
 *.log

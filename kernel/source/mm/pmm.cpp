@@ -6,8 +6,8 @@ C_LINKAGE uint64_t _kernel_end;
 uint64_t kernel_start = reinterpret_cast<uint64_t>(&_kernel_start);
 uint64_t kernel_end = reinterpret_cast<uint64_t>(&_kernel_end);
 
-uint64_t mbd_start;
-uint64_t mbd_end;
+uint64_t mbd_start, initrd_start;
+uint64_t mbd_end, initrd_end;
 
 auto pmm_global_mutex = x86_64::spinlock::mutex();
 
@@ -65,6 +65,8 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     mbd_start = boot_protocol->reserve_start;
     mbd_end = (boot_protocol->reserve_start + boot_protocol->reserve_length);
+    initrd_start = boot_protocol->kernel_initrd_ptr;
+    initrd_end = boot_protocol->kernel_initrd_size;
 
     multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
     for(multiboot_memory_map_t* entry = ent->entries; (uintptr_t)entry < (uintptr_t)((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
@@ -92,7 +94,7 @@ void* mm::pmm::alloc_block(){
     ent.n_pages--;
     if(ent.n_pages != 0) push(ent);
 
-    if(((addr >= (kernel_start - KERNEL_VBASE)) && (addr <= (kernel_end - KERNEL_VBASE))) || ((addr >= (mbd_start - KERNEL_VBASE) && addr <= (mbd_end - KERNEL_VBASE)))){
+    if(((addr >= (kernel_start - KERNEL_VBASE)) && (addr <= (kernel_end - KERNEL_VBASE))) || ((addr >= (mbd_start - KERNEL_VBASE) && addr <= (mbd_end - KERNEL_VBASE))) || ((addr >= (initrd_start) && addr <= (initrd_end)))){
         // Addr is in kernel or multiboot info so just ignore it and get a new one
         x86_64::spinlock::release(&pmm_global_mutex);
         return mm::pmm::alloc_block();

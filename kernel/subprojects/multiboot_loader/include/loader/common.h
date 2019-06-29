@@ -2,6 +2,7 @@
 #define SIGMA_MULTIBOOT_LOADER_COMMON
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdnoreturn.h>
 
 namespace loader::common

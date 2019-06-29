@@ -1,5 +1,17 @@
 #include <loader/multiboot.h>
 
+static int memcmp(const void* s1, const void* s2, size_t n){
+    const uint8_t* a = (const uint8_t*)s1;
+    const uint8_t* b = (const uint8_t*)s2;
+
+    for(size_t i = 0; i < n; i++){
+        if(a[i] < b[i]) return -1;
+        else if(b[i] < a[i]) return 1;
+    }
+
+    return 0;
+}
+
 void loader::multiboot::parse_mbd(){
     uint32_t* base = reinterpret_cast<uint32_t*>(this->mbd);
     uint64_t total_size = *base;
@@ -61,6 +73,17 @@ void loader::multiboot::parse_mbd(){
                 if(this->elf_sections == nullptr){
                     this->elf_sections = reinterpret_cast<uint64_t*>(info->sections);
                     this->n_elf_sections = info->num;
+                }
+            }
+            break;
+
+            case MULTIBOOT_TAG_TYPE_MODULE:
+            {
+                multiboot_tag_module* info = reinterpret_cast<multiboot_tag_module*>(type);
+
+                if(memcmp(info->cmdline, "initrd.tar", 10) == 0){
+                    this->initrd_ptr = info->mod_start;
+                    this->initrd_size = (info->mod_end - info->mod_start);
                 }
             }
             break;

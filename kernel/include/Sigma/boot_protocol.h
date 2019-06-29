@@ -13,6 +13,8 @@ namespace boot
         uint64_t reserve_length; // Area to reserve
         uint64_t kernel_elf_sections;
         uint64_t kernel_n_elf_sections;
+        uint64_t kernel_initrd_ptr;
+        uint64_t kernel_initrd_size;
     };
 } // namespace loader
 

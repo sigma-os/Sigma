@@ -49,11 +49,21 @@ namespace loader
             return this->n_elf_sections;
         }
 
+        uint64_t get_initrd_ptr(){
+            return this->initrd_ptr;
+        }
+
+        uint64_t get_initrd_size(){
+            return this->initrd_size;
+        }
+
         private:
         uint32_t mem_low, mem_high;
         uint64_t* rsdp = nullptr;
         uint64_t* elf_sections = nullptr;
         uint64_t n_elf_sections = 0;
+
+        uint64_t initrd_ptr, initrd_size;
 
         uint64_t mmap_entry;
 

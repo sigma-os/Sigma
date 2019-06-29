@@ -22,6 +22,8 @@ extern "C" {
         boot_data.mmap = reinterpret_cast<uint64_t>(mboot.get_mmap_entry());
         boot_data.reserve_start = mboot.get_mbd_ptr();
         boot_data.reserve_length = mboot.get_mbd_size();
+        boot_data.kernel_initrd_ptr = mboot.get_initrd_ptr();
+        boot_data.kernel_initrd_size = mboot.get_initrd_size();
 
         _kernel_early();
     }
