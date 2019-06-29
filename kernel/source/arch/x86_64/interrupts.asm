@@ -333,3 +333,24 @@ isr_stub:
 
     add rsp, 16
     iretq
+
+global flush_gdt
+flush_gdt:
+    push rax
+    
+    mov rax, rsp
+    push 0x0 ; Stack Segment
+    push rax ; RSP
+    pushf ; RFLAGS
+    push 0x8 ; CS
+    push flush_done ; RIP
+    iretq
+
+flush_done:
+    xor rax, rax
+    mov ax, 0x0
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    pop rax
+    ret

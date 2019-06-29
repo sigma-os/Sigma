@@ -22,6 +22,11 @@ struct rle_stack_entry {
         if((this->base == rhs.base) && (this->n_pages == rhs.n_pages)) return true;
         return false;
     }
+
+    bool operator <(rle_stack_entry &rhs){
+        if(this->base < rhs.base) return true;
+        return false;
+    }
 };
 
 rle_stack_entry* stack_base;
@@ -46,6 +51,8 @@ void mm::pmm::print_stack(){
     }
 }
 
+static void sort_stack();
+
 void mm::pmm::init(boot::boot_protocol* boot_protocol){
     x86_64::spinlock::acquire(&pmm_global_mutex);
 
@@ -68,7 +75,13 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
         }
     }
 
+    sort_stack();
+
     x86_64::spinlock::release(&pmm_global_mutex);
+
+    for(uint8_t i = 0; i < 10; i++){ // Reserve first 10 blocks for BIOS stuff and Trampoline code
+        mm::pmm::alloc_block();
+    }
 }
 
 void* mm::pmm::alloc_block(){
@@ -115,3 +128,33 @@ void mm::pmm::free_block(void* block){
     x86_64::spinlock::release(&pmm_global_mutex);
     return;
 }
+
+static void sorted_insert(rle_stack_entry x) 
+{ 
+    // Base case: Either stack is empty or newly inserted 
+    // item is greater than top (more than all existing) 
+    if ((stack_base == stack_pointer) || (x < *stack_pointer)) 
+    { 
+        push(x); 
+        return; 
+    } 
+  
+    // If top is greater, remove the top item and recur 
+    rle_stack_entry temp = pop(); 
+    sorted_insert(x); 
+  
+    // Put back the top item removed earlier 
+    push(temp); 
+} 
+  
+// Function to sort stack 
+static void sort_stack() 
+{ 
+    if(stack_base != stack_pointer){
+        rle_stack_entry x = pop(); 
+  
+        sort_stack(); 
+
+        sorted_insert(x); 
+    }
+} 

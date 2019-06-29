@@ -45,7 +45,6 @@ C_LINKAGE void kernel_main(){
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
     gdt.init();
     uint16_t tss_offset = gdt.add_tss(&tss);
-    gdt.update_pointer();
     tss.load(tss_offset);
 
     x86_64::idt::idt idt = x86_64::idt::idt();
