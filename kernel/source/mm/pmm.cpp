@@ -63,8 +63,8 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     for(multiboot_memory_map_t* entry = ent->entries; (uintptr_t)entry < (uintptr_t)((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
         if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
-            auto ent = rle_stack_entry(entry->addr, (entry->len / mm::pmm::block_size));
-            push(ent);
+            auto stack_entry = rle_stack_entry(entry->addr, (entry->len / mm::pmm::block_size));
+            push(stack_entry);
         }
     }
 

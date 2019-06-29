@@ -1,7 +1,7 @@
 #include <Sigma/acpi/madt.h>
 
 
-acpi::madt::madt(){
+acpi::madt::madt(): legacy_pic(false) {
     this->table = reinterpret_cast<acpi::madt_header*>(acpi::get_table(acpi::madt_signature));
     this->cpus = types::linked_list<smp::cpu_entry>();
     this->ioapics = types::linked_list<types::pair<uint64_t, uint64_t>>();

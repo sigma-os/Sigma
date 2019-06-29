@@ -118,7 +118,7 @@ namespace x86_64::apic
 
         void init();
 
-        lapic(): timer_ticks_per_ms(0) {};
+        lapic(): base(0), id(0), version(0), max_lvt_entries(0), timer_ticks_per_ms(0) {};
 
         private:
         uint64_t base;
