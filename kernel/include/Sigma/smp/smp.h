@@ -15,6 +15,8 @@
 
 #include <Sigma/types/linked_list.h>
 
+#include <Sigma/smp/ipi.h>
+
 namespace smp
 {
     struct cpu_entry {

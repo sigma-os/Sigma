@@ -111,7 +111,8 @@ namespace x86_64::apic
             return this->version;
         }
 
-        void send_ipi(uint8_t target_lapic_id, uint32_t flags);
+        void send_ipi_raw(uint8_t target_lapic_id, uint32_t flags);
+        void send_ipi(uint8_t target_lapic_id, uint8_t vector);
         void send_eoi();
 
         void enable_timer(uint8_t vector, uint64_t ms, x86_64::apic::lapic_timer_modes mode);

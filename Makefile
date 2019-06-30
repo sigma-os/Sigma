@@ -3,12 +3,13 @@
 all: run
 
 sigma.bin:
-	rm -f sigma.bin
-	cd kernel/; make sigma.bin; cp sigma.bin ..
+	rm -f sigma.bin kernel/sigma.bin
+	cd kernel/; make sigma.bin
+	cp kernel/sigma.bin .
 
 initrd.tar:
 	rm -f initrd.tar
-	cd initrd/; ./build.sh; cp initrd.tar ..
+	./initrd/build.sh
 
 sigma.iso: sigma.bin initrd.tar
 	mkdir -p build/iso/boot/grub

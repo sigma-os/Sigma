@@ -27,6 +27,7 @@ main_sources = files(
     'source/mm/vmm.cpp',
     'source/mm/alloc.cpp',
     'source/smp/smp.cpp',
+    'source/smp/ipi.cpp',
     'source/smp/trampoline.S',
     'source/proc/initrd.cpp',
     'source/cpp_support.cpp',

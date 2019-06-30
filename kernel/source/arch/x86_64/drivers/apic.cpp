@@ -39,9 +39,17 @@ void x86_64::apic::lapic::init(){
     this->write(x86_64::apic::lapic_spurious, spurious_reg);
 }
 
-void x86_64::apic::lapic::send_ipi(uint8_t target_lapic_id, uint32_t flags){
+void x86_64::apic::lapic::send_ipi_raw(uint8_t target_lapic_id, uint32_t flags){
     this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
     this->write(x86_64::apic::lapic_icr_low, flags);
+        
+    // TODO: Timeout and fail
+    while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
+}
+
+void x86_64::apic::lapic::send_ipi(uint8_t target_lapic_id, uint8_t vector){
+    this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
+    this->write(x86_64::apic::lapic_icr_low, vector);
         
     // TODO: Timeout and fail
     while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
