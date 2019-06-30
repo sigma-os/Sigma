@@ -88,6 +88,6 @@ kernel/build/iso/
 
 *.log
 
-kernel/bx_enh_dbg.ini
+bx_enh_dbg.ini
 
 kernel/build_meson/

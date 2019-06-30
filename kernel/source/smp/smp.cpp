@@ -70,8 +70,6 @@ void smp::multiprocessing::boot_cpu(cpu_entry& e){
     clear_booted_flag(); // Clear flag for next CPU
 }
 
-extern uint8_t cpus_booted;
-
 smp::multiprocessing::multiprocessing(types::linked_list<cpu_entry>& cpus, x86_64::apic::lapic* lapic){
     this->bsp_lapic = lapic;
 
