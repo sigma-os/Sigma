@@ -1,9 +1,5 @@
 #include <Sigma/arch/x86_64/paging.h>
 
-static inline void flush_tlb_entry(uint64_t addr)
-{
-    asm volatile("invlpg (%0)" ::"r" (addr) : "memory");
-}
 
 static inline uint64_t pml4_index(uint64_t address){
     //return (address >> 27) & 0x1FF;
@@ -57,6 +53,11 @@ void x86_64::paging::paging::init(){
 
     this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
     memset(reinterpret_cast<void*>(this->paging_info), 0, sizeof(x86_64::paging::pml4));
+}
+
+void x86_64::paging::paging::invalidate_addr(uint64_t addr)
+{
+    asm volatile("invlpg (%0)" ::"r" (addr) : "memory");
 }
 
 static void clean_pd(x86_64::paging::pd* pd){
@@ -180,7 +181,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
 
     (reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number]) = pt_entry;
 
-    flush_tlb_entry(virt);
+    this->invalidate_addr(virt);
 
     return true;
 }

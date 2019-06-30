@@ -28,6 +28,7 @@ class IPaging {
         virtual void set_paging_info() = 0;
 
         virtual void clone_paging_info(IPaging& new_info) = 0;
+        virtual void invalidate_addr(uint64_t addr) = 0;
 
     protected:
 };

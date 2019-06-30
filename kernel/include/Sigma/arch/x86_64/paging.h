@@ -56,6 +56,7 @@ namespace x86_64::paging
             uint64_t get_page_size();
 
             uint64_t get_paging_info();
+            void invalidate_addr(uint64_t addr);
 
         private:
             // Virtual address!

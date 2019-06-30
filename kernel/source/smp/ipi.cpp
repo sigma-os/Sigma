@@ -1,14 +1,19 @@
 #include <Sigma/smp/ipi.h>
 
-static uint64_t shootdown_addr;
-static uint64_t shootdown_length;
+static uint64_t shootdown_addr = 0;
+static uint64_t shootdown_length = 0;
+
+auto shootdown_mutex = x86_64::spinlock::mutex();
 
 void smp::ipi::send_shootdown(uint64_t address, uint64_t length){
+    x86_64::spinlock::acquire(&shootdown_mutex);
     shootdown_addr = address;
     shootdown_length = length;
-    smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19) | (1 << 18) | smp::ipi::ping_ipi_vector)); // All excluding self
-
-    // TODO: Shoot ourselves down
+    debug_printf("[IPI]: Requested TLB shootdown on addr: %x, length: %x\n", shootdown_addr, shootdown_length);
+    smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19)| smp::ipi::shootdown_ipi_vector)); // All including self
+    shootdown_addr = 0;
+    shootdown_length = 0;
+    x86_64::spinlock::release(&shootdown_mutex);
 }
 
 void smp::ipi::send_ping(uint8_t apic_id){
@@ -22,7 +27,9 @@ void smp::ipi::send_ping(){
 
 static void shootdown_ipi(x86_64::idt::idt_registers* regs){
     UNUSED(regs);
-    debug_printf("[IPI]: Requested TLB shootdown on addr: %x, length: %x\n TODO: Implement\n", shootdown_addr, shootdown_length);
+    for(uint64_t offset = 0; offset < shootdown_length; offset += mm::pmm::block_size){
+        mm::vmm::kernel_vmm::get_instance().get_paging_provider().invalidate_addr(shootdown_addr + offset);
+    }
 }
 
 static void ping_ipi(x86_64::idt::idt_registers* regs){
