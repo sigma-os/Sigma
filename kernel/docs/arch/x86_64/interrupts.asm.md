@@ -11,4 +11,7 @@ ISR 255 is *always* reserved for APIC Spurious interrupts, *even* if for some re
         ```
             iretq
         ```
+
 ISR 250 to 254 are *always* reserved for IPIs, *even* if there are no APs
+
+ISR 64 is the APIC timer handler

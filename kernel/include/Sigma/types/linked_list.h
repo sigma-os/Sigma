@@ -89,6 +89,26 @@ namespace types
                 return &(new_entry->item);
             }
 
+            linked_list_entry<T>* get_entry_for_item(T* entry){
+                /*for(auto& entry : *this){
+                    if(&entry == item) return &entry;
+                }*/
+
+                for(linked_list_entry<T>* item = head; item != nullptr; item = item->next){
+                    if(&(item->item) == entry) return item;
+                }
+
+                return nullptr;
+            }
+
+            linked_list_iterator<T> get_iterator_for_item(T* item){
+                linked_list_entry<T>* entry = get_entry_for_item(item);
+                if(entry == nullptr){
+                    return linked_list_iterator<T>(nullptr);
+                }
+                return linked_list_iterator<T>(entry);
+            }
+
             linked_list_iterator<T> begin(){
                 return linked_list_iterator<T>(head);
             }
@@ -98,10 +118,9 @@ namespace types
             }
 
 
-            
-        private:
             linked_list_entry<T>* head;
             linked_list_entry<T>* tail;
+        private:
             size_t length;
     };
 } // types

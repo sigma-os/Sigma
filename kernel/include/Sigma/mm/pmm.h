@@ -17,6 +17,7 @@ namespace mm::pmm
     void print_stack();
 
     void* alloc_block();
+    void* alloc_n_blocks(size_t n);
     void free_block(void* block);
 } // mm::pmm
 

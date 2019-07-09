@@ -15,10 +15,9 @@
 #include <Sigma/mm/hmm.h>
 
 #include <Sigma/arch/x86_64/drivers/apic.h>
+#include <Sigma/arch/x86_64/drivers/hpet.h>
 #include <Sigma/arch/x86_64/drivers/pic.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
-
-#include <Sigma/multitasking/elf.h>
 
 #include <Sigma/smp/smp.h>
 #include <Sigma/smp/cpu.h>
@@ -27,13 +26,27 @@
 #include <Sigma/acpi/madt.h>
 
 #include <Sigma/proc/initrd.h>
+#include <Sigma/proc/process.h>
+#include <Sigma/proc/elf.h>
 
 #include <Sigma/types/linked_list.h>
 #include <Sigma/boot_protocol.h>
 #include <config.h>
 
 auto cpu_list = types::linked_list<smp::cpu::entry>();
-extern "C" boot::boot_protocol boot_data;
+C_LINKAGE boot::boot_protocol boot_data;
+
+static void enable_cpu_tasking(){
+    uint64_t rsp = 0;
+    asm("mov %%rsp, %0" : "=r"(rsp)); 
+    smp::cpu::get_current_cpu()->tss->rsp0 = rsp;
+
+    proc::process::init_cpu();
+
+    asm("sti");
+    while(1);
+}
+
 C_LINKAGE void kernel_main(){  
     FUNCTION_CALL_ONCE();
 
@@ -67,11 +80,11 @@ C_LINKAGE void kernel_main(){
     uint64_t n_elf_sections = boot_protocol->kernel_n_elf_sections;
 
     for(uint64_t i = 0; i < n_elf_sections; i++){
-        multitasking::elf::Elf64_Shdr* shdr = reinterpret_cast<multitasking::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(multitasking::elf::Elf64_Shdr)));
-        if(shdr->sh_flags & multitasking::elf::SHF_ALLOC){
+        proc::elf::Elf64_Shdr* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
+        if(shdr->sh_flags & proc::elf::SHF_ALLOC){
            uint32_t flags = map_page_flags_present;
-           if(shdr->sh_flags & multitasking::elf::SHF_WRITE) flags |= map_page_flags_writable;
-           if(!(shdr->sh_flags & multitasking::elf::SHF_EXECINSTR)) flags |= map_page_flags_no_execute;
+           if(shdr->sh_flags & proc::elf::SHF_WRITE) flags |= map_page_flags_writable;
+           if(!(shdr->sh_flags & proc::elf::SHF_EXECINSTR)) flags |= map_page_flags_no_execute;
 
            for(uint64_t j = 0; j < shdr->sh_size; j += mm::pmm::block_size){
                 uint64_t virt = (shdr->sh_addr + j);
@@ -111,13 +124,20 @@ C_LINKAGE void kernel_main(){
     auto* entry = cpu_list.empty_entry();
     entry->lapic = lapic;
     entry->lapic_id = entry->lapic.get_id();
+    entry->tss = &tss;
     entry->set_gs();
 
 
-    entry->lapic.send_eoi(); // Clear any remaining interrupt
+    x86_64::idt::register_irq_status(33, true);
+
     x86_64::apic::ioapic::init(madt);
 
+
+    x86_64::hpet::init_hpet();
+
     acpi::init_sci(madt);
+
+    proc::process::init_multitasking(madt);
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
     (void)(smp);
@@ -128,10 +148,8 @@ C_LINKAGE void kernel_main(){
 
     proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
 
-    asm("sti");
-
-    while(1);
-    //asm("cli; hlt");
+    enable_cpu_tasking();
+    asm("cli; hlt"); // Wait what?
 }   
 
 
@@ -158,14 +176,13 @@ C_LINKAGE void smp_kernel_main(){
     entry->lapic = x86_64::apic::lapic();
     entry->lapic.init();
     entry->lapic_id = entry->lapic.get_id();
+    entry->tss = &tss;
     entry->set_gs();
 
     printf("Booted CPU with lapic_id: %d\n", entry->lapic_id);
 
     x86_64::spinlock::release(&ap_mutex);
 
-    asm("sti");
-
-    while(true);
-    //asm("cli; hlt");
+    enable_cpu_tasking();
+    asm("cli; hlt"); // Wait what?
 }

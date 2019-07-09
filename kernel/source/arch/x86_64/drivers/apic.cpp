@@ -1,6 +1,7 @@
 #include <Sigma/acpi/madt.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/idt.h>
+#include <Sigma/arch/x86_64/drivers/hpet.h>
 
 uint32_t x86_64::apic::lapic::read(uint32_t reg){
     volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
@@ -59,27 +60,24 @@ void x86_64::apic::lapic::send_eoi(){
     this->write(x86_64::apic::lapic_eoi, 0); // Anything other than 0 *will* result in a General Protection Fault
 }
 
-auto timer_mutex = x86_64::spinlock::mutex();
 
 void x86_64::apic::lapic::enable_timer(uint8_t vector, uint64_t ms, x86_64::apic::lapic_timer_modes mode){  
-    x86_64::spinlock::acquire(&timer_mutex);
     uint32_t ticks_per_second;
 
     if(this->timer_ticks_per_ms != 0) goto finalize;
 
     this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
 
-    x86_64::cmos::sleep_second(); // Align sleep time
 
     this->write(x86_64::apic::lapic_timer_initial_count, 0xFFFFFFFF);
     this->set_timer_mask(false);
 
-    x86_64::cmos::sleep_second(); // Time 1 second
+    x86_64::hpet::poll_sleep(10);
 
     this->set_timer_mask(true);
 
     ticks_per_second = 0xFFFFFFFF - this->read(x86_64::apic::lapic_timer_current_count);
-    this->timer_ticks_per_ms = ticks_per_second / 1000; // Seconds to milliseconds
+    this->timer_ticks_per_ms = ticks_per_second / 10;
 
 finalize:
     this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
@@ -88,8 +86,6 @@ finalize:
     this->write(x86_64::apic::lapic_timer_initial_count, this->timer_ticks_per_ms * ms);
 
     this->set_timer_mask(false);
-
-    x86_64::spinlock::release(&timer_mutex);
 }
 
 void x86_64::apic::lapic::set_timer_mode(x86_64::apic::lapic_timer_modes mode){

@@ -1,9 +1,9 @@
-#ifndef SIGMA_KERNEL_MULTITASKING_ELF
-#define SIGMA_KERNEL_MULTITASKING_ELF
+#ifndef SIGMA_KERNEL_PROC_ELF
+#define SIGMA_KERNEL_PROC_ELF
 
 #include <Sigma/common.h>
 
-namespace multitasking::elf
+namespace proc::elf
 {
     using Elf64_Word = uint32_t;
     using Elf64_Off = uint64_t;
@@ -27,7 +27,7 @@ namespace multitasking::elf
     constexpr uint64_t SHF_ALLOC = 0x2;
     constexpr uint64_t SHF_EXECINSTR = 0x4;
 
-} // multitasking::elf
+} // proc::elf
 
 
 #endif

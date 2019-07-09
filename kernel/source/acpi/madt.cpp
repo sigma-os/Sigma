@@ -21,8 +21,6 @@ void acpi::madt::parse_lapic(uint8_t* item){
     if(bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_enabled) || (!bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_enabled) && bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_online_capable))){
         auto* entry = this->cpus.empty_entry();
         entry->lapic_id = lapic->apic_id;
-        entry->lapic_version = 0x10; // Don't know for sure but assume for compatibility with MP tables
-        entry->on_chip_apic = true;
         uint32_t a, b, c, d;
         if(x86_64::cpuid(0x1, a, b, c, d)){
             uint8_t id = ((b >> 24) & 0xFF);

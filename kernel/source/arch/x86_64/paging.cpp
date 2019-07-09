@@ -45,6 +45,7 @@ x86_64::paging::pml4* x86_64::paging::get_current_info(){
 
 void x86_64::paging::set_current_info(x86_64::paging::pml4* info){
         uint64_t pointer = reinterpret_cast<uint64_t>(info);
+
         asm("mov %0, %%cr3" : : "r"(pointer));
 }
 

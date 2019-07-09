@@ -6,7 +6,6 @@
 
 #include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
-#include <Sigma/arch/x86_64/drivers/cmos.h>
 #include <Sigma/types/linked_list.h>
 
 namespace acpi

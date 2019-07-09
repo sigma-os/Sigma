@@ -25,18 +25,6 @@ static void clear_booted_flag(){
     *trampoline_booted_addr = 0;
 }
 
-void smp::multiprocessing::boot_external_apic(smp::cpu_entry& cpu){
-    x86_64::cmos::write(x86_64::cmos::reg_reset_code, x86_64::cmos::reg_reset_code_jump);
-
-    uint32_t* reset_vector = reinterpret_cast<uint32_t*>(x86_64::bios::bios_reset_vector + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-    *reset_vector = static_cast<uint32_t>(((smp::smp_trampoline_base & 0xFF00) << 12));
-
-    this->bsp_lapic->send_ipi_raw(cpu.lapic_id, (x86_64::apic::lapic_icr_tm_level | x86_64::apic::lapic_icr_levelassert | x86_64::apic::lapic_icr_dm_init));
-    this->bsp_lapic->send_ipi_raw(cpu.lapic_id, (x86_64::apic::lapic_icr_tm_level | x86_64::apic::lapic_icr_dm_init));  
-
-    x86_64::cmos::write(x86_64::cmos::reg_reset_code, 0); // Reset BIOS reset
-}
-
 
 void smp::multiprocessing::boot_apic(smp::cpu_entry& cpu){
     this->bsp_lapic->send_ipi_raw(cpu.lapic_id, (x86_64::apic::lapic_icr_tm_level | x86_64::apic::lapic_icr_levelassert | x86_64::apic::lapic_icr_dm_init));
@@ -48,16 +36,10 @@ void smp::multiprocessing::boot_apic(smp::cpu_entry& cpu){
 void smp::multiprocessing::boot_cpu(cpu_entry& e){
     uint64_t off = (((uint64_t)&smp::trampoline_stack) - ((uint64_t)&smp::trampoline_start));
     uint64_t* trampoline_stack_addr = (uint64_t*)((smp::smp_trampoline_base + off) + KERNEL_VBASE);
-    void* cpu_stack = mm::pmm::alloc_block(); // 4kb stack
-    *trampoline_stack_addr = (reinterpret_cast<uint64_t>(cpu_stack) + 0x1000 + KERNEL_VBASE);
+    void* cpu_stack = mm::pmm::alloc_n_blocks(4); // 4kb stack
+    *trampoline_stack_addr = (reinterpret_cast<uint64_t>(cpu_stack) + (0x1000 * 4) + KERNEL_VBASE);
     
-    if(e.lapic_version >= 0x10){
-        // boot normal apic
-        this->boot_apic(e);
-    } else {
-        // boot external apic. on 64bit cpu?
-        this->boot_external_apic(e);
-    }
+    this->boot_apic(e);
 
     if(wait_for_boot()){
         debug_printf("[SMP]: Booted CPU with lapic_id: %d, stack: %x\n", e.lapic_id, *trampoline_stack_addr);

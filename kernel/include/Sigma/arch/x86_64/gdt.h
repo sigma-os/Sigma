@@ -65,7 +65,11 @@ namespace x86_64::gdt
         
     };
 
-    constexpr uint16_t code_selector = 0x08; // Manually update this
+    constexpr uint16_t kernel_data_selector = 0x0;
+    constexpr uint16_t kernel_code_selector = 0x08; // Manually update this
+
+    constexpr uint16_t user_data_selector = 0x0;
+    constexpr uint16_t user_code_selector = 0x10; // Manually update this
 } // x86_64::gdt
 
 

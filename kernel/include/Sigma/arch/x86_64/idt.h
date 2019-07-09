@@ -40,7 +40,7 @@ namespace x86_64::idt
         public:
         idt_table(){
             for(auto& e : entries){
-                e = x86_64::idt::idt_entry(nullptr, x86_64::gdt::code_selector, false, 0);
+                e = x86_64::idt::idt_entry(nullptr, x86_64::gdt::kernel_code_selector, false, 0);
             }
         }
 

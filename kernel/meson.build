@@ -9,7 +9,7 @@ main_sources = files(
     'source/acpi/madt.cpp',
     'source/acpi/laihost.cpp',
     'source/arch/x86_64/drivers/apic.cpp',
-    'source/arch/x86_64/drivers/cmos.cpp',
+    'source/arch/x86_64/drivers/hpet.cpp',
     'source/arch/x86_64/drivers/pic.cpp',
     'source/arch/x86_64/drivers/pci.cpp',
     'source/arch/x86_64/gdt.cpp',
@@ -30,6 +30,7 @@ main_sources = files(
     'source/smp/ipi.cpp',
     'source/smp/trampoline.S',
     'source/proc/initrd.cpp',
+    'source/proc/process.cpp',
     'source/cpp_support.cpp',
     'source/crti.S',
     'source/crtn.S',
@@ -42,6 +43,7 @@ cpp_includes = include_directories('include')
 nasm_sources = files(
     'source/arch/x86_64/misc/spinlock.asm',
     'source/arch/x86_64/interrupts.asm',
+    'source/proc/idle.asm',
     'source/smp/gs.asm',
     'source/kernel_early.asm',)
 

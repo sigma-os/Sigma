@@ -89,6 +89,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 void* mm::pmm::alloc_block(){
     x86_64::spinlock::acquire(&pmm_global_mutex);
     rle_stack_entry ent = pop();
+    while(ent.n_pages == 0) ent = pop();
     uint64_t addr = ent.base;
     ent.base += mm::pmm::block_size;
     ent.n_pages--;
@@ -103,6 +104,29 @@ void* mm::pmm::alloc_block(){
     return reinterpret_cast<void*>(addr);
 }
 
+void* mm::pmm::alloc_n_blocks(size_t n){
+    x86_64::spinlock::acquire(&pmm_global_mutex);
+    uint64_t base = 0;
+    for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
+        if(entry->n_pages >= n){
+            // Found entry that is big enough to hold us
+            base = entry->base;
+            entry->base += (mm::pmm::block_size * n);
+            entry->n_pages -= n;
+        }
+    }
+    if(base == 0){
+        PANIC("[PMM]: Out of memory");
+    }
+
+    if(((base >= (kernel_start - KERNEL_VBASE)) && (base <= (kernel_end - KERNEL_VBASE))) || ((base >= (mbd_start - KERNEL_VBASE) && base <= (mbd_end - KERNEL_VBASE))) || ((base >= (initrd_start) && base <= (initrd_end)))){
+        // Addr is in kernel or multiboot info so just ignore it and get a new one
+        x86_64::spinlock::release(&pmm_global_mutex);
+        return mm::pmm::alloc_n_blocks(n);
+    }
+    x86_64::spinlock::release(&pmm_global_mutex);
+    return reinterpret_cast<void*>(base);
+}
 
 void mm::pmm::free_block(void* block){
     x86_64::spinlock::acquire(&pmm_global_mutex);

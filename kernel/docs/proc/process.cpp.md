@@ -1,0 +1,7 @@
+- Thread Privilege levels
+    - KERNEL
+        - This is *only* used for kernel threads and not useable for any other threads, it runs in ring 0 and gives *full* hardware access
+    - DRIVER
+        - This is the level used for drivers, it runs in ring 3 and gives limited hardware access
+    - APPLICATION
+        - This is the level used for normal application, it runs in ring 3 and gives *no* hardware access

@@ -3,6 +3,7 @@
 #include <Sigma/acpi/acpi.h>
 #include <Sigma/arch/x86_64/io.h>
 #include <Sigma/arch/x86_64/drivers/pci.h>
+#include <Sigma/arch/x86_64/drivers/hpet.h>
 #include <Sigma/mm/vmm.h>
 
 extern "C" {
@@ -91,9 +92,8 @@ uint32_t laihost_pci_read(uint8_t bus, uint8_t device, uint8_t function, uint16_
     return x86_64::pci::read(bus, device, function, offset);
 }
 
-void laihost_sleep(uint64_t time){
-    UNUSED(time);
-    debug_printf("[ACPI]: Stubbed function called: name: %s\n", __func__);
+void laihost_sleep(uint64_t ms){
+    x86_64::hpet::poll_sleep(ms);
 }
 
 }

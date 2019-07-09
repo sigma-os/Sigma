@@ -6,6 +6,13 @@ size_t strlen(const char* s){
     return len;
 }
 
+char *strcpy(char *dest, const char *src) {
+    while(*src)
+        *(dest++) = *(src++);
+    *dest = 0;
+    return dest;
+}
+
 void* memset(void* s, int c, size_t n){
     uint8_t* buf = (uint8_t*)s;
 
