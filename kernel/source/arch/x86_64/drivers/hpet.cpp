@@ -46,48 +46,51 @@ static void hpet_write(uint64_t reg, uint64_t value){
 
 void x86_64::hpet::init_hpet(){
     // Attempt to find the AML object for the timer
-    lai_object_t pnp_id;
+    lai_variable_t pnp_id = {};
     lai_eisaid(&pnp_id, const_cast<char*>(x86_64::hpet::hpet_pnp_id));
-
-    size_t index = 0;
-    lai_nsnode_t *handle = lai_get_deviceid(index, &pnp_id);
     
-    if(!handle){
-        PANIC("[HPET]: Couldn't find HPET timer in AML");
-    }
+    LAI_CLEANUP_STATE lai_state_t state;
+    lai_init_state(&state);
 
+    lai_nsnode_t *handle = nullptr;
+    struct lai_ns_iterator iter = LAI_NS_ITERATOR_INIT;
 
-    // Code for printing every HPET device in AML, not necessary for normal usage
-    #ifdef DEBUG
-    while(handle){
-        char path[ACPI_MAX_NAME];
-        strcpy(path, handle->path);
-        strcpy(path + strlen(path), "._UID");
-        
-        lai_object_t hpet_uid;
-        int status = lai_eval(&hpet_uid, path);
+    lai_nsnode_t *node;
+    while ((node = lai_ns_iterate(&iter))) {
+        if(lai_check_device_pnp_id(node, &pnp_id, &state)) continue; // This aint it chief
 
+        lai_nsnode_t* hpet_uid_node = lai_resolve_path(node, "_UID");
+        lai_variable_t hpet_uid = {};
+        int status = lai_eval(&hpet_uid, hpet_uid_node, &state);
+
+        #ifdef DEBUG
         if(status == 0){
-
-            strcpy(path, handle->path);
-            strcpy(path + strlen(path), "._STR");
-        
-            lai_object_t hpet_str;
-            int str_status = lai_eval(&hpet_str, path);
-            if(str_status == 0){
-                debug_printf("[HPET]: Found HPET in AML code, _UID: %x, _STR: %s\n", hpet_uid.integer, hpet_str.string_ptr);
-            } else {
-                debug_printf("[HPET]: Found HPET in AML code, UID: %x\n", hpet_uid.integer);
-            }
+            uint64_t uid = 0xFFFFFFFFFFFFFFFF;
+            lai_obj_get_integer(&hpet_uid, &uid);
+            debug_printf("[HPET]: Found HPET in AML code, UID: %x\n", hpet_uid.integer);
         } else {
             debug_printf("[HPET]: Found HPET in AML code\n");
         }
+        #endif
 
-
-        index++;
-        handle = lai_get_deviceid(index, &pnp_id);
+        if(status == 0){ // Found a _UID
+            // We only support one HPET so look for UID 0
+            uint64_t uid = 0xFFFFFFFFFFFFFFFF;
+            lai_obj_get_integer(&hpet_uid, &uid);
+            if(hpet_uid.integer == 0){
+                handle = node;
+                break;
+            }
+        } else {
+            // Assume this is 0, since there is no _UID we don't know for sure
+            handle = node;
+            break;
+        }
     }
-    #endif
+
+    if(!handle){
+        PANIC("[HPET]: Couldn't find HPET timer in AML");
+    }
     
     acpi_table = reinterpret_cast<x86_64::hpet::table*>(acpi::get_table("HPET"));
     if(acpi_table == nullptr){
