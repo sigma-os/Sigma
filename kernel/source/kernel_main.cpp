@@ -17,6 +17,7 @@
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/drivers/hpet.h>
 #include <Sigma/arch/x86_64/drivers/pic.h>
+#include <Sigma/arch/x86_64/drivers/pci.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
 
 #include <Sigma/smp/smp.h>
@@ -132,6 +133,8 @@ C_LINKAGE void kernel_main(){
 
     x86_64::apic::ioapic::init(madt);
 
+
+    x86_64::pci::parse_pci();
 
     x86_64::hpet::init_hpet();
 

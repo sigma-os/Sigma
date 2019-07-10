@@ -53,21 +53,25 @@ void x86_64::hpet::init_hpet(){
     lai_init_state(&state);
 
     lai_nsnode_t *handle = nullptr;
-    struct lai_ns_iterator iter = LAI_NS_ITERATOR_INIT;
+    struct lai_ns_iterator iter = LAI_NS_ITERATOR_INITIALIZER;
 
     lai_nsnode_t *node;
     while ((node = lai_ns_iterate(&iter))) {
         if(lai_check_device_pnp_id(node, &pnp_id, &state)) continue; // This aint it chief
 
         lai_nsnode_t* hpet_uid_node = lai_resolve_path(node, "_UID");
+
+        int status = 1;
         lai_variable_t hpet_uid = {};
-        int status = lai_eval(&hpet_uid, hpet_uid_node, &state);
+        if(hpet_uid_node != nullptr){
+            status = lai_eval(&hpet_uid, hpet_uid_node, &state);
+        }
 
         #ifdef DEBUG
         if(status == 0){
             uint64_t uid = 0xFFFFFFFFFFFFFFFF;
             lai_obj_get_integer(&hpet_uid, &uid);
-            debug_printf("[HPET]: Found HPET in AML code, UID: %x\n", hpet_uid.integer);
+            debug_printf("[HPET]: Found HPET in AML code, UID: %x\n", uid);
         } else {
             debug_printf("[HPET]: Found HPET in AML code\n");
         }
@@ -77,7 +81,7 @@ void x86_64::hpet::init_hpet(){
             // We only support one HPET so look for UID 0
             uint64_t uid = 0xFFFFFFFFFFFFFFFF;
             lai_obj_get_integer(&hpet_uid, &uid);
-            if(hpet_uid.integer == 0){
+            if(uid == 0){
                 handle = node;
                 break;
             }
