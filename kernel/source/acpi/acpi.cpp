@@ -2,6 +2,8 @@
 
 extern "C" {
 #include <lai/core.h>
+#include <lai/helpers/sci.h>
+#include <lai/helpers/sleep.h>
 }
 
 

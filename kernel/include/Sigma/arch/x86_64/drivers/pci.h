@@ -32,10 +32,10 @@ namespace x86_64::pci
 
     
 
-    uint32_t read(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset);
-    uint32_t read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset);
-    void write(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value);
-    void write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value);
+    uint32_t read(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
+    uint32_t read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
+    void write(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
+    void write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
 
     
     struct bar {

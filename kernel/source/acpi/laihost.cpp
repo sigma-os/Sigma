@@ -84,12 +84,28 @@ uint32_t laihost_ind(uint16_t port){
     return x86_64::io::ind(port);
 }
 
-void laihost_pci_write(uint8_t bus, uint8_t device, uint8_t function, uint16_t offset , uint32_t value){
-    x86_64::pci::write(bus, device, function, offset, value);
+void laihost_pci_writeb(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset , uint8_t value){
+    x86_64::pci::write(seg, bus, device, function, offset, value, 1);
 }
 
-uint32_t laihost_pci_read(uint8_t bus, uint8_t device, uint8_t function, uint16_t offset){
-    return x86_64::pci::read(bus, device, function, offset);
+uint8_t laihost_pci_readb(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset){
+    return x86_64::pci::read(seg, bus, device, function, offset, 1);
+}
+
+void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset , uint16_t value){
+    x86_64::pci::write(seg, bus, device, function, offset, value, 2);
+}
+
+uint16_t laihost_pci_readw(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset){
+    return x86_64::pci::read(seg, bus, device, function, offset, 2);
+}
+
+void laihost_pci_writed(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset , uint32_t value){
+    x86_64::pci::write(seg, bus, device, function, offset, value, 4);
+}
+
+uint32_t laihost_pci_readd(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset){
+    return x86_64::pci::read(seg, bus, device, function, offset, 4);
 }
 
 void laihost_sleep(uint64_t ms){
