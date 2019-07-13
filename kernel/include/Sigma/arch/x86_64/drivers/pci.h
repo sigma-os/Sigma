@@ -69,6 +69,9 @@ namespace x86_64::pci
 
     x86_64::pci::device iterate(pci_iterator& iterator);
 
+    constexpr const char* pci_root_bus_pnp_id = "PNP0A03";
+    constexpr const char* pcie_root_bus_pnp_id = "PNP0A08";
+
     void parse_pci();
 } // namespace x86_64::pci
 

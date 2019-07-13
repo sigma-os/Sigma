@@ -1,5 +1,9 @@
 #include <Sigma/arch/x86_64/drivers/pci.h>
 
+extern "C"{
+    #include <lai/core.h>
+}
+
 static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
 static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
 
@@ -22,15 +26,15 @@ static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun
     switch (access_size)
     {
     case 1: // Byte
-        return x86_64::io::inb(x86_64::pci::config_data);
+        return x86_64::io::inb(x86_64::pci::config_data + (offset % 4));
         break;
                 
     case 2: // Word
-        return x86_64::io::inw(x86_64::pci::config_data);
+        return x86_64::io::inw(x86_64::pci::config_data + (offset % 4));
         break;
 
     case 4: // DWord
-        return x86_64::io::ind(x86_64::pci::config_data);
+        return x86_64::io::ind(x86_64::pci::config_data + (offset % 4));
         break;
 
     default:
@@ -46,15 +50,15 @@ static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t functi
     switch (access_size)
     {
     case 1: // Byte
-        x86_64::io::outb(x86_64::pci::config_data, value);
+        x86_64::io::outb(x86_64::pci::config_data + (offset % 4), value);
         break;
                 
     case 2: // Word
-        x86_64::io::outw(x86_64::pci::config_data, value);
+        x86_64::io::outw(x86_64::pci::config_data + (offset % 4), value);
         break;
 
     case 4: // DWord
-        x86_64::io::outd(x86_64::pci::config_data, value);   
+        x86_64::io::outd(x86_64::pci::config_data + (offset % 4), value);   
         break;
 
     default:
@@ -70,7 +74,7 @@ static uint32_t mcfg_pci_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t f
             if((bus >= entry.start_bus_number) && (bus <= entry.end_bus_number)){
                 // Found it
 
-                uint64_t addr = (entry.base + (((bus - entry.start_bus_number) << 20) | (slot << 15) | (function << 12))) + offset;
+                uint64_t addr = (entry.base + (((bus - entry.start_bus_number) << 20) | (slot << 15) | (function << 12))) | (offset);
                 mm::vmm::kernel_vmm::get_instance().map_page(addr, (addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute | map_page_flags_global | map_page_flags_cache_disable);
                 switch (access_size)
                 {
@@ -198,7 +202,7 @@ static void enumerate_bus(uint16_t seg, uint8_t bus);
 
 static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function){
     auto dev = x86_64::pci::device();
-    uint16_t vendor_id = ((x86_64::pci::read(seg, bus, device, function, 0, 4) >> 16) & 0xFFFF);
+    uint16_t vendor_id = x86_64::pci::read(seg, bus, device, function, 0, 2);
     if(vendor_id == 0xFFFF) return; // Device doesn't exist
 
     dev.exists = true;
@@ -212,7 +216,8 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
     uint8_t subclass_code = ((x86_64::pci::read(seg, bus, device, function, 8, 4) >> 16) & 0xFF);
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge
-        enumerate_bus(seg, ((x86_64::pci::read(seg, bus, device, function, 18, 4) >> 8) & 0xFF));
+        uint8_t secondary_bus = x86_64::pci::read(seg, bus, device, function, 0x19, 1);
+        enumerate_bus(seg, secondary_bus);
     }
 
     dev.class_code = class_code;
@@ -235,10 +240,10 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
 }
 
 static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device){
-    uint16_t vendor_id = ((x86_64::pci::read(seg, bus, device, 0, 0, 4) >> 16) & 0xFFFF);
+    uint16_t vendor_id = x86_64::pci::read(seg, bus, device, 0, 0, 2);
     if(vendor_id == 0xFFFF) return; // Device doesn't exist
 
-    uint8_t header_type = ((x86_64::pci::read(seg, bus, device, 0, 0xC, 4) >> 16) & 0xFF);
+    uint8_t header_type = x86_64::pci::read(seg, bus, device, 0, 0xE, 1);
     if(bitops<uint8_t>::bit_test(header_type, 7)){
         for(uint8_t i = 0; i < 8; i++) enumerate_function(seg, bus, device, i);
     } else {
@@ -250,24 +255,27 @@ static void enumerate_bus(uint16_t seg, uint8_t bus){
     for(uint8_t i = 0; i < 32; i++) enumerate_device(seg, bus, i);
 }
 
-static void enumerate_seg(uint16_t seg, uint8_t bus_start, uint8_t bus_end){
-    for(uint8_t bus = bus_start; bus < bus_end; bus++) enumerate_bus(seg, bus);
-}
-
 void x86_64::pci::parse_pci(){
-    //uint16_t n_segments;
     auto* mcfg = reinterpret_cast<acpi::mcfg_table*>(acpi::get_table(acpi::mcfg_table_signature));
     if(mcfg == nullptr){
         // No PCI-E use legacy access
         internal_read = legacy_read;
         internal_write = legacy_write;
 
-        enumerate_seg(0, 0, 255); // Legacy ranges
+        uint8_t header_type = x86_64::pci::read(0, 0, 0, 0, 0xE, 1);
+        if(bitops<uint8_t>::bit_test(header_type, 7)){
+            for(uint8_t i = 0; i < 8; i++){
+                uint16_t vendor_id = x86_64::pci::read(0, 0, 0, i, 0, 2);
+                if(vendor_id == 0xFFFF) break; // Device doesn't exist
+                enumerate_bus(0, i);
+            }
+        } else {
+            enumerate_bus(0, 0);
+        }
     } else {
         size_t n_entries = (mcfg->header.length - (sizeof(acpi::sdt_header) + sizeof(uint64_t))) / sizeof(acpi::mcfg_table_entry); 
         for(uint64_t i = 0; i < n_entries; i++){
             acpi::mcfg_table_entry& entry = mcfg->entries[i];
-
             mcfg_entries.push_back(entry);
         }
 
@@ -275,8 +283,50 @@ void x86_64::pci::parse_pci(){
         internal_read = mcfg_pci_read;
         internal_write = mcfg_pci_write;
 
-        for(const auto& entry : mcfg_entries) enumerate_seg(entry.seg, entry.start_bus_number, entry.end_bus_number);
-    }
+        LAI_CLEANUP_STATE lai_state_t state;
+        lai_init_state(&state);
+
+        lai_variable_t pci_pnp_id = {};
+        lai_variable_t pcie_pnp_id = {};
+        lai_eisaid(&pci_pnp_id, const_cast<char*>(x86_64::pci::pci_root_bus_pnp_id));
+        lai_eisaid(&pcie_pnp_id, const_cast<char*>(x86_64::pci::pcie_root_bus_pnp_id));
+
+        struct lai_ns_iterator iter = LAI_NS_ITERATOR_INITIALIZER;
+        lai_nsnode_t *node;
+        while ((node = lai_ns_iterate(&iter))) {
+            if (lai_check_device_pnp_id(node, &pci_pnp_id, &state) &&
+                    lai_check_device_pnp_id(node, &pcie_pnp_id, &state)) {
+                continue;
+            }
+
+            lai_variable_t bus_number = {};
+            uint64_t bbn_result = 0;
+            lai_nsnode_t *bbn_handle = lai_resolve_path(node, "_BBN");
+            if (bbn_handle) {
+                if (lai_eval(&bus_number, bbn_handle, &state)) {
+                    debug_printf("[PCI]: Couldn't evaluate Root Bus _BBN, skipping this one\n");
+                    continue;
+                }
+                lai_obj_get_integer(&bus_number, &bbn_result);
+            } else {
+                debug_printf("[PCI]: Root bus doesn't have _BBN, assuming 0\n");
+            }
+
+            lai_variable_t seg_number = {};
+            uint64_t seg_result = 0;
+            lai_nsnode_t *seg_handle = lai_resolve_path(node, "_SEG");
+            if (seg_handle) {
+                if (lai_eval(&seg_number, seg_handle, &state)){
+                    debug_printf("[PCI]: Couldn't evaluate Root Bus _SEG, assuming 0\n");
+                } else {
+                    lai_obj_get_integer(&seg_number, &seg_result);
+                }
+            } else {
+                debug_printf("[PCI]: Root bus doesn't have _SEG, assuming 0\n");
+            }
+            enumerate_bus(seg_result, bbn_result);
+        }
+    }   
 
     for(const auto& entry : pci_devices) debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code));
 }
@@ -359,7 +409,7 @@ x86_64::pci::device x86_64::pci::iterate(x86_64::pci::pci_iterator& iterator){
     uint64_t i = 0;
     for(const auto& entry : pci_devices){
         if(i == iterator){
-            iterator++;
+            ++iterator;
             return entry;
         } 
         i++;
