@@ -144,7 +144,7 @@ void x86_64::hpet::init_hpet(){
 
 bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_types type, uint8_t vector, uint64_t ms){
     if(comparator > n_counters){
-        printf("[HPET]: Unexisting comparator\n", comparator);
+        printf("[HPET]: Unexisting comparator\n");
         return false;
     }
 

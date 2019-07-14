@@ -78,11 +78,6 @@ trampoline_enter_64:
     movw %ax, %gs
     movw %ax, %ss
 
-    movq (SMP_START + (trampoline_stack - trampoline_start)), %rsp
-    movq %rsp, %rbp
-
-    movb $1, (SMP_START + (trampoline_booted - trampoline_start))
-
     movabsq $_smp_kernel_early, %rax
     jmp *%rax
     cli
@@ -124,14 +119,6 @@ trampoline_gdt64_end:
 trampoline_gdt64_pointer:
     .word trampoline_gdt64_end - trampoline_gdt64 - 1
     .quad (SMP_START + (trampoline_gdt64 - trampoline_start)) 
-
-
-
-.globl trampoline_stack
-trampoline_stack: .quad 0
-
-.globl trampoline_booted
-trampoline_booted: .byte 0
 
 .align 0x1000
 pml4_table:

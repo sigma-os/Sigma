@@ -102,6 +102,14 @@ _kernel_early:
 
 global _smp_kernel_early
 _smp_kernel_early:
+    mov rax, qword [trampoline_paging]
+    mov cr3, rax
+
+    mov rsp, qword [trampoline_stack]
+    mov rbp, rsp
+
+    mov byte [trampoline_booted], 1
+
     call initialize_sse
     call initialize_avx
     call initialize_efer
@@ -115,6 +123,13 @@ _smp_kernel_early:
     cli
     hlt
 
+
+global trampoline_stack
+trampoline_stack: dq 0
+global trampoline_paging
+trampoline_paging: dq 0
+global trampoline_booted
+trampoline_booted: db 0
 
 section .bss
 

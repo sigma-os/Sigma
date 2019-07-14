@@ -162,8 +162,6 @@ x86_64::spinlock::mutex ap_mutex = x86_64::spinlock::mutex();
 C_LINKAGE void smp_kernel_main(){
     x86_64::spinlock::acquire(&ap_mutex);
 
-    mm::vmm::kernel_vmm::get_instance().set();
-    
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
     gdt.init();

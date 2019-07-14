@@ -197,7 +197,6 @@ void proc::process::init_multitasking(acpi::madt& madt){
     for(auto entry : cpu_list) cpus.push_back(proc::process::managed_cpu(entry, false, nullptr));
 
     kernel_thread = thread_list.empty_entry();
-    *kernel_thread = proc::process::thread();
     kernel_thread->pid = current_thread_list_offset++;
     kernel_thread->state = proc::process::thread_state::BLOCKED;
 

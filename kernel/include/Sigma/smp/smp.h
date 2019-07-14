@@ -29,8 +29,9 @@ namespace smp
 
     C_LINKAGE uint64_t trampoline_start;
     C_LINKAGE uint64_t trampoline_end;
-    C_LINKAGE uint64_t trampoline_booted;
+    C_LINKAGE uint8_t trampoline_booted;
     C_LINKAGE uint64_t trampoline_stack;
+    C_LINKAGE uint64_t trampoline_paging;
 
     constexpr uint64_t smp_trampoline_base = 0x1000;
 

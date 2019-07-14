@@ -10,9 +10,7 @@ void smp::ipi::send_shootdown(uint64_t address, uint64_t length){
     shootdown_addr = address;
     shootdown_length = length;
     debug_printf("[IPI]: Requested TLB shootdown on addr: %x, length: %x\n", shootdown_addr, shootdown_length);
-    smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19)| smp::ipi::shootdown_ipi_vector)); // All including self
-    shootdown_addr = 0;
-    shootdown_length = 0;
+    smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19) | smp::ipi::shootdown_ipi_vector)); // All including self
     x86_64::spinlock::release(&shootdown_mutex);
 }
 

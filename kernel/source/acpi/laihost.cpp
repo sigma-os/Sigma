@@ -31,6 +31,7 @@ void laihost_log(int level, const char *msg){
 
     case LAI_WARN_LOG:
         printf("[LAI] Warning: %s\n", msg);
+        //debug_printf("[LAI] Warning: %s\n", msg);
         break;
     
     default:
