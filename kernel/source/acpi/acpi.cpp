@@ -196,11 +196,12 @@ static void acpi_sci_handler(x86_64::idt::idt_registers* regs){
         debug_printf("[ACPI]: Requested ACPI shutdown at tsc: %x\n", x86_64::read_tsc());
         lai_enter_sleep(5); // S5 is off
     } else {
-        printf("[ACPI]: Unkown SCI event: %x\n", event);
+        printf("[ACPI]: Unknown SCI event: %x\n", event);
     }
 }
 
 void acpi::init_sci(acpi::madt& madt){
+    FUNCTION_CALL_ONCE();
     auto* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
     uint16_t sci_int = fadt->sci_int;
 
@@ -208,12 +209,13 @@ void acpi::init_sci(acpi::madt& madt){
         // FADT->SCI_INT contains a GSI, map ourselves
 
         // ACPI spec states that is it a sharable, level, active low interrupt
-        x86_64::apic::ioapic::set_entry(sci_int, (sci_int + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, 1, 1, 0xFF); // Target all ioapics
+        x86_64::apic::ioapic::set_entry(sci_int, (sci_int + 0x20), x86_64::apic::ioapic_delivery_modes::FIXED, x86_64::apic::ioapic_destination_modes::PHYSICAL, ((1 << 13) | (1 << 15)), smp::cpu::get_current_cpu()->lapic_id); // Target the BSP
     }
 
     x86_64::idt::register_interrupt_handler((sci_int + 0x20), acpi_sci_handler, true);
-    x86_64::apic::ioapic::unmask_gsi(sci_int);
+    x86_64::apic::ioapic::unmask_irq(sci_int);
 
-    // Initialize LAI
-    lai_enable_acpi(1); // argument is interrupt mode, 1 = apic, 0 = pic, 2 = sapic, sapic doesn't even exist anymore    
+    lai_enable_acpi(1); // argument is interrupt mode, 1 = APIC, 0 = PIC, 2 = SAPIC, SAPIC doesn't even exist on x86_64 only on IA64(Itanium)    
+
+    debug_printf("[ACPI]: Enabled SCI on IRQ: %x\n", sci_int);
 }

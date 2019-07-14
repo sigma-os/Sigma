@@ -386,7 +386,7 @@ x86_64::pci::bar x86_64::pci::read_bar(uint16_t seg, uint8_t bus, uint8_t slot, 
             break;
         
         default:
-            debug_printf("[PCI]: Unknown mmio bar type: %x", bar_type);
+            debug_printf("[PCI]: Unknown mmio bar type: %x\n", bar_type);
             break;
         }
 

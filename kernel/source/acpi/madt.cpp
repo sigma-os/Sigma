@@ -4,7 +4,7 @@
 acpi::madt::madt(): legacy_pic(false) {
     this->table = reinterpret_cast<acpi::madt_header*>(acpi::get_table(acpi::madt_signature));
     this->cpus = types::linked_list<smp::cpu_entry>();
-    this->ioapics = types::linked_list<types::pair<uint64_t, uint64_t>>();
+    this->ioapics = types::linked_list<types::pair<uint64_t, uint32_t>>();
     this->isos = types::linked_list<x86_64::apic::interrupt_override>();
 }
 
@@ -47,9 +47,9 @@ void acpi::madt::parse_ioapic(uint8_t* item){
 void acpi::madt::parse_iso(uint8_t* item){
     auto* iso = reinterpret_cast<acpi::madt_gsi_override*>(item);
 
-    debug_printf("[MADT]: Detected Interrupt Source Override: ISA IRQ: %x, GSI: %x\n", iso->source, iso->gsi);
+    debug_printf("[MADT]: Detected Interrupt Source Override: ISA IRQ: %x, GSI: %x, flags: %x\n", iso->source, iso->gsi, iso->flags);
 
-    this->isos.push_back({iso->source, iso->gsi, iso->get_polatity(), iso->get_trigger_mode()}); // constructs an x86_64::apic::interrupt_override
+    this->isos.push_back({iso->source, iso->gsi, iso->flags}); // constructs an x86_64::apic::interrupt_override
 }
 
 void acpi::madt::parse(){
@@ -97,7 +97,7 @@ void acpi::madt::get_cpus(types::linked_list<smp::cpu_entry>& cpus){
     for(auto a : this->cpus) cpus.push_back(a);
 }
 
-void acpi::madt::get_ioapics(types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics){
+void acpi::madt::get_ioapics(types::linked_list<types::pair<uint64_t, uint32_t>>& ioapics){
     for(auto a : this->ioapics) ioapics.push_back(a);
 }
 

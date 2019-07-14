@@ -58,14 +58,6 @@ namespace acpi
         uint8_t source;
         uint32_t gsi;
         uint16_t flags;
-
-        uint8_t get_polatity(){
-            return (this->flags & 0b11);
-        }
-
-        uint8_t get_trigger_mode(){
-            return ((this->flags >> 2) & 0b11);
-        }
     } __attribute__((packed));
     static_assert(sizeof(madt_gsi_override) == 10);
 
@@ -88,7 +80,7 @@ namespace acpi
         void parse();
 
         void get_cpus(types::linked_list<smp::cpu_entry>& cpus);
-        void get_ioapics(types::linked_list<types::pair<uint64_t, uint64_t>>& ioapics);
+        void get_ioapics(types::linked_list<types::pair<uint64_t, uint32_t>>& ioapics);
         void get_interrupt_overrides(types::linked_list<x86_64::apic::interrupt_override>& ioapics);
         uint64_t get_lapic_address();
         bool supports_legacy_pic(){
@@ -107,7 +99,7 @@ namespace acpi
 
         bool legacy_pic;
         types::linked_list<smp::cpu_entry> cpus;
-        types::linked_list<types::pair<uint64_t, uint64_t>> ioapics;
+        types::linked_list<types::pair<uint64_t, uint32_t>> ioapics;
         types::linked_list<x86_64::apic::interrupt_override> isos;
         madt_header* table;
     };

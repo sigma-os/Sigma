@@ -161,8 +161,7 @@ namespace x86_64::apic
     struct interrupt_override {
         uint8_t source;
         uint32_t gsi;
-        uint8_t polarity;
-        uint8_t trigger_mode;
+        uint16_t flags;
     };
 
     class ioapic_device {
@@ -177,8 +176,8 @@ namespace x86_64::apic
             return this->max_redirection_entries;
         }
         ioapic_device() = default;
-        void init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos);
-        void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
+        void init(uint64_t base);
+        void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination);
         uint64_t read_entry(uint8_t index);
         void set_entry(uint8_t index, uint64_t data);
         void unmask(uint8_t index);
@@ -193,9 +192,12 @@ namespace x86_64::apic
 
     namespace ioapic {
         void init(acpi::madt& madt);
-        void set_entry(uint8_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination);
-        void mask_gsi(uint8_t gsi);
-        void unmask_gsi(uint8_t gsi);
+        void set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination);
+        void set_entry(uint32_t gsi, uint64_t data);
+        uint64_t read_entry(uint32_t gsi);
+        void mask_gsi(uint32_t gsi);
+        void unmask_gsi(uint32_t gsi);
+        void unmask_irq(uint32_t irq);
     };
 } // x86_64::apic
 

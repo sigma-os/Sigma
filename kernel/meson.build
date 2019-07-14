@@ -66,7 +66,7 @@ crtend_obj = crtend_obj_command.stdout().strip()
 crt_files = files(crtbegin_obj, 
                   crtend_obj)
 
-extra_warning_flags = ['-Wreorder', '-Werror']
+extra_warning_flags = ['-Wreorder', '-Wno-unknown-pragmas', '-Werror']
 
 flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding',
                   '-nostdlib', '-mcmodel=kernel', '-fno-stack-protector', '-fno-omit-frame-pointer', '-g', '-O2',

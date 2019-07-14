@@ -3,6 +3,8 @@
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/arch/x86_64/drivers/hpet.h>
 
+#pragma region LAPIC
+
 uint32_t x86_64::apic::lapic::read(uint32_t reg){
     volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
     return *val;
@@ -127,13 +129,15 @@ void x86_64::apic::lapic::set_timer_mask(bool state){
     this->write(x86_64::apic::lapic_lvt_timer, lint_entry);
 }
 
-// IOAPIC
+#pragma endregion
+
+#pragma region IOAPIC
 
 static inline uint32_t get_redirection_entry(uint32_t entry){
     return (x86_64::apic::ioapic_redirection_table + entry * 2);
 }
 
-void x86_64::apic::ioapic_device::init(uint64_t base, uint32_t gsi_base, bool pic, types::linked_list<x86_64::apic::interrupt_override>& isos){
+void x86_64::apic::ioapic_device::init(uint64_t base){
     this->base = base;
 
     mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
@@ -147,32 +151,7 @@ void x86_64::apic::ioapic_device::init(uint64_t base, uint32_t gsi_base, bool pi
         this->set_entry(i, (0 | (1 << 16))); // Mask all unused interrupts
     }
 
-    if(pic && gsi_base == 0){ // TODO: Don't assume that this IOAPIC has all interrupt entries
-        // First 16 GSI's are mapped to PIC interrupts, with ISO exceptions
-        for(size_t i = 0; i < 16; i++){
-            if(i == 2) continue; // Skip mapping Slave Cascade
-
-            bool found = false;
-            for(auto& entry : isos){
-                if(entry.source == i){
-                    // Found ISO for this interrupt
-                    this->set_entry(entry.gsi, (entry.source + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, ((entry.polarity == 3) ? (1) : (0)), ((entry.trigger_mode == 3) ? (1) : (0)), 0xFF); // Target all LAPIC's
-                    this->set_entry(entry.gsi, (this->read_entry(entry.gsi) | (1 << 16))); // Mask all entries
-                    found = true;
-                    break;
-                }
-            }
-            if(!found){
-                // Assume GSI = IRQ
-                this->set_entry(i, (i + 0x20), x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY, x86_64::apic::ioapic_destination_modes::LOGICAL, 0, 0, 0xFF); // Target all LAPIC's
-                this->set_entry(i, (this->read_entry(i) | (1 << 16))); // Mask all entries
-
-            }
-            x86_64::idt::register_irq_status(i, true); // Set IRQ status to true
-        }
-    }
-
-    debug_printf("[IOAPIC]: Initialized I/OAPIC: ID: %x, Version: %x, n_redirection entries: %d\n", this->id, this->version, this->max_redirection_entries);
+    debug_printf("[I/OAPIC]: Initialized I/OAPIC: ID: %x, Version: %x, n_redirection entries: %d\n", this->id, this->version, this->max_redirection_entries);
 }
 
 uint32_t x86_64::apic::ioapic_device::read(uint32_t reg){
@@ -205,7 +184,7 @@ void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint64_t data){
     this->write(offset + 1, ((data >> 32) & 0xFFFFFFFF));
 }
 
-void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination){
+void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination){
     uint64_t data = 0;
     data |= vector;
     switch (delivery_mode)
@@ -242,55 +221,119 @@ void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_6
     
     }
     
-    data |= ((uint64_t)pin_polarity << 13);
-    data |= ((uint64_t)trigger_mode << 15);
+    if(flags & 2) data |= ((uint64_t)1 << 13);
+    if(flags & 8) data |= ((uint64_t)1 << 15);
+    
     data |= ((uint64_t)destination << 56);
     this->set_entry(index, data);
 }
 
-auto ioapics_base = types::linked_list<types::pair<uint64_t, uint64_t>>(); // base, and gsi_base
 auto interrupt_overrides = types::linked_list<x86_64::apic::interrupt_override>();
-
-auto ioapics = types::linked_list<types::pair<x86_64::apic::ioapic_device, uint64_t>>(); // ioapic, and gsi_base
+auto ioapics = types::linked_list<types::pair<x86_64::apic::ioapic_device, uint32_t>>(); // ioapic, and gsi_base
 
 void x86_64::apic::ioapic::init(acpi::madt& madt){
+    auto ioapics_base = types::linked_list<types::pair<uint64_t, uint32_t>>(); // base, and gsi_base
     madt.get_ioapics(ioapics_base);
     madt.get_interrupt_overrides(interrupt_overrides);
 
     for(auto& a : ioapics_base){
         auto* ioapic = ioapics.empty_entry();
-        ioapic->a.init(a.a, a.b, madt.supports_legacy_pic(), interrupt_overrides);
+        ioapic->a.init(a.a);
         ioapic->b = a.b;
+    }
+
+    if(madt.supports_legacy_pic()){
+        // First 16 GSI's are mapped to PIC interrupts, with ISO exceptions
+        for(size_t i = 0; i < 16; i++){
+            if(i == 2) continue; // Skip mapping Slave Cascade
+
+            bool found = false;
+            for(auto& entry : interrupt_overrides){
+                if(entry.source == i){
+                    // Found ISO for this interrupt
+
+                    x86_64::apic::ioapic::set_entry(entry.gsi, (entry.source + 0x20), x86_64::apic::ioapic_delivery_modes::FIXED, x86_64::apic::ioapic_destination_modes::PHYSICAL, entry.flags, smp::cpu::get_current_cpu()->lapic_id); // Target all LAPIC's
+                    //x86_64::apic::ioapic::set_entry(entry.gsi, (x86_64::apic::ioapic::read_entry(entry.gsi) | (1 << 16))); // Mask all entries
+                    x86_64::apic::ioapic::mask_gsi(entry.gsi);
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                // Assume GSI = IRQ
+                x86_64::apic::ioapic::set_entry(i, (i + 0x20), x86_64::apic::ioapic_delivery_modes::FIXED, x86_64::apic::ioapic_destination_modes::PHYSICAL, 0, smp::cpu::get_current_cpu()->lapic_id); // Target all LAPIC's
+                //x86_64::apic::ioapic::set_entry(i, (x86_64::apic::ioapic::read_entry(i) | (1 << 16))); // Mask all entries
+                x86_64::apic::ioapic::mask_gsi(i);
+            }
+            x86_64::idt::register_irq_status((i + 0x20), true); // Set IRQ status to true
+        }
     }
 }
 
-void x86_64::apic::ioapic::set_entry(uint8_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint8_t pin_polarity, uint8_t trigger_mode, uint8_t destination){
+void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination){
     for(auto& entry : ioapics){
-        if((gsi >= entry.b) && (gsi <= (entry.a.get_max_redirection_entries() + entry.b))){
+        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
             // Found correct ioapic
-            entry.a.set_entry((gsi - entry.b), vector, delivery_mode, destination_mode, pin_polarity, trigger_mode, destination);
+            entry.a.set_entry((gsi - entry.b), vector, delivery_mode, destination_mode, flags, destination);
             return;
         }
     }
-    debug_printf("[I/OAPIC]: Couldn't find IOAPIC with gsi: %x\n", gsi);
+    debug_printf("[I/OAPIC]: Couldn't find IOAPIC writing gsi entry: %x\n", gsi);
 }
 
-void x86_64::apic::ioapic::mask_gsi(uint8_t gsi){
+void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint64_t data){
     for(auto& entry : ioapics){
-        if((gsi >= entry.b) && (gsi <= (entry.a.get_max_redirection_entries() + entry.b))){
+        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+            // Found correct ioapic
+            entry.a.set_entry(gsi - entry.b, data);
+            return;
+        }
+    }
+    debug_printf("[I/OAPIC]: Couldn't find IOAPIC writing gsi entry: %x\n", gsi);
+}
+
+uint64_t x86_64::apic::ioapic::read_entry(uint32_t gsi){
+    for(auto& entry : ioapics){
+        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+            // Found correct ioapic
+            return entry.a.read_entry(gsi - entry.b);
+        }
+    }
+    debug_printf("[I/OAPIC]: Couldn't find IOAPIC for reading gsi entry: %x\n", gsi);
+    return 0;
+}
+
+void x86_64::apic::ioapic::mask_gsi(uint32_t gsi){
+    for(auto& entry : ioapics){
+        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
             // Found correct ioapic
             entry.a.set_entry((gsi - entry.b), (entry.a.read_entry((gsi - entry.b)) | (1 << 16))); // Mask
             return;
         }
     }
+    debug_printf("[I/OAPIC]: Couldn't find IOAPIC for masking gsi: %x\n", gsi);
 }
 
-void x86_64::apic::ioapic::unmask_gsi(uint8_t gsi){
+void x86_64::apic::ioapic::unmask_gsi(uint32_t gsi){
     for(auto& entry : ioapics){
-        if((gsi >= entry.b) && (gsi <= (entry.a.get_max_redirection_entries() + entry.b))){
+        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
             // Found correct ioapic
             entry.a.unmask((gsi - entry.b));
             return;
         }
     }
+    debug_printf("[I/OAPIC]: Couldn't find IOAPIC for unmasking gsi: %x\n", gsi);
 }
+
+void x86_64::apic::ioapic::unmask_irq(uint32_t irq){
+    for(const auto& iso : interrupt_overrides){
+        if(iso.source == irq){
+            x86_64::apic::ioapic::unmask_gsi(iso.gsi);
+            return;
+        }
+    }
+
+    x86_64::apic::ioapic::unmask_gsi(irq);
+}
+
+#pragma endregion
