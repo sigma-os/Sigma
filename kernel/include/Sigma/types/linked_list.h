@@ -2,6 +2,7 @@
 #define SIGMA_KERNEL_TYPES_LINKED_LIST
 
 #include <Sigma/common.h>
+#include <Sigma/arch/x86_64/misc/spinlock.h>
 
 namespace types
 {
@@ -47,6 +48,7 @@ namespace types
             }
 
             T* push_back(T entry){
+                x86_64::spinlock::acquire(&this->mutex);
                 linked_list_entry<T>* new_entry = new linked_list_entry<T>;
 
                 new_entry->item = entry;
@@ -58,6 +60,7 @@ namespace types
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
                     this->length++;
+                    x86_64::spinlock::release(&this->mutex);
                     return &(new_entry->item);
                 }
 
@@ -65,10 +68,12 @@ namespace types
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
                 this->length++;
+                x86_64::spinlock::release(&this->mutex);
                 return &(new_entry->item);
             }
 
             T* empty_entry(){
+                x86_64::spinlock::acquire(&this->mutex);
                 linked_list_entry<T>* new_entry = new linked_list_entry<T>;
                 
                 new_entry->next = nullptr;
@@ -79,6 +84,7 @@ namespace types
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
                     this->length++;
+                    x86_64::spinlock::release(&this->mutex);
                     return &(new_entry->item);
                 }
 
@@ -86,6 +92,7 @@ namespace types
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
                 this->length++;
+                x86_64::spinlock::release(&this->mutex);
                 return &(new_entry->item);
             }
 
@@ -121,6 +128,7 @@ namespace types
             linked_list_entry<T>* head;
             linked_list_entry<T>* tail;
         private:
+            x86_64::spinlock::mutex mutex;
             size_t length;
     };
 } // types

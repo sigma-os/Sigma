@@ -31,6 +31,7 @@ main_sources = files(
     'source/smp/trampoline.S',
     'source/proc/initrd.cpp',
     'source/proc/process.cpp',
+    'source/proc/elf.cpp',
     'source/cpp_support.cpp',
     'source/crti.S',
     'source/crtn.S',

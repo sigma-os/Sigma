@@ -222,12 +222,13 @@ void proc::process::init_cpu(){
     printf("[MULTITASKING]: Tried to initialize cpu with apic_id: %x, that is not present in the tables\n", current_apic_id);
 }
 
-static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip, uint64_t cr3, proc::process::thread_privilege_level privilege){
+static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip, uint64_t cr3, proc::process::thread_privilege_level privilege, proc::process::thread_state state){
     thread->context = proc::process::thread_context(); // Start with a clean slate, make sure no data leaks to the next thread
     thread->context.rip = reinterpret_cast<uint64_t>(rip);
     thread->context.cr3 = cr3;
     thread->context.rsp = stack;
-    thread->state = proc::process::thread_state::IDLE;
+    thread->state = state;
+    thread->context.rflags = 0;
     thread->privilege = privilege;
 
     switch (thread->privilege)
@@ -257,14 +258,13 @@ proc::process::thread* proc::process::create_thread(void* rip, uint64_t stack, u
     for(auto& thread : thread_list){
         if(thread.state == proc::process::thread_state::DISABLED){
             // Found an empty thread in the list
-            return create_thread_int(&thread, stack, rip, cr3, privilege);
+            return create_thread_int(&thread, stack, rip, cr3, privilege, proc::process::thread_state::IDLE);
         }
     }
 
     auto* thread = thread_list.empty_entry();
-    *thread = proc::process::thread();
     thread->pid = current_thread_list_offset++;
-    return create_thread_int(thread, stack, rip, cr3, privilege);
+    return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::IDLE);
 }
 
 proc::process::thread* proc::process::create_kernel_thread(kernel_thread_function function){
@@ -273,4 +273,21 @@ proc::process::thread* proc::process::create_kernel_thread(kernel_thread_functio
     uint64_t stack = reinterpret_cast<uint64_t>(new uint8_t[0x1000]); // TODO: Improve this
     stack += 0x1000; // Remember stack grows downwards
     return proc::process::create_thread(rip, stack, cr3, proc::process::thread_privilege_level::KERNEL);
+}
+
+proc::process::thread* proc::process::create_blocked_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege){
+    for(auto& thread : thread_list){
+        if(thread.state == proc::process::thread_state::DISABLED){
+            // Found an empty thread in the list
+            return create_thread_int(&thread, stack, rip, cr3, privilege, proc::process::thread_state::BLOCKED);
+        }
+    }
+
+    auto* thread = thread_list.empty_entry();
+    thread->pid = current_thread_list_offset++;
+    return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::BLOCKED);
+}
+
+void proc::process::set_thread_state(proc::process::thread* thread, proc::process::thread_state new_state){
+    thread->state = new_state;
 }

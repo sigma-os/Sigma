@@ -41,4 +41,6 @@ inline void  operator delete[](void *, void *) throw() { };
 
 #define IS_CANONICAL(addr) ((((addr) <= 0x00007fffffffffff)) || (((addr) >= 0xffff800000000000) && ((addr) <= 0xffffffffffffffff)))
 
+#define DIV_CEIL(val, div) (((val) + (div) - 1) / (div))
+
 #endif

@@ -70,7 +70,7 @@ C_LINKAGE void kernel_main(){
     uint64_t phys_start = 0x0;
     
     for(uint32_t i = 0; i < (1024 * 16); i++){
-        mm::vmm::kernel_vmm::get_instance().map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable);
+        mm::vmm::kernel_vmm::get_instance().map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable | map_page_flags_global);
 
         virt_start += 0x1000;
         phys_start += 0x1000;
@@ -82,10 +82,10 @@ C_LINKAGE void kernel_main(){
 
     for(uint64_t i = 0; i < n_elf_sections; i++){
         proc::elf::Elf64_Shdr* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
-        if(shdr->sh_flags & proc::elf::SHF_ALLOC){
-           uint32_t flags = map_page_flags_present;
-           if(shdr->sh_flags & proc::elf::SHF_WRITE) flags |= map_page_flags_writable;
-           if(!(shdr->sh_flags & proc::elf::SHF_EXECINSTR)) flags |= map_page_flags_no_execute;
+        if(shdr->sh_flags & proc::elf::shf_alloc){
+           uint32_t flags = map_page_flags_present | map_page_flags_global;
+           if(shdr->sh_flags & proc::elf::shf_write) flags |= map_page_flags_writable;
+           if(!(shdr->sh_flags & proc::elf::shf_execinstr)) flags |= map_page_flags_no_execute;
 
            for(uint64_t j = 0; j < shdr->sh_size; j += mm::pmm::block_size){
                 uint64_t virt = (shdr->sh_addr + j);
@@ -150,6 +150,10 @@ C_LINKAGE void kernel_main(){
     }
 
     proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
+
+    proc::process::thread* thread;
+
+    if(!proc::elf::start_elf_executable("test", &thread)) printf("Failed to load test executable\n");
 
     enable_cpu_tasking();
     asm("cli; hlt"); // Wait what?

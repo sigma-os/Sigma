@@ -27,15 +27,24 @@ namespace proc::process
         types::vector<uint64_t> frames;
     };
 
+    struct thread_image {
+        thread_image(): stack_top(0), stack_bottom(0), heap_bottom(0), heap_top(0) {}
+        uint64_t stack_top;
+        uint64_t stack_bottom;
+        uint64_t heap_bottom;
+        uint64_t heap_top;
+    };
+
     enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED};
     enum class thread_privilege_level {KERNEL, DRIVER, APPLICATION};
 
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
-                  state(proc::process::thread_state::DISABLED), privilege(proc::process::thread_privilege_level::APPLICATION), \
-                  pid(0){}
+                  image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
+                  privilege(proc::process::thread_privilege_level::APPLICATION), pid(0){}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
+        proc::process::thread_image image;
         proc::process::thread_state state;
         proc::process::thread_privilege_level privilege;
 
@@ -61,6 +70,8 @@ namespace proc::process
     using kernel_thread_function = void (*)();
     proc::process::thread* create_kernel_thread(kernel_thread_function function);
     proc::process::thread* create_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
+    proc::process::thread* create_blocked_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
+    void set_thread_state(proc::process::thread* thread, proc::process::thread_state new_state);
 } // namespace proc::sched
 
 
