@@ -38,17 +38,19 @@ namespace proc::process
     enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED};
     enum class thread_privilege_level {KERNEL, DRIVER, APPLICATION};
 
+    using tid_t = uint64_t;
+
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
-                  privilege(proc::process::thread_privilege_level::APPLICATION), pid(0){}
+                  privilege(proc::process::thread_privilege_level::APPLICATION), tid(0){}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
         proc::process::thread_state state;
         proc::process::thread_privilege_level privilege;
 
-        uint64_t pid;
+        tid_t tid;
     };
     
 
@@ -72,6 +74,9 @@ namespace proc::process
     proc::process::thread* create_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
     proc::process::thread* create_blocked_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
     void set_thread_state(proc::process::thread* thread, proc::process::thread_state new_state);
+
+    proc::process::thread* thread_for_tid(tid_t tid);
+    proc::process::thread* get_current_thread();
 } // namespace proc::sched
 
 

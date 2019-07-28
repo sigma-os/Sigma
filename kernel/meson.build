@@ -69,18 +69,18 @@ crt_files = files(crtbegin_obj,
 
 extra_warning_flags = ['-Wreorder', '-Wno-unknown-pragmas', '-Werror']
 
-flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding',
+flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding', '-mno-red-zone',
                   '-nostdlib', '-mcmodel=kernel', '-fno-stack-protector', '-fno-omit-frame-pointer', '-g', '-O2',
                   '-mno-mmx', '-mno-sse', '-mno-sse2', '-mno-sse3', '-mno-sse4', '-mno-sse4.1', '-mno-sse4.2', '-mno-sse4a']
 
 cpp_flags = []
 cpp_flags += flags_c_common
 cpp_flags += extra_warning_flags
-cpp_flags += ['-std=c++17', '-mno-red-zone', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit']
+cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit']
 
 c_flags = []
 c_flags += flags_c_common
-c_flags += ['-std=c18', '-mno-red-zone']
+c_flags += ['-std=c18']
 
 ld_script = meson.current_source_dir() + '/build/linker.ld'
 

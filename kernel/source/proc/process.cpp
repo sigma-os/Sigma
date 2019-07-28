@@ -197,7 +197,7 @@ void proc::process::init_multitasking(acpi::madt& madt){
     for(auto entry : cpu_list) cpus.push_back(proc::process::managed_cpu(entry, false, nullptr));
 
     kernel_thread = thread_list.empty_entry();
-    kernel_thread->pid = current_thread_list_offset++;
+    kernel_thread->tid = current_thread_list_offset++;
     kernel_thread->state = proc::process::thread_state::BLOCKED;
 
     x86_64::idt::register_interrupt_handler(proc::process::cpu_quantum_interrupt_vector, timer_handler, true);
@@ -263,7 +263,7 @@ proc::process::thread* proc::process::create_thread(void* rip, uint64_t stack, u
     }
 
     auto* thread = thread_list.empty_entry();
-    thread->pid = current_thread_list_offset++;
+    thread->tid = current_thread_list_offset++;
     return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::IDLE);
 }
 
@@ -284,10 +284,22 @@ proc::process::thread* proc::process::create_blocked_thread(void* rip, uint64_t 
     }
 
     auto* thread = thread_list.empty_entry();
-    thread->pid = current_thread_list_offset++;
+    thread->tid = current_thread_list_offset++;
     return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::BLOCKED);
 }
 
 void proc::process::set_thread_state(proc::process::thread* thread, proc::process::thread_state new_state){
     thread->state = new_state;
+}
+
+proc::process::thread* proc::process::thread_for_tid(proc::process::tid_t tid){
+    for(auto& entry : thread_list){
+        if(entry.tid == tid) return &entry;
+    }
+
+    return nullptr;
+}
+
+proc::process::thread* proc::process::get_current_thread(){
+    return get_current_managed_cpu()->current_thread;
 }
