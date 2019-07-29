@@ -1,4 +1,3 @@
-project('Sigma OS', 'cpp', version: '0.1.0')
 
 conf_data = configuration_data()
 conf_data.set('version', meson.project_version())
@@ -101,4 +100,4 @@ loader_extra_objects = loader.get_variable('extra_object_files')
 
 deps = [lai_dependency, loader_dependency]
 
-executable('sigma.bin', main_sources, nasm_objects, loader_extra_objects, dependencies: deps, include_directories: cpp_includes, link_depends: ld_script, objects: crt_files)
+executable('sigma.bin', main_sources, nasm_objects, loader_extra_objects, dependencies: deps, include_directories: cpp_includes, link_depends: ld_script, objects: crt_files, install: true)
