@@ -9,19 +9,19 @@ namespace acpi
 {
     constexpr const char* mcfg_table_signature = "MCFG";
 
-    struct mcfg_table_entry {
+    struct PACKED_ATTRIBUTE mcfg_table_entry {
         uint64_t base;
         uint16_t seg;
         uint8_t start_bus_number;
         uint8_t end_bus_number;
         uint32_t reserved;
-    } __attribute__((packed));
+    };
 
-    struct mcfg_table {
+    struct PACKED_ATTRIBUTE mcfg_table {
         acpi::sdt_header header;
         uint64_t reserved;
         mcfg_table_entry entries[1];
-    } __attribute__((packed));
+    };
 } // namespace acpi
 
 

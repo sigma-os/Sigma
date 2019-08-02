@@ -9,7 +9,7 @@ namespace acpi
 {
     constexpr const char* fadt_signature = "FACP";
 
-    struct fadt {
+    struct PACKED_ATTRIBUTE fadt {
         acpi::sdt_header header;
         uint32_t firmware_control;
         uint32_t dsdt;
@@ -66,7 +66,7 @@ namespace acpi
         acpi::generic_address_structure sleep_control_reg;
         acpi::generic_address_structure sleep_status_reg;
         uint64_t hypervisor_vendor_identity;
-    } __attribute__((packed));
+    };
 
     constexpr uint8_t preferred_pm_profile_unspecified = 0;
     constexpr uint8_t preferred_pm_profile_desktop = 1;

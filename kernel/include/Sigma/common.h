@@ -33,7 +33,7 @@ inline void  operator delete[](void *, void *) throw() { };
     })
 
 
-#define ARCH_X86_64 // get the possibility of multiple platforms working
+#define ARCH_X86_64 // TODO: Actually separate archs
 //#define ARCH_ARM
 
 #define ALIGN_DOWN(val, align) (((uint64_t)(val)) & ~((align) - 1))
@@ -42,5 +42,12 @@ inline void  operator delete[](void *, void *) throw() { };
 #define IS_CANONICAL(addr) ((((addr) <= 0x00007fffffffffff)) || (((addr) >= 0xffff800000000000) && ((addr) <= 0xffffffffffffffff)))
 
 #define DIV_CEIL(val, div) (((val) + (div) - 1) / (div))
+
+#ifdef __GNUC__
+#define PACKED_ATTRIBUTE [[gnu::packed]]
+#define NOINLINE_ATTRIBUTE [[gnu::noinline]]
+#else
+#error "Unknown Compiler"
+#endif
 
 #endif

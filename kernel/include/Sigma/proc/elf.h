@@ -14,7 +14,7 @@ namespace proc::elf
     using Elf64_Xword = uint64_t;
     using Elf64_Sxword = int64_t;
 
-    struct Elf64_Ehdr{
+    struct PACKED_ATTRIBUTE Elf64_Ehdr{
         uint8_t e_ident[16];
         Elf64_Half e_type;
         Elf64_Half e_machine;
@@ -29,7 +29,7 @@ namespace proc::elf
         Elf64_Half e_shentsize;
         Elf64_Half e_shnum;
         Elf64_Half e_shstrndx;
-    } __attribute__((packed));
+    };
 
     constexpr uint8_t ei_mag0 = 0;
     constexpr uint8_t ei_mag1 = 1;
@@ -55,7 +55,7 @@ namespace proc::elf
     constexpr uint16_t et_exec = 2; // normal no extension executable file
     constexpr uint16_t et_dyn = 3; //.so file
 
-    struct Elf64_Shdr{
+    struct PACKED_ATTRIBUTE Elf64_Shdr{
 	    Elf64_Word sh_name; /* Section name */
         Elf64_Word sh_type; /* Section type */
         Elf64_Xword sh_flags; /* Section attributes */
@@ -66,13 +66,13 @@ namespace proc::elf
         Elf64_Word sh_info; /* Miscellaneous information */
         Elf64_Xword sh_addralign; /* Address alignment boundary */
         Elf64_Xword sh_entsize;
-    } __attribute__((packed));
+    };
 
     constexpr uint64_t shf_write = 0x1;
     constexpr uint64_t shf_alloc = 0x2;
     constexpr uint64_t shf_execinstr = 0x4;
 
-    struct Elf64_Phdr{
+    struct PACKED_ATTRIBUTE Elf64_Phdr{
         Elf64_Word p_type;
         Elf64_Word p_flags;
         Elf64_Off p_offset;
@@ -81,7 +81,7 @@ namespace proc::elf
         Elf64_Xword p_filesz;
         Elf64_Xword p_memsz;
         Elf64_Xword p_align;
-    } __attribute__((packed));
+    };
 
     constexpr uint16_t pt_null = 0;
     constexpr uint16_t pt_load = 1;

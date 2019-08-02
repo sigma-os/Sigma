@@ -10,20 +10,20 @@
 
 namespace x86_64::gdt
 {
-    struct entry {
+    struct PACKED_ATTRIBUTE entry {
         explicit entry(uint64_t ent): ent(ent) {}
         entry(){}
 
         uint64_t ent;
-    } __attribute__((packed));
+    };
 
-    struct pointer {
+    struct PACKED_ATTRIBUTE pointer {
         void update_gdtr(){
             asm("lgdt %0" : : "m"(*this));
         }
         uint16_t size;
         uint64_t pointer;
-    } __attribute__((packed));
+    };
 
 
     

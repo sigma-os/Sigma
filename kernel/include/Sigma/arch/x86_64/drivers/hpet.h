@@ -9,14 +9,14 @@
 
 namespace x86_64::hpet
 {
-    struct table {
+    struct PACKED_ATTRIBUTE table {
         acpi::sdt_header header;
         uint32_t event_timer_block_id;
         acpi::generic_address_structure base_addr_low;
         uint8_t hpet_number;
         uint16_t main_counter_minimum_periodic_clock_tick;
         uint8_t page_protection;
-    } __attribute__((packed));
+    };
 
     constexpr const char* hpet_pnp_id = "PNP0103";
 

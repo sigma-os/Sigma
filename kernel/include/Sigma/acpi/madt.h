@@ -13,12 +13,12 @@ namespace acpi
 {
     constexpr const char* madt_signature = "APIC";
 
-    struct madt_header
+    struct PACKED_ATTRIBUTE madt_header
     {
         acpi::sdt_header header;
         uint32_t lapic_addr;
         uint32_t flags;
-    } __attribute__((packed)); // Table of entries next
+    }; // Table of entries next
 
     constexpr uint8_t flags_pc_at_compatibility = 0; // Has old PIC
     
@@ -27,20 +27,20 @@ namespace acpi
     constexpr uint8_t type_interrupt_source_override = 2;
     constexpr uint8_t type_nmi_source = 3;
 
-    struct madt_lapic
+    struct PACKED_ATTRIBUTE madt_lapic
     {
         uint8_t type; // 0
         uint8_t length; // 8
         uint8_t acpi_uid;
         uint8_t apic_id;
         uint32_t flags;
-    } __attribute__((packed));
+    };
     static_assert(sizeof(madt_lapic) == 8);
     
     constexpr uint32_t madt_lapic_flags_enabled = 0;
     constexpr uint32_t madt_lapic_flags_online_capable = 1;
 
-    struct madt_ioapic
+    struct PACKED_ATTRIBUTE madt_ioapic
     {
         uint8_t type; // 1
         uint8_t length; // 12
@@ -48,25 +48,25 @@ namespace acpi
         uint8_t reserved;
         uint32_t ioapic_addr;
         uint32_t gsi_base;
-    } __attribute__((packed));
+    };
     static_assert(sizeof(madt_ioapic) == 12);
 
-    struct madt_gsi_override {
+    struct PACKED_ATTRIBUTE madt_gsi_override {
         uint8_t type; // 2
         uint8_t length; // 10
         uint8_t bus; // 0, ISA
         uint8_t source;
         uint32_t gsi;
         uint16_t flags;
-    } __attribute__((packed));
+    };
     static_assert(sizeof(madt_gsi_override) == 10);
 
-    struct madt_nmi_souce{
+    struct PACKED_ATTRIBUTE madt_nmi_souce{
         uint8_t type; // 8
         uint8_t length; // 8;
         uint16_t flags;
         uint32_t gsi;
-    } __attribute__((packed));
+    };
     static_assert(sizeof(madt_nmi_souce) == 8);
     
 

@@ -82,6 +82,7 @@
 *.img
 *.bin
 *.tar
+*.xbstrap
 
 build/
 kernel/build/iso/

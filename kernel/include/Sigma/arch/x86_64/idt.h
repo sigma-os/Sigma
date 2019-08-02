@@ -18,7 +18,7 @@ namespace x86_64::idt
     constexpr uint8_t idt_entry_option_present = 15;
 
 
-    class idt_entry {
+    class PACKED_ATTRIBUTE idt_entry {
         public:
         idt_entry(){
             
@@ -30,13 +30,13 @@ namespace x86_64::idt
         uint16_t pointer_mid;
         uint32_t pointer_high;
         uint32_t reserved;
-    } __attribute__((packed));
+    };
 
 
 
     constexpr uint16_t idt_max_entries = 256;
 
-    struct idt_table {
+    struct PACKED_ATTRIBUTE idt_table {
         public:
         idt_table(){
             for(auto& e : entries){
@@ -49,22 +49,22 @@ namespace x86_64::idt
         }
 
         idt_entry entries[idt_max_entries];
-    } __attribute__((packed));
+    };
 
-    struct idt_pointer {
+    struct PACKED_ATTRIBUTE idt_pointer {
         void update_idtr(){
             asm("lidt %0" : : "m"(*this));
         }
         volatile uint16_t size;
         volatile uint64_t base;
-    } __attribute__((packed));
+    };
 
-    struct idt_registers {
+    struct PACKED_ATTRIBUTE idt_registers {
         uint64_t ds;
         uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rbp, useless, rbx, rdx, rcx, rax;
         uint64_t int_number, error_code;
         uint64_t rip, cs, rflags, rsp, ss;
-    } __attribute__((packed));
+    };
 
     typedef void (*idt_function)(idt_registers*);
 

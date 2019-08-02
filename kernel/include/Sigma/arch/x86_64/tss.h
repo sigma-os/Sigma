@@ -9,7 +9,7 @@ namespace x86_64::tss
     constexpr uint8_t ist_n_entries = 7;
 
 
-    struct table
+    struct PACKED_ATTRIBUTE table
     {
     public:
         table(){
@@ -69,7 +69,7 @@ namespace x86_64::tss
         void load(uint16_t gdt_offset){
             asm("mov %0, %%ax; ltr %%ax" : : "g"(gdt_offset) : "ax");
         }
-    } __attribute__((packed));
+    };
 } // x86_64::tss
 
 
