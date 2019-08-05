@@ -66,7 +66,7 @@ namespace x86_64::idt
         uint64_t rip, cs, rflags, rsp, ss;
     };
 
-    typedef void (*idt_function)(idt_registers*);
+    using idt_function = void (*)(idt_registers*);
 
     constexpr uint8_t normal_ist_index = 0;
     constexpr uint8_t double_fault_ist_index = 1;

@@ -100,7 +100,7 @@ void x86_64::hpet::init_hpet(){
     if(acpi_table == nullptr){
         // Huh thats odd, there is an AML device but no table?
         // TODO: In this case get the HPET base from the AML _CRS object
-        PANIC("TODO");
+        PANIC("TODO, Extract HPET base from _CRS");
     }
 
     if(acpi_table->base_addr_low.id != acpi::generic_address_structure_id_system_memory) {

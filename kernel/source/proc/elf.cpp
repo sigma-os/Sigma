@@ -17,7 +17,7 @@ static bool load_static_executable(const char* initrd_filename, proc::process::t
     mm::vmm::kernel_vmm::get_instance().clone_info(proc_paging);
     proc_paging.set_paging_info();
 
-    proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, proc::process::thread_privilege_level::APPLICATION); // TODO: Don't assume driver
+    proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, proc::process::thread_privilege_level::APPLICATION);
 
     proc::elf::Elf64_Phdr program_section_header;
     for(uint64_t i = 0; i < program_header.e_phnum; i++){
@@ -53,7 +53,7 @@ static bool load_static_executable(const char* initrd_filename, proc::process::t
         }
     }
 
-    // Todo: actually handle stack and heap correctly
+    // TODO: actually handle stack and heap correctly
     uint64_t frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
     if(frame == 0){
         printf("[ELF]: Couldn't allocate physical frames for process stack\n");
@@ -88,7 +88,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
 
     switch(program_header.e_ident[proc::elf::ei_class]){
         case proc::elf::elfclass32:
-            PANIC("TODO: Implement IA32e submode\n");
+            PANIC("Sigma does not and will not support the IA32e submode for 32bit executables\n");
             break;
 
         case proc::elf::elfclass64:

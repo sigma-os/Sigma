@@ -1,8 +1,20 @@
 #ifndef SIGMA_KERNEL_COMMON
 #define SIGMA_KERNEL_COMMON
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstddef>
+
+using std::uint8_t;
+using std::uint16_t;
+using std::uint32_t;
+using std::uint64_t;
+
+using std::int8_t;
+using std::int16_t;
+using std::int32_t;
+using std::int64_t;
+
+using std::size_t;
 
 #include <Sigma/bitops.h>
 #include <Sigma/panic.h>
@@ -46,6 +58,7 @@ inline void  operator delete[](void *, void *) throw() { };
 #ifdef __GNUC__
 #define PACKED_ATTRIBUTE [[gnu::packed]]
 #define NOINLINE_ATTRIBUTE [[gnu::noinline]]
+#define ALWAYSINLINE_ATTRIBUTE [[gnu::always_inline]]
 #else
 #error "Unknown Compiler"
 #endif

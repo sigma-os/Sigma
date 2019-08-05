@@ -44,7 +44,7 @@ namespace acpi
 
     struct PACKED_ATTRIBUTE rsdt {
         acpi::sdt_header header;
-        uint32_t tables[n_unique_acpi_tables]; // TODO: other way to have this line, because multiple tables with the same signature also do xsdt
+        uint32_t tables[n_unique_acpi_tables]; // TODO: other way to have this line, because multiple tables with the same signature exist, also do xsdt
     };
 
     struct PACKED_ATTRIBUTE xsdt {
