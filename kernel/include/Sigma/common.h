@@ -63,4 +63,6 @@ inline void  operator delete[](void *, void *) throw() { };
 #error "Unknown Compiler"
 #endif
 
+using tid_t = uint64_t;
+
 #endif

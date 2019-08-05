@@ -8,6 +8,7 @@
 #include <Sigma/smp/cpu.h>
 #include <Sigma/types/vector.h>
 #include <Sigma/types/pair.h>
+#include <Sigma/proc/ipc.h>
 
 namespace proc::process
 {
@@ -38,8 +39,6 @@ namespace proc::process
     enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED};
     enum class thread_privilege_level {KERNEL, DRIVER, APPLICATION};
 
-    using tid_t = uint64_t;
-
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
@@ -49,6 +48,7 @@ namespace proc::process
         proc::process::thread_image image;
         proc::process::thread_state state;
         proc::process::thread_privilege_level privilege;
+        proc::ipc::thread_ipc_manager ipc_manager;
 
         tid_t tid;
     };
@@ -77,6 +77,9 @@ namespace proc::process
 
     proc::process::thread* thread_for_tid(tid_t tid);
     proc::process::thread* get_current_thread();
+
+    bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
+    bool receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data);
 } // namespace proc::sched
 
 

@@ -46,12 +46,12 @@ namespace types
             return *data[index];
         }
 
-        linked_list_iterator<T> begin(){
-            return linked_list_iterator<T>(data);
+        vector_iterator<T> begin(){
+            return vector_iterator<T>(data);
         }
 
-        linked_list_iterator<T> end(){
-            return linked_list_iterator<T>(data + offset);
+        vector_iterator<T> end(){
+            return vector_iterator<T>(data + offset);
         }
 
         private:

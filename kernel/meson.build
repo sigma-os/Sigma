@@ -29,6 +29,7 @@ main_sources = files(
     'source/smp/ipi.cpp',
     'source/smp/trampoline.S',
     'source/proc/initrd.cpp',
+    'source/proc/ipc.cpp',
     'source/proc/process.cpp',
     'source/proc/elf.cpp',
     'source/cpp_support.cpp',

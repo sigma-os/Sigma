@@ -223,6 +223,7 @@ void proc::process::init_cpu(){
 }
 
 static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip, uint64_t cr3, proc::process::thread_privilege_level privilege, proc::process::thread_state state){
+    thread->ipc_manager = proc::ipc::thread_ipc_manager(thread->tid);
     thread->context = proc::process::thread_context(); // Start with a clean slate, make sure no data leaks to the next thread
     thread->context.rip = reinterpret_cast<uint64_t>(rip);
     thread->context.cr3 = cr3;
@@ -292,7 +293,7 @@ void proc::process::set_thread_state(proc::process::thread* thread, proc::proces
     thread->state = new_state;
 }
 
-proc::process::thread* proc::process::thread_for_tid(proc::process::tid_t tid){
+proc::process::thread* proc::process::thread_for_tid(tid_t tid){
     for(auto& entry : thread_list){
         if(entry.tid == tid) return &entry;
     }
@@ -302,4 +303,12 @@ proc::process::thread* proc::process::thread_for_tid(proc::process::tid_t tid){
 
 proc::process::thread* proc::process::get_current_thread(){
     return get_current_managed_cpu()->current_thread;
+}
+
+bool proc::process::send_message(tid_t origin, size_t buffer_length, uint8_t* buffer){
+    return get_current_thread()->ipc_manager.send_message(origin, buffer_length, buffer);
+}
+
+bool proc::process::receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data){
+    return get_current_thread()->ipc_manager.receive_message(origin, size, data);
 }
