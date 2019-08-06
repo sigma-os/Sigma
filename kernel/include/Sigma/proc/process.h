@@ -77,6 +77,7 @@ namespace proc::process
 
     proc::process::thread* thread_for_tid(tid_t tid);
     proc::process::thread* get_current_thread();
+    tid_t get_current_tid();
 
     bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
     bool receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data);

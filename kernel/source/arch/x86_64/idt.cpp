@@ -76,22 +76,31 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
         printf("RIP: %x, CPU: %d\n", registers->rip, cpu->lapic_id);
     }
 
-    if(!handlers[n].is_irq) while(1);
-
     // It is an IRQ so send an EOI
-    cpu->lapic.send_eoi();
+    if(handlers[n].is_irq) cpu->lapic.send_eoi();
+
+    if(!handlers[n].should_iret) while(1);
 }
 
 void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq){
     if (handlers[n].callback != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n].callback, (uint64_t)f);
     handlers[n].callback = f;
     handlers[n].is_irq = is_irq;
+    handlers[n].should_iret = true;
 }
 
 void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f){
     if (handlers[n].callback != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n].callback, (uint64_t)f);
     handlers[n].callback = f;
     handlers[n].is_irq = false;
+    handlers[n].should_iret = false;
+}
+
+void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq, bool should_iret){
+    if (handlers[n].callback != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n].callback, (uint64_t)f);
+    handlers[n].callback = f;
+    handlers[n].is_irq = is_irq;
+    handlers[n].should_iret = should_iret;
 }
 
 void x86_64::idt::register_irq_status(uint16_t n, bool is_irq){

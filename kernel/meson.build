@@ -32,6 +32,7 @@ main_sources = files(
     'source/proc/ipc.cpp',
     'source/proc/process.cpp',
     'source/proc/elf.cpp',
+    'source/proc/syscall.cpp',
     'source/cpp_support.cpp',
     'source/crti.S',
     'source/crtn.S',
@@ -44,7 +45,7 @@ cpp_includes = include_directories('include')
 nasm_sources = files(
     'source/arch/x86_64/misc/spinlock.asm',
     'source/arch/x86_64/interrupts.asm',
-    'source/proc/idle.asm',
+    'source/proc/process_low.asm',
     'source/smp/gs.asm',
     'source/kernel_early.asm',)
 

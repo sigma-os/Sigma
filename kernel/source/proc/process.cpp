@@ -312,3 +312,11 @@ bool proc::process::send_message(tid_t origin, size_t buffer_length, uint8_t* bu
 bool proc::process::receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data){
     return get_current_thread()->ipc_manager.receive_message(origin, size, data);
 }
+
+tid_t proc::process::get_current_tid(){
+    auto* cpu = get_current_managed_cpu();
+    if(cpu == nullptr) return 0; // Kernel thread should be safe
+    auto* thread = cpu->current_thread;
+    if(thread == nullptr) return 0; // Same
+    return thread->tid;
+}

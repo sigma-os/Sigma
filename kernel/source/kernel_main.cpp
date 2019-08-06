@@ -28,6 +28,7 @@
 
 #include <Sigma/proc/initrd.h>
 #include <Sigma/proc/process.h>
+#include <Sigma/proc/syscall.h>
 #include <Sigma/proc/elf.h>
 
 #include <Sigma/types/linked_list.h>
@@ -150,6 +151,8 @@ C_LINKAGE void kernel_main(){
     }
 
     proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
+
+    proc::syscall::init_syscall();
 
     proc::process::thread* thread;
 

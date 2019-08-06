@@ -11,3 +11,8 @@ idle_loop:
     hlt ; Wait for next interrupt
 
     jmp idle_loop
+
+;global syscall_entry
+;syscall_entry:
+    ; TODO
+;   sysret

@@ -90,6 +90,7 @@ namespace x86_64::idt
 
     void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f);
     void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq);
+    void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq, bool should_iret);
 
     void register_irq_status(uint16_t n, bool is_irq);
 
@@ -99,7 +100,7 @@ namespace x86_64::idt
         handler(): callback(nullptr), is_irq(false) {}
 
         x86_64::idt::idt_function callback;
-        bool is_irq;
+        bool is_irq, should_iret;
     };
 
 } // x86_64::idt
