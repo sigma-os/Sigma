@@ -1,6 +1,5 @@
 #include <Sigma/proc/syscall.h>
 #include <Sigma/proc/process.h>
-//C_LINKAGE void syscall_entry();
 
 static uint64_t syscall_early_klog(uint64_t rbx, uint64_t rcx, uint64_t rdx, uint64_t rsi, uint64_t rdi){
     UNUSED(rcx);
@@ -55,8 +54,6 @@ void proc::syscall::init_syscall(){
         x86_64::msr::write(proc::syscall::lstar_msr, reinterpret_cast<uint64_t>(syscall_entry));
         x86_64::msr::write(proc::syscall::sfmask_msr, 0); // Keep all RFLAGS bits as is
     }*/
-
-    
 
     x86_64::idt::register_interrupt_handler(proc::syscall::syscall_isr_number, syscall_handler, false, true);
 }
