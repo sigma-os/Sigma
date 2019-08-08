@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-int klog(const char* str);
+int libsigma_klog(const char* str);
 
 #ifdef __cplusplus
 }
