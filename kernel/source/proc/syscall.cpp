@@ -12,6 +12,15 @@ static uint64_t syscall_early_klog(uint64_t rbx, uint64_t rcx, uint64_t rdx, uin
     return 0;
 }
 
+static uint64_t syscall_set_fsbase(uint64_t rbx, uint64_t rcx, uint64_t rdx, uint64_t rsi, uint64_t rdi){
+    UNUSED(rcx);
+    UNUSED(rdx);
+    UNUSED(rsi);
+    UNUSED(rdi);
+    proc::process::set_current_thread_fs(rbx);
+    return 0;
+}
+
 
 using syscall_function = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t); // rax, rbx, rcx, rdx, rsi, rdi
 
@@ -21,7 +30,8 @@ struct kernel_syscall {
 };
 
 kernel_syscall syscalls[] = {
-    {syscall_early_klog, "early_klog"}
+    {syscall_early_klog, "early_klog"},
+    {syscall_set_fsbase, "set fsbase"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

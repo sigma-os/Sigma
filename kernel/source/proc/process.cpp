@@ -87,6 +87,8 @@ static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread
     thread->context.rflags = regs->rflags;
 
     thread->context.cr3 = reinterpret_cast<uint64_t>(x86_64::paging::get_current_info());
+
+    thread->context.fs = x86_64::msr::read(x86_64::msr::fs_base);
 }
 
 static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thread* new_thread, proc::process::thread* old_thread){
@@ -114,6 +116,8 @@ static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thre
     regs->ds = new_thread->context.ds;
     regs->rip = new_thread->context.rip;
     regs->rflags = new_thread->context.rflags;
+
+    x86_64::msr::write(x86_64::msr::fs_base, new_thread->context.fs);
 
     if(old_thread == nullptr){
         x86_64::paging::set_current_info(reinterpret_cast<x86_64::paging::pml4*>(new_thread->context.cr3));
@@ -319,4 +323,18 @@ tid_t proc::process::get_current_tid(){
     auto* thread = cpu->current_thread;
     if(thread == nullptr) return 0; // Same
     return thread->tid;
+}
+
+void proc::process::set_thread_fs(tid_t tid, uint64_t fs){
+    if(!IS_CANONICAL(fs)) PANIC("Tried to set non canonical FS for thread");
+    proc::process::thread* thread = proc::process::thread_for_tid(tid);
+    if(thread == nullptr) PANIC("Tried to modify thread on nonexistent thread");
+    thread->context.fs = fs;
+}
+
+void proc::process::set_current_thread_fs(uint64_t fs){
+    if(!IS_CANONICAL(fs)) PANIC("Tried to set non canonical FS for thread");
+    auto* cpu = get_current_managed_cpu();
+    if(cpu == nullptr) PANIC("Tried to modify thread on nonexistent CPU");
+    cpu->current_thread->context.fs = fs;
 }

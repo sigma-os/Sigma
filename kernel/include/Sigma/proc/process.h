@@ -4,6 +4,7 @@
 #include <Sigma/common.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/idt.h>
+#include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/acpi/madt.h>
 #include <Sigma/smp/cpu.h>
 #include <Sigma/types/vector.h>
@@ -16,11 +17,12 @@ namespace proc::process
         thread_context(): rax(0), rbx(0), rcx(0), rdx(0), rsi(0), rdi(0), rbp(0), rsp(0), \
                           r8(0), r9(0), r10(0), r11(0), r12(0), r13(0), r14(0), r15(0), \
                           rip(0), cr3(0), rflags(0), \
-                          ss(0), ds(0), cs(0) {}
+                          ss(0), ds(0), cs(0), fs(0) {}
         uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp; // Normal Registers
         uint64_t r8, r9, r10, r11, r12, r13, r14, r15; // General Purpose Registers
         uint64_t rip, cr3, rflags; // Control Registers
         uint16_t ss, ds, cs; // Segment Registers
+        uint64_t fs; // Thread Local Base
     };
 
     struct thread_resources {
@@ -78,6 +80,14 @@ namespace proc::process
     proc::process::thread* thread_for_tid(tid_t tid);
     proc::process::thread* get_current_thread();
     tid_t get_current_tid();
+
+
+    // General Thread Modifying functions
+    void set_thread_fs(tid_t tid, uint64_t fs);
+
+    // Current Thread Modifying functions
+    // You should always use these because they are O(1) and not O(n), where n is the amount of threads, like the general ones
+    void set_current_thread_fs(uint64_t fs);
 
     bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
     bool receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data);
