@@ -142,6 +142,31 @@ x86_64::idt::idt_entry::idt_entry(void* function, uint16_t selector, bool presen
     this->options = flags;
 }
 
+x86_64::idt::idt_entry::idt_entry(void* function, uint16_t selector, bool present, uint8_t ist_number, uint8_t dpl){
+    if(ist_number > x86_64::tss::ist_n_entries){
+        printf("[IDT]: Trying to initialize IDT entry with IST number: %i but it is larger than the highest entry", ist_number);
+        return;
+    }
+
+    uint64_t pointer = reinterpret_cast<uint64_t>(function);
+
+    this->pointer_low = (pointer & 0xFFFF);
+    this->pointer_mid = ((pointer >> 16) & 0xFFFF);
+    this->pointer_high = ((pointer >> 32) & 0xFFFFFFFF);
+    this->reserved = 0;
+    this->gdt_sel = selector;
+
+    uint16_t flags = 0;
+    flags |= (ist_number & 0x7);
+    bitops<uint16_t>::bit_set(flags, 9); // Next 3 bits must be 1
+    bitops<uint16_t>::bit_set(flags, 10);
+    bitops<uint16_t>::bit_set(flags, 11);
+    flags |= ((dpl & 0x3) << 13);
+
+    if(present) bitops<uint16_t>::bit_set(flags, idt_entry_option_present);
+
+    this->options = flags;
+}
 
 C_LINKAGE void isr0();
 C_LINKAGE void isr1();
@@ -655,7 +680,7 @@ void x86_64::idt::idt::init(){
     this->table.set_entry(246, (void *)&isr246, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(247, (void *)&isr247, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(248, (void *)&isr248, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
-    this->table.set_entry(249, (void *)&isr249, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
+    this->table.set_entry(249, (void *)&isr249, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index, 3); // Syscall handler so should be able to be called from userspace 
     this->table.set_entry(250, (void *)&isr250, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(251, (void *)&isr251, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(252, (void *)&isr252, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);

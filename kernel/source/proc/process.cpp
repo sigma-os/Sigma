@@ -227,7 +227,7 @@ void proc::process::init_cpu(){
 }
 
 static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip, uint64_t cr3, proc::process::thread_privilege_level privilege, proc::process::thread_state state){
-    thread->ipc_manager = proc::ipc::thread_ipc_manager(thread->tid);
+    thread->ipc_manager.init(thread->tid);
     thread->context = proc::process::thread_context(); // Start with a clean slate, make sure no data leaks to the next thread
     thread->context.rip = reinterpret_cast<uint64_t>(rip);
     thread->context.cr3 = cr3;
@@ -337,4 +337,27 @@ void proc::process::set_current_thread_fs(uint64_t fs){
     auto* cpu = get_current_managed_cpu();
     if(cpu == nullptr) PANIC("Tried to modify thread on nonexistent CPU");
     cpu->current_thread->context.fs = fs;
+}
+
+void proc::process::kill(x86_64::idt::idt_registers* regs){
+    x86_64::spinlock::acquire(&scheduler_mutex);
+    mm::vmm::kernel_vmm::get_instance().set(); // We want nothing to do with this thread anymore
+    proc::process::thread* thread = proc::process::get_current_thread();
+
+    thread->state = proc::process::thread_state::DISABLED;
+    thread->context = proc::process::thread_context(); // Remove all traces from previous function
+    thread->ipc_manager.deinit();
+    thread->privilege = proc::process::thread_privilege_level::APPLICATION; // Lowest privilege
+    for(auto& frame : thread->resources.frames) mm::pmm::free_block(reinterpret_cast<void*>(frame)); // Free frames
+    thread->image = proc::process::thread_image();
+    thread->vmm.~paging();
+    thread->vmm = x86_64::paging::paging();
+
+    auto* cpu = get_current_managed_cpu();
+    cpu->current_thread = nullptr; // May this thread rest in peace
+
+    idle_cpu(regs, cpu);
+
+    PANIC("idle_cpu returned, how is this happening");
+    x86_64::spinlock::release(&scheduler_mutex); // Just for safety i guess
 }

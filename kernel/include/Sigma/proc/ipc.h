@@ -84,9 +84,11 @@ namespace proc::ipc {
 	class thread_ipc_manager
 	{
 	public:
-		thread_ipc_manager(tid_t tid);
 		thread_ipc_manager(){}
-		~thread_ipc_manager();
+		~thread_ipc_manager(){}
+
+		void init(tid_t tid);
+		void deinit();
 
 		// Async
 		bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);

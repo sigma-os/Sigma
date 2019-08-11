@@ -11,7 +11,7 @@ namespace types
         public:
         explicit vector_iterator(T* entry): entry(entry) { }
         T& operator*(){
-            return entry->item;
+            return *entry;
         }
         void operator++(){
             if(this->entry) this->entry++;

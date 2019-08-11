@@ -24,6 +24,7 @@ namespace x86_64::idt
             
         }
         idt_entry(void* function, uint16_t selector, bool present, uint8_t ist_number);
+        idt_entry(void* function, uint16_t selector, bool present, uint8_t ist_number, uint8_t dpl);
         uint16_t pointer_low;
         uint16_t gdt_sel;
         uint16_t options;
@@ -46,6 +47,10 @@ namespace x86_64::idt
 
         void set_entry(uint16_t n, void* function, uint16_t selector, uint8_t ist_index){
             this->entries[n] = x86_64::idt::idt_entry(function, selector, true, ist_index);
+        }
+
+        void set_entry(uint16_t n, void* function, uint16_t selector, uint8_t ist_index, uint8_t dpl){
+            this->entries[n] = x86_64::idt::idt_entry(function, selector, true, ist_index, dpl);
         }
 
         idt_entry entries[idt_max_entries];

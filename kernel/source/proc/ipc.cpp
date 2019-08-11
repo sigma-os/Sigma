@@ -4,8 +4,11 @@ using namespace proc::ipc;
 
 
 // TODO: Expandable buffers, so start at 128 bytes but expand all the way to 4096bytes
-thread_ipc_manager::thread_ipc_manager(tid_t tid): current_offset(0), current_unread_messages_count(0), tid(tid)
+void thread_ipc_manager::init(tid_t tid)
 {
+	this->current_offset = 0;
+	this->current_unread_messages_count = 0;
+	this->tid = tid;
 	this->msg_buffer = new uint8_t[thread_ipc_manager_default_msg_buffer_size];
 	if (this->msg_buffer == nullptr) {
 		printf("[IPC]: Couldn't allocate buffer for ipc manager for tid: %d\n", tid);
@@ -15,7 +18,7 @@ thread_ipc_manager::thread_ipc_manager(tid_t tid): current_offset(0), current_un
 }
 
 
-thread_ipc_manager::~thread_ipc_manager()
+void thread_ipc_manager::deinit()
 {
 	if (this->current_offset >= thread_ipc_manager_default_msg_buffer_size) {
 		printf("[IPC]: Detected buffer overrun while destructing thread_ipc_manager [%x], leaking memory..\n", this);

@@ -1,28 +1,27 @@
 #include <Sigma/proc/syscall.h>
 #include <Sigma/proc/process.h>
 
-static uint64_t syscall_early_klog(uint64_t rbx, uint64_t rcx, uint64_t rdx, uint64_t rsi, uint64_t rdi){
-    UNUSED(rcx);
-    UNUSED(rdx);
-    UNUSED(rsi);
-    UNUSED(rdi);
-    if(!IS_CANONICAL(rbx)) return 1;
-    const char* str = reinterpret_cast<const char*>(rbx);
+#include <Sigma/arch/x86_64/idt.h>
+
+static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
+    if(!IS_CANONICAL(regs->rbx)) return 1;
+    const char* str = reinterpret_cast<const char*>(regs->rbx);
     debug_printf("[KLOG]: Early: Thread %d says: %s", proc::process::get_current_tid(), str);
     return 0;
 }
 
-static uint64_t syscall_set_fsbase(uint64_t rbx, uint64_t rcx, uint64_t rdx, uint64_t rsi, uint64_t rdi){
-    UNUSED(rcx);
-    UNUSED(rdx);
-    UNUSED(rsi);
-    UNUSED(rdi);
-    proc::process::set_current_thread_fs(rbx);
+static uint64_t syscall_set_fsbase(x86_64::idt::idt_registers* regs){
+    proc::process::set_current_thread_fs(regs->rbx);
     return 0;
 }
 
+static uint64_t syscall_kill(x86_64::idt::idt_registers* regs){
+    proc::process::kill(regs);
+    while(1); // Last protection measure
+    return 0;
+}
 
-using syscall_function = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t); // rax, rbx, rcx, rdx, rsi, rdi
+using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
     syscall_function func;
@@ -31,7 +30,8 @@ struct kernel_syscall {
 
 kernel_syscall syscalls[] = {
     {syscall_early_klog, "early_klog"},
-    {syscall_set_fsbase, "set fsbase"}
+    {syscall_set_fsbase, "set fsbase"},
+    {syscall_kill, "kill"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
@@ -48,7 +48,7 @@ static void syscall_handler(x86_64::idt::idt_registers* regs){
     debug_printf("[SYSCALL]: Requested syscall %d [%s], from thread %d\n", regs->rax, syscall.name, proc::process::get_current_tid());
     #endif
 
-    regs->rax = syscall.func(regs->rbx, regs->rcx, regs->rdx, regs->rsi, regs->rdi);
+    regs->rax = syscall.func(regs);
 }
 
 

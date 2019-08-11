@@ -44,13 +44,15 @@ namespace proc::process
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
-                  privilege(proc::process::thread_privilege_level::APPLICATION), tid(0){}
+                  privilege(proc::process::thread_privilege_level::APPLICATION), vmm(x86_64::paging::paging()), \
+                  tid(0){}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
         proc::process::thread_state state;
         proc::process::thread_privilege_level privilege;
         proc::ipc::thread_ipc_manager ipc_manager;
+        x86_64::paging::paging vmm;
 
         tid_t tid;
     };
@@ -88,6 +90,7 @@ namespace proc::process
     // Current Thread Modifying functions
     // You should always use these because they are O(1) and not O(n), where n is the amount of threads, like the general ones
     void set_current_thread_fs(uint64_t fs);
+    void kill(x86_64::idt::idt_registers* regs);
 
     bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
     bool receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data);
