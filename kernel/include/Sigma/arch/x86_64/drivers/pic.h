@@ -5,8 +5,6 @@
 #include <Sigma/bitops.h>
 #include <Sigma/arch/x86_64/io.h>
 
-#include <Sigma/interfaces/interrupt_source.h>
-
 namespace x86_64::pic
 {
     constexpr uint8_t pic1_cmd_port = 0x20;

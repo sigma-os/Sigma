@@ -33,7 +33,7 @@ rle_stack_entry* stack_base;
 rle_stack_entry* stack_pointer;
 
 
-// Check for stack undeflow and overflow
+//TODO: Check for stack undeflow and overflow
 static rle_stack_entry pop(){
     stack_pointer--;
     rle_stack_entry ent = *stack_pointer;
@@ -72,8 +72,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     for(multiboot_memory_map_t* entry = ent->entries; (uintptr_t)entry < (uintptr_t)((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
         if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
-            auto stack_entry = rle_stack_entry(entry->addr, (entry->len / mm::pmm::block_size));
-            push(stack_entry);
+            push({entry->addr, (entry->len / mm::pmm::block_size)});
         }
     }
 
@@ -81,6 +80,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     x86_64::spinlock::release(&pmm_global_mutex);
 
+    // TODO: Remove this hack and just ignore any memory under 1mb
     for(uint8_t i = 0; i < 10; i++){ // Reserve first 10 blocks for BIOS stuff and Trampoline code
         mm::pmm::alloc_block();
     }
@@ -149,7 +149,7 @@ void mm::pmm::free_block(void* block){
     }
 
     // We're not consecutive to any entry, add our own
-    push(rle_stack_entry(addr, 1));
+    push({addr, 1});
 
     x86_64::spinlock::release(&pmm_global_mutex);
     return;

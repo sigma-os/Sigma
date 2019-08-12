@@ -6,8 +6,8 @@ struct frame {
 };
 
 void debug::trace_stack(uint8_t levels){
+    #if defined(DEBUG)
     frame* current = static_cast<frame*>(__builtin_frame_address(0));
-
 
     debug_printf("Starting Stack Trace\n");
     for(size_t i = 0; i < levels; i++){
@@ -17,4 +17,7 @@ void debug::trace_stack(uint8_t levels){
     }
 
     debug_printf("End of Stack Trace\n");
+    #elif
+    UNUSED(levels);
+    #endif
 }   

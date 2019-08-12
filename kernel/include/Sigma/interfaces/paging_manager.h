@@ -3,12 +3,12 @@
 
 #include <Sigma/common.h>
 
-const uint64_t map_page_flags_present = (1 << 0);
-const uint64_t map_page_flags_writable = (1 << 1);
-const uint64_t map_page_flags_user = (1 << 2);
-const uint64_t map_page_flags_no_execute = (1 << 3);
-const uint64_t map_page_flags_cache_disable = (1 << 4);
-const uint64_t map_page_flags_global = (1 << 5);
+constexpr uint64_t map_page_flags_present = (1 << 0);
+constexpr uint64_t map_page_flags_writable = (1 << 1);
+constexpr uint64_t map_page_flags_user = (1 << 2);
+constexpr uint64_t map_page_flags_no_execute = (1 << 3);
+constexpr uint64_t map_page_flags_cache_disable = (1 << 4);
+constexpr uint64_t map_page_flags_global = (1 << 5);
 
 class IPaging {
     public:

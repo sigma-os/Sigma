@@ -4,8 +4,9 @@ extern "C" void __cxa_pure_virtual(){
     asm("cli; hlt");
 }
 
-// Register destructor function?, just don't i don't know what to do just ignore the call
-// Kernel shouldn't return anyway
+// This function is intended to register a global destructor handle to be called on exit()
+// However this is a kernel, and if it tries to exit via exit() or whatever something is seriously wrong
+// So we can safely ignore it
 // Something something https://wiki.osdev.org/C%2B%2B#Global_objects
 extern "C" int __cxa_atexit(void (*func) (void *), void * arg, void * dso_handle){
     (void)(func);

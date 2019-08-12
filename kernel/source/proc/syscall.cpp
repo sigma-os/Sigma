@@ -30,7 +30,7 @@ struct kernel_syscall {
 
 kernel_syscall syscalls[] = {
     {syscall_early_klog, "early_klog"},
-    {syscall_set_fsbase, "set fsbase"},
+    {syscall_set_fsbase, "set_fsbase"},
     {syscall_kill, "kill"}
 };
 

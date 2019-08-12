@@ -46,7 +46,9 @@ x86_64::paging::pml4* x86_64::paging::get_current_info(){
 void x86_64::paging::set_current_info(x86_64::paging::pml4* info){
         uint64_t pointer = reinterpret_cast<uint64_t>(info);
 
-        asm("mov %0, %%cr3" : : "r"(pointer));
+        asm volatile("mov %0, %%cr3" : : "r"(pointer) : "memory"); // This ASM block has very imporant side effects
+                                                                   // Namely the full trashing of the TLB and setting
+                                                                   // of new page info
 }
 
 void x86_64::paging::paging::init(){
@@ -58,7 +60,10 @@ void x86_64::paging::paging::init(){
 
 void x86_64::paging::paging::invalidate_addr(uint64_t addr)
 {
-    asm volatile("invlpg (%0)" ::"r" (addr) : "memory");
+    asm volatile("invlpg (%0)" ::"r" (addr) : "memory"); // This ASM block has the important side effects of
+                                                         // Trashing a part of the TLB, thus it is set to be
+                                                         // volatile and a memory border so it is exactly where
+                                                         // we need it
 }
 
 static void clean_pd(x86_64::paging::pd* pd){
@@ -190,7 +195,9 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
 void x86_64::paging::paging::set_paging_info(){
     uint64_t phys = (reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE);
 
-    asm volatile ("mov %0, %%cr3" : : "r"(phys));
+    asm volatile ("mov %0, %%cr3" : : "r"(phys) : "memory"); // This ASM block has very imporant side effects
+                                                             // Namely the full trashing of the TLB and setting
+                                                             // of new page info
 }   
 
 

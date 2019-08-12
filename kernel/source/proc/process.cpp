@@ -330,6 +330,9 @@ void proc::process::set_thread_fs(tid_t tid, uint64_t fs){
     proc::process::thread* thread = proc::process::thread_for_tid(tid);
     if(thread == nullptr) PANIC("Tried to modify thread on nonexistent thread");
     thread->context.fs = fs;
+    if(proc::process::get_current_thread()->tid == tid) x86_64::msr::write(x86_64::msr::fs_base, fs);
+                                                        // We are setting the FSbase of the current thread
+                                                        // so set it immediatly
 }
 
 void proc::process::set_current_thread_fs(uint64_t fs){
@@ -337,6 +340,7 @@ void proc::process::set_current_thread_fs(uint64_t fs){
     auto* cpu = get_current_managed_cpu();
     if(cpu == nullptr) PANIC("Tried to modify thread on nonexistent CPU");
     cpu->current_thread->context.fs = fs;
+    x86_64::msr::write(x86_64::msr::fs_base, fs);
 }
 
 void proc::process::kill(x86_64::idt::idt_registers* regs){

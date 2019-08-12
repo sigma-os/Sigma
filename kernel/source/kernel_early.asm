@@ -48,6 +48,7 @@ initialize_efer:
     rdmsr
     bts eax, 0 ; Set SCE for the syscall and sysret instructions
     bts eax, 11 ; Set NXE for No-Execute-Support
+               ; LME and thus LMA are already set by the bootloader
     wrmsr
 
     ret

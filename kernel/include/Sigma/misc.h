@@ -5,7 +5,7 @@
 
 template<size_t S, size_t A>
 struct alignas(A) aligned_storage {
-    uint8_t bytes[S];
+    std::byte bytes[S];
 };
 
 

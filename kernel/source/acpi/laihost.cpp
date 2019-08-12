@@ -51,7 +51,7 @@ void *laihost_scan(char * signature, size_t index){
 }
 
 void *laihost_map(size_t addr, size_t bytes){
-    uint64_t n_pages = (bytes + mm::pmm::block_size - 1) / mm::pmm::block_size; // Ceil
+    uint64_t n_pages = DIV_CEIL(bytes, mm::pmm::block_size); // Ceil it to make sure we have all bytes allocated incase (bytes & 0xFFF) != 0
 
     for(size_t i = 0; i < n_pages; i++){
         uint64_t offset = (i * mm::pmm::block_size);

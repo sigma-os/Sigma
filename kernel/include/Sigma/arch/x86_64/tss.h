@@ -13,6 +13,7 @@ namespace x86_64::tss
     {
     public:
         table(){
+            //TODO: only allocate needed stacks
             this->ist_stack1 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
             this->ist_stack2 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
             this->ist_stack3 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);

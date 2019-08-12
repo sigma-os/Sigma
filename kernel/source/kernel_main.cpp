@@ -45,7 +45,7 @@ static void enable_cpu_tasking(){
 
     proc::process::init_cpu();
 
-    asm("sti");
+    asm("sti"); // Start interrupts and wait for an APIC timer IRQ to arrive for the first scheduling task
     while(1);
 }
 
