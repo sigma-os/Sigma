@@ -317,6 +317,17 @@ bool proc::process::receive_message(tid_t& origin, size_t& size, types::vector<u
     return get_current_thread()->ipc_manager.receive_message(origin, size, data);
 }
 
+void proc::process::expand_thread_stack(proc::process::thread* thread, size_t pages){
+    for(uint64_t i = 0; i < pages; i++){
+        void* phys = mm::pmm::alloc_block();
+        if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread stack");
+        thread->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
+        
+        thread->image.stack_bottom -= mm::pmm::block_size;
+        thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), thread->image.stack_bottom, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
+    }
+}
+
 tid_t proc::process::get_current_tid(){
     auto* cpu = get_current_managed_cpu();
     if(cpu == nullptr) return 0; // Kernel thread should be safe
@@ -329,24 +340,29 @@ void proc::process::set_thread_fs(tid_t tid, uint64_t fs){
     if(!IS_CANONICAL(fs)) PANIC("Tried to set non canonical FS for thread");
     proc::process::thread* thread = proc::process::thread_for_tid(tid);
     if(thread == nullptr) PANIC("Tried to modify thread on nonexistent thread");
+    x86_64::spinlock::acquire(&thread->thread_lock);
     thread->context.fs = fs;
     if(proc::process::get_current_thread()->tid == tid) x86_64::msr::write(x86_64::msr::fs_base, fs);
                                                         // We are setting the FSbase of the current thread
                                                         // so set it immediatly
+    x86_64::spinlock::release(&thread->thread_lock);
 }
 
 void proc::process::set_current_thread_fs(uint64_t fs){
     if(!IS_CANONICAL(fs)) PANIC("Tried to set non canonical FS for thread");
     auto* cpu = get_current_managed_cpu();
     if(cpu == nullptr) PANIC("Tried to modify thread on nonexistent CPU");
+    x86_64::spinlock::acquire(&cpu->current_thread->thread_lock);
     cpu->current_thread->context.fs = fs;
     x86_64::msr::write(x86_64::msr::fs_base, fs);
+    x86_64::spinlock::release(&cpu->current_thread->thread_lock);
 }
 
 void proc::process::kill(x86_64::idt::idt_registers* regs){
-    x86_64::spinlock::acquire(&scheduler_mutex);
     mm::vmm::kernel_vmm::get_instance().set(); // We want nothing to do with this thread anymore
     proc::process::thread* thread = proc::process::get_current_thread();
+    x86_64::spinlock::acquire(&thread->thread_lock);
+
 
     thread->state = proc::process::thread_state::DISABLED;
     thread->context = proc::process::thread_context(); // Remove all traces from previous function
@@ -356,6 +372,7 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     thread->image = proc::process::thread_image();
     thread->vmm.~paging();
     thread->vmm = x86_64::paging::paging();
+    x86_64::spinlock::release(&thread->thread_lock);
 
     auto* cpu = get_current_managed_cpu();
     cpu->current_thread = nullptr; // May this thread rest in peace
@@ -363,5 +380,4 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     idle_cpu(regs, cpu);
 
     PANIC("idle_cpu returned, how is this happening");
-    x86_64::spinlock::release(&scheduler_mutex); // Just for safety i guess
 }

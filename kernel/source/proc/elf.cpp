@@ -53,16 +53,9 @@ static bool load_static_executable(const char* initrd_filename, proc::process::t
         }
     }
 
-    // TODO: actually handle stack and heap correctly
-    uint64_t frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-    if(frame == 0){
-        printf("[ELF]: Couldn't allocate physical frames for process stack\n");
-        return false;
-    }
-    new_thread->resources.frames.push_back(frame);
-    new_thread->vmm.map_page(frame, 0x800000, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
+    proc::process::expand_thread_stack(new_thread, 2); // Create a stack of 3 pages for the
 
-    new_thread->context.rsp = 0x801000;
+    new_thread->context.rsp = new_thread->image.stack_top;
     new_thread->context.rbp = new_thread->context.rsp;
     new_thread->context.cr3 = (new_thread->vmm.get_paging_info() - KERNEL_VBASE);
     new_thread->context.rip = program_header.e_entry;

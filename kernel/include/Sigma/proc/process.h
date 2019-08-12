@@ -30,8 +30,12 @@ namespace proc::process
         types::vector<uint64_t> frames;
     };
 
+    constexpr uint64_t default_stack_top = 0x80000000;
+    constexpr uint64_t default_heap_bottom = 0x800000;
+
     struct thread_image {
-        thread_image(): stack_top(0), stack_bottom(0), heap_bottom(0), heap_top(0) {}
+        thread_image(): stack_top(default_stack_top), stack_bottom(default_stack_top), \
+                        heap_bottom(default_heap_bottom), heap_top(default_heap_bottom) {}
         uint64_t stack_top;
         uint64_t stack_bottom;
         uint64_t heap_bottom;
@@ -45,7 +49,7 @@ namespace proc::process
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
                   privilege(proc::process::thread_privilege_level::APPLICATION), vmm(x86_64::paging::paging()), \
-                  tid(0){}
+                  tid(0), thread_lock({}){}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
@@ -53,8 +57,8 @@ namespace proc::process
         proc::process::thread_privilege_level privilege;
         proc::ipc::thread_ipc_manager ipc_manager;
         x86_64::paging::paging vmm;
-
         tid_t tid;
+        x86_64::spinlock::mutex thread_lock;
     };
     
 
@@ -83,6 +87,8 @@ namespace proc::process
     proc::process::thread* get_current_thread();
     tid_t get_current_tid();
 
+    // Internal Thread Modifying functions
+    void expand_thread_stack(proc::process::thread* thread, size_t pages);
 
     // General Thread Modifying functions
     void set_thread_fs(tid_t tid, uint64_t fs);
