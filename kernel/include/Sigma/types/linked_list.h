@@ -37,7 +37,7 @@ namespace types
     template<typename T>
     class linked_list {
         public:
-            linked_list(): head(nullptr), tail(nullptr), length(0) {}
+            linked_list(): head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), length(0) {}
 
             ~linked_list() {
                 if((this->head != nullptr) && (this->tail != nullptr) && (this->length != 0)){

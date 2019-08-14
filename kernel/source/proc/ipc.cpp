@@ -9,7 +9,7 @@ void thread_ipc_manager::init(tid_t tid)
 	this->current_offset = 0;
 	this->current_unread_messages_count = 0;
 	this->tid = tid;
-	this->msg_buffer = new uint8_t[thread_ipc_manager_default_msg_buffer_size];
+	this->msg_buffer = reinterpret_cast<uint8_t*>(malloc(thread_ipc_manager_default_msg_buffer_size));
 	if (this->msg_buffer == nullptr) {
 		printf("[IPC]: Couldn't allocate buffer for ipc manager for tid: %d\n", tid);
 		return;
@@ -24,7 +24,7 @@ void thread_ipc_manager::deinit()
 		printf("[IPC]: Detected buffer overrun while destructing thread_ipc_manager [%x], leaking memory..\n", this);
 		return;
 	}
-	if (this->msg_buffer) delete this->msg_buffer;
+	if (this->msg_buffer) free(reinterpret_cast<void*>(this->msg_buffer));
 }
 
 /* The on memory layout of the message looks like this

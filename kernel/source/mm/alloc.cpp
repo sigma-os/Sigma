@@ -2,10 +2,10 @@
 
 #include <Sigma/debug.h>
 
-x86_64::spinlock::mutex alloc_global_mutex = x86_64::spinlock::mutex();
+static x86_64::spinlock::mutex alloc_global_mutex = x86_64::spinlock::mutex();
 
-alloc::header* head = nullptr;
-alloc::header* tail = nullptr;
+static alloc::header* head = nullptr;
+static alloc::header* tail = nullptr;
 
 static bool check_magic(alloc::header* header){
     if((header->magic_low == alloc::magic_low) && (header->magic_high == alloc::magic_high)) return true;
@@ -51,7 +51,7 @@ void alloc::print_list(){
 	debug_printf("head = %x, tail = %x\n", head, tail);
 	while(curr) {
 		debug_printf("addr = %x, size = %x, is_free=%d, next=%x, magic_low: %x, magic_high: %x\n", curr, curr->size, curr->is_free, curr->next, curr->magic_low, curr->magic_high);
-        if(!IS_CANONICAL((uint64_t)curr->next) || (uint64_t)curr->next == 0xffffffffffffffff){
+        if(!IS_CANONICAL((uint64_t)curr->next) || (uint64_t)curr->next < 0xffffffffd0000000 || (uint64_t)curr->next == 0xffffffffffffffff){
             debug_printf("Heap corruption detected in entry: addr: %x\n", curr);
             return;
         }
@@ -140,6 +140,8 @@ void alloc::free(void* ptr){
 
     if(!check_magic(header)){
         printf("[ALLOC]: Invalid header magic: header ptr: %x\n", header);
+        alloc::print_list();
+        debug::trace_stack(10);
         x86_64::spinlock::release(&alloc_global_mutex);
         return;
     }

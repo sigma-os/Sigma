@@ -8,11 +8,13 @@ extern "C" {
 #elif defined(__STDC__)
 #include <stdint.h>
 #else 
-#error "Compiling libsigma/thread.h on unknown language"
+#error "Compiling libsigma/memory.h on unknown language"
 #endif
 
-int libsigma_set_fsbase(uint64_t fs);
-void libsigma_kill(void);
+#define LIBSIGMA_VALLOC_TYPE_SBRK_LIKE 0
+#define LIBSIGMA_VALLOC_TYPE_FREE_BSAE 1
+
+uint64_t libsigma_valloc(uint64_t type, uint64_t base, uint64_t n_pages);
 
 #if defined(__cplusplus)
 }

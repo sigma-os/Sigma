@@ -14,11 +14,8 @@ namespace x86_64::vga
 
     struct PACKED_ATTRIBUTE text_entry_t
     {
-        text_entry_t(uint8_t ascii, text_colour foreground, text_colour background): ascii(ascii){
-            colour = (static_cast<uint8_t>(background) << 4) | static_cast<uint8_t>(foreground);
-        }
-
-        
+        text_entry_t(uint8_t ascii, text_colour foreground, text_colour background): ascii(ascii), \
+                colour((static_cast<uint8_t>(background) << 4) | static_cast<uint8_t>(foreground)) { }
         uint8_t ascii;
         uint8_t colour;
     };
@@ -35,10 +32,8 @@ namespace x86_64::vga
 
     class writer {
         public:
-        writer(): x(0), y(0), mutex(x86_64::spinlock::mutex()){
-            foreground = vga::text_colour::white;
-            background = vga::text_colour::black;
-        }
+        writer(): x(0), y(0), foreground(vga::text_colour::white), background(vga::text_colour::black), \
+                  mutex(x86_64::spinlock::mutex()) { }
 
         void print(const char* str);
         void nprint(const char* str, size_t n);

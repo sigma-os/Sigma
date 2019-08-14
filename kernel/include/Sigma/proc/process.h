@@ -48,8 +48,8 @@ namespace proc::process
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
-                  privilege(proc::process::thread_privilege_level::APPLICATION), vmm(x86_64::paging::paging()), \
-                  tid(0), thread_lock({}){}
+                  privilege(proc::process::thread_privilege_level::APPLICATION), ipc_manager(proc::ipc::thread_ipc_manager()), \
+                  vmm(x86_64::paging::paging()), tid(0), thread_lock({}){}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
@@ -89,6 +89,7 @@ namespace proc::process
 
     // Internal Thread Modifying functions
     void expand_thread_stack(proc::process::thread* thread, size_t pages);
+    void* expand_thread_heap(proc::process::thread* thread, size_t pages);
 
     // General Thread Modifying functions
     void set_thread_fs(tid_t tid, uint64_t fs);

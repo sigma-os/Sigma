@@ -15,7 +15,7 @@ namespace proc::ipc {
 
 	struct ipc_message_header {
 		public:
-		ipc_message_header(tid_t target, tid_t origin, size_t buffer_length): target(target), origin(origin), buffer_length(buffer_length){
+		ipc_message_header(tid_t target, tid_t origin, size_t buffer_length): target(target), origin(origin), buffer_length(buffer_length), footer(nullptr){
 			this->set_magic();
 		}
 
@@ -51,7 +51,7 @@ namespace proc::ipc {
 
 	struct ipc_message_footer {
 		public:
-		ipc_message_footer(){
+		ipc_message_footer(): header(nullptr) {
 			this->set_magic();
 		}
 
@@ -84,7 +84,7 @@ namespace proc::ipc {
 	class thread_ipc_manager
 	{
 	public:
-		thread_ipc_manager(){}
+		thread_ipc_manager(): msg_buffer(nullptr), current_offset(0), current_unread_messages_count(0), tid(0){}
 		~thread_ipc_manager(){}
 
 		void init(tid_t tid);

@@ -69,7 +69,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     initrd_end = boot_protocol->kernel_initrd_size;
 
     multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
-    for(multiboot_memory_map_t* entry = ent->entries; (uintptr_t)entry < (uintptr_t)((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
+    for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
         if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
             push({entry->addr, (entry->len / mm::pmm::block_size)});

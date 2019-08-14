@@ -5,6 +5,12 @@ _start:
     mov rbx, t
     int 249
 
+    mov rax, 3
+    mov rbx, 0
+    mov rcx, 0
+    mov rdx, 10
+    int 249
+
     mov rax, 2
     int 249
 

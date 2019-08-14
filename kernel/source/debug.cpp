@@ -17,7 +17,7 @@ void debug::trace_stack(uint8_t levels){
     }
 
     debug_printf("End of Stack Trace\n");
-    #elif
+    #else
     UNUSED(levels);
     #endif
 }   

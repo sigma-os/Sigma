@@ -28,7 +28,7 @@ namespace types
     template<typename T>
     class vector {
         public:
-        vector(): length(5), offset(0), data(reinterpret_cast<T*>(malloc(sizeof(T) * length))){
+        vector(): length(16), offset(0), data(reinterpret_cast<T*>(malloc(sizeof(T) * length))){
         }
 
         ~vector(){
@@ -36,20 +36,26 @@ namespace types
         }
 
         void push_back(T value){
-            if((offset + 1) >= length) realloc(data, length + 5);
+            if((offset + 1) >= length){
+                data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
+                length *= 2;
+            } 
             data[offset++] = value;
         }
 
+        [[nodiscard]]
         T& operator[](size_t index){
             if(index >= length) PANIC("Tried to access vector out of bounds");
 
-            return *data[index];
+            return data[index];
         }
 
+        [[nodiscard]]
         vector_iterator<T> begin(){
             return vector_iterator<T>(data);
         }
 
+        [[nodiscard]]
         vector_iterator<T> end(){
             return vector_iterator<T>(data + offset);
         }

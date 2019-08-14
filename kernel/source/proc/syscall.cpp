@@ -3,21 +3,52 @@
 
 #include <Sigma/arch/x86_64/idt.h>
 
+#define SYSCALL_GET_FUNC() (regs->rax)
+#define SYSCALL_GET_ARG0() (regs->rbx)
+#define SYSCALL_GET_ARG1() (regs->rcx)
+#define SYSCALL_GET_ARG2() (regs->rdx)
+
+#define SYSCALL_SET_RETURN_VALUE(expr) (regs->rax = (expr))
+
+// ARG0: Pointer to str
 static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
-    if(!IS_CANONICAL(regs->rbx)) return 1;
-    const char* str = reinterpret_cast<const char*>(regs->rbx);
-    debug_printf("[KLOG]: Early: Thread %d says: %s", proc::process::get_current_tid(), str);
+    if(!IS_CANONICAL(SYSCALL_GET_ARG0())) return 1;
+    const char* str = reinterpret_cast<const char*>(SYSCALL_GET_ARG0());
+    debug_printf("[KLOG]: Early: Thread %d says: %s\n", proc::process::get_current_tid(), str);
     return 0;
 }
 
+// ARG0: New FSbase
 static uint64_t syscall_set_fsbase(x86_64::idt::idt_registers* regs){
-    proc::process::set_current_thread_fs(regs->rbx);
+    proc::process::set_current_thread_fs(SYSCALL_GET_ARG0());
     return 0;
 }
 
+// No args
 static uint64_t syscall_kill(x86_64::idt::idt_registers* regs){
     proc::process::kill(regs);
     while(1); // Last protection measure
+    return 0;
+}
+
+// ARG0: Allocate type
+//       - 0: SBRK like allocation
+//       - 1: Allocation at free base
+// ARG1: Base
+// ARG2: n pages
+
+#include <Sigma/mm/alloc.h>
+static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
+    switch (SYSCALL_GET_ARG0())
+    {
+    case 0: { // Do sbrk-like allocation
+        void* base = proc::process::expand_thread_heap(proc::process::get_current_thread(), SYSCALL_GET_ARG2());
+        return reinterpret_cast<uint64_t>(base);
+    }
+    default:
+        PANIC("syscall_valloc unknown allocate type");
+        break;
+    }
     return 0;
 }
 
@@ -31,24 +62,25 @@ struct kernel_syscall {
 kernel_syscall syscalls[] = {
     {syscall_early_klog, "early_klog"},
     {syscall_set_fsbase, "set_fsbase"},
-    {syscall_kill, "kill"}
+    {syscall_kill, "kill"},
+    {syscall_valloc, "valloc"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
 
 static void syscall_handler(x86_64::idt::idt_registers* regs){
-    if(regs->rax > syscall_count){
+    if(SYSCALL_GET_FUNC() > syscall_count){
         debug_printf("[SYSCALL]: Tried to access non existing syscall\n");
-        regs->rax = 1;
+        SYSCALL_SET_RETURN_VALUE(1);
         return;
     }
     
-    kernel_syscall& syscall = syscalls[regs->rax];
+    kernel_syscall& syscall = syscalls[SYSCALL_GET_FUNC()];
     #ifdef LOG_SYSCALLS
-    debug_printf("[SYSCALL]: Requested syscall %d [%s], from thread %d\n", regs->rax, syscall.name, proc::process::get_current_tid());
+    debug_printf("[SYSCALL]: Requested syscall %d [%s], from thread %d\n", SYSCALL_GET_FUNC(), syscall.name, proc::process::get_current_tid());
     #endif
 
-    regs->rax = syscall.func(regs);
+    SYSCALL_SET_RETURN_VALUE(syscall.func(regs));
 }
 
 

@@ -9,7 +9,8 @@ namespace loader
 {
     class multiboot {
         public:
-        multiboot(void* mbd, uint64_t magic): mbd(mbd), magic(magic){
+        multiboot(void* mbd, uint64_t magic): mem_low(0), mem_high(0), rsdp(nullptr), elf_sections(nullptr), n_elf_sections(0), \
+                                              initrd_ptr(0), initrd_size(0), mmap_entry(0), mbd(mbd), magic(magic){
             if(magic != MULTIBOOT2_BOOTLOADER_MAGIC){
                 loader::common::debug_printf("Multiboot header magic not correct\n");
                 loader::common::abort();
@@ -59,9 +60,9 @@ namespace loader
 
         private:
         uint32_t mem_low, mem_high;
-        uint64_t* rsdp = nullptr;
-        uint64_t* elf_sections = nullptr;
-        uint64_t n_elf_sections = 0;
+        uint64_t* rsdp;
+        uint64_t* elf_sections;
+        uint64_t n_elf_sections;
 
         uint64_t initrd_ptr, initrd_size;
 

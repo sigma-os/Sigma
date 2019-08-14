@@ -102,7 +102,7 @@ namespace x86_64::idt
     void register_generic_handlers();
 
     struct handler {
-        handler(): callback(nullptr), is_irq(false) {}
+        handler(): callback(nullptr), is_irq(false), should_iret(false) {}
 
         x86_64::idt::idt_function callback;
         bool is_irq, should_iret;

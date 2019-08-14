@@ -140,7 +140,7 @@ static void mcfg_pci_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func
                 case 4: // DWord
                     {
                         volatile auto* ptr = reinterpret_cast<volatile uint32_t*>(addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-                        *ptr = (uint32_t)value;
+                        *ptr = value;
                     }
                     break;
 
