@@ -29,15 +29,17 @@ namespace types
     class vector {
         public:
         vector(): length(16), offset(0), data(reinterpret_cast<T*>(malloc(sizeof(T) * length))){
+            data = new (malloc(sizeof(T) * length)) T;
         }
 
         ~vector(){
-            free(reinterpret_cast<void*>(this->data));
+            free(static_cast<void*>(this->data));
         }
 
         void push_back(T value){
             if((offset + 1) >= length){
-                data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
+                //data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
+                data = new (realloc(data, sizeof(T) * (length * 2))) T;
                 length *= 2;
             } 
             data[offset++] = value;
