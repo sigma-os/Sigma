@@ -4,6 +4,7 @@ extern "C" {
 #include <lai/core.h>
 #include <lai/helpers/sci.h>
 #include <lai/helpers/pm.h>
+#include <lai/drivers/ec.h>
 }
 
 
@@ -186,7 +187,12 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
     }
     //lai_enable_tracing(1);
+
+    lai_set_acpi_revision(rsdp->revision);
+
     lai_create_namespace();
+
+    acpi::init_ec();
 }
 
 static void acpi_sci_handler(x86_64::idt::idt_registers* regs){
@@ -218,4 +224,32 @@ void acpi::init_sci(acpi::madt& madt){
     lai_enable_acpi(1); // argument is interrupt mode, 1 = APIC, 0 = PIC, 2 = SAPIC, SAPIC doesn't even exist on x86_64 only on IA64(Itanium)    
 
     debug_printf("[ACPI]: Enabled SCI on IRQ: %x\n", sci_int);
+}
+
+void acpi::init_ec(){
+    FUNCTION_CALL_ONCE();
+    LAI_CLEANUP_STATE lai_state_t state;
+    lai_init_state(&state);
+ 
+    LAI_CLEANUP_VAR lai_variable_t pnp_id = {};
+    constexpr const char* ec_pnp_id = ACPI_EC_PNP_ID;
+    lai_eisaid(&pnp_id, const_cast<char*>(ec_pnp_id));
+ 
+    struct lai_ns_iterator it = {};
+    lai_nsnode_t *node;
+    while((node = lai_ns_iterate(&it))){
+        if(lai_check_device_pnp_id(node, &pnp_id, &state)) // This is not an EC
+            continue;
+ 
+        // Found one
+        struct lai_ec_driver *driver = new struct lai_ec_driver; // Dynamically allocate the memory since -
+        lai_init_ec(node, driver);                               // we dont know how many ECs there could be
+ 
+        struct lai_ns_child_iterator child_it = LAI_NS_CHILD_ITERATOR_INITIALIZER(node);
+        lai_nsnode_t *child_node;
+        while((child_node = lai_ns_child_iterate(&child_it))){
+            if(lai_ns_get_node_type(child_node) == LAI_NODETYPE_OPREGION)
+                lai_ns_override_opregion(child_node, &lai_ec_opregion_override, driver);
+        }
+    }
 }

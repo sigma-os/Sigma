@@ -25,7 +25,7 @@ namespace acpi
     };
 
     void init(boot::boot_protocol* boot_protocol);
-
+    void init_ec();
     void init_sci(acpi::madt& madt);
 
     // Physical! Address
