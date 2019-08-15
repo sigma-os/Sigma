@@ -10,9 +10,13 @@
 
 #define SYSCALL_SET_RETURN_VALUE(expr) (regs->rax = (expr))
 
+#define PTR_IS_USERLAND(ptr) ((ptr) <= 0x8000000000000000)
+
+#define CHECK_PTR(ptr) if(!IS_CANONICAL((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0) return 1
+
 // ARG0: Pointer to str
 static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
-    if(!IS_CANONICAL(SYSCALL_GET_ARG0())) return 1;
+    CHECK_PTR(SYSCALL_GET_ARG0());
     const char* str = reinterpret_cast<const char*>(SYSCALL_GET_ARG0());
     debug_printf("[KLOG]: Early: Thread %d says: %s\n", proc::process::get_current_tid(), str);
     return 0;
@@ -20,6 +24,7 @@ static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
 
 // ARG0: New FSbase
 static uint64_t syscall_set_fsbase(x86_64::idt::idt_registers* regs){
+    CHECK_PTR(SYSCALL_GET_ARG0());
     proc::process::set_current_thread_fs(SYSCALL_GET_ARG0());
     return 0;
 }
@@ -33,17 +38,22 @@ static uint64_t syscall_kill(x86_64::idt::idt_registers* regs){
 
 // ARG0: Allocate type
 //       - 0: SBRK like allocation
-//       - 1: Allocation at free base
+//       - 1: Allocation at free base, TODO
 // ARG1: Base
 // ARG2: n pages
 
 #include <Sigma/mm/alloc.h>
 static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
+    // TODO: Limit amount of allocatable frames
     switch (SYSCALL_GET_ARG0())
     {
     case 0: { // Do sbrk-like allocation
         void* base = proc::process::expand_thread_heap(proc::process::get_current_thread(), SYSCALL_GET_ARG2());
         return reinterpret_cast<uint64_t>(base);
+    }
+    case 1: {
+        PANIC("//TODO");
+        break;
     }
     default:
         PANIC("syscall_valloc unknown allocate type");
