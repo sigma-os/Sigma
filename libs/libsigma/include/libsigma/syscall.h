@@ -11,10 +11,11 @@ extern "C" {
 #error "Compiling libsigma/syscall.h on unknown language"
 #endif
 
-#define SIGMA_SYSCALL_EARLY_KLOG 0
-#define SIGMA_SYSCALL_SET_FSBASE 1
-#define SIGMA_SYSCALL_KILL       2
-#define SIGMA_SYSCALL_VALLOC     3
+#define SIGMA_SYSCALL_EARLY_KLOG  0
+#define SIGMA_SYSCALL_SET_FSBASE  1
+#define SIGMA_SYSCALL_KILL        2
+#define SIGMA_SYSCALL_VALLOC      3
+#define SIGMA_SYSCALL_READ_INITRD 4
 
 uint64_t libsigma_syscall0(uint64_t number);
 uint64_t libsigma_syscall1(uint64_t number, uint64_t arg1);

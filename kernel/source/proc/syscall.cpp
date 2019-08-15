@@ -1,12 +1,14 @@
 #include <Sigma/proc/syscall.h>
 #include <Sigma/proc/process.h>
-
+#include <Sigma/proc/initrd.h>
 #include <Sigma/arch/x86_64/idt.h>
 
 #define SYSCALL_GET_FUNC() (regs->rax)
 #define SYSCALL_GET_ARG0() (regs->rbx)
 #define SYSCALL_GET_ARG1() (regs->rcx)
 #define SYSCALL_GET_ARG2() (regs->rdx)
+#define SYSCALL_GET_ARG3() (regs->rsi)
+#define SYSCALL_GET_ARG4() (regs->rdi)
 
 #define SYSCALL_SET_RETURN_VALUE(expr) (regs->rax = (expr))
 
@@ -62,6 +64,22 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
+// ARG0: Char* to filename
+// ARG1: uint8_t* to buf
+// ARG2: Offset
+// ARG3: size
+
+static uint64_t syscall_initrd_read(x86_64::idt::idt_registers* regs){
+    CHECK_PTR(SYSCALL_GET_ARG0());
+    CHECK_PTR(SYSCALL_GET_ARG1());
+
+    if(!proc::initrd::read_file(reinterpret_cast<char*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3())){
+        return 1;
+    }
+
+    return 0;
+}
+
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
@@ -73,7 +91,8 @@ kernel_syscall syscalls[] = {
     {syscall_early_klog, "early_klog"},
     {syscall_set_fsbase, "set_fsbase"},
     {syscall_kill, "kill"},
-    {syscall_valloc, "valloc"}
+    {syscall_valloc, "valloc"},
+    {syscall_initrd_read, "inird_read"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
