@@ -2,9 +2,8 @@
 #define LIBSIGMA_SYSCALLS_H
 
 #if defined(__cplusplus)
-#include <cstdint>
-using std::uint64_t;
 extern "C" {
+#include <stdint.h>
 #elif defined(__STDC__)
 #include <stdint.h>
 #else 
