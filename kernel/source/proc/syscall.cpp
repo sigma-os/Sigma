@@ -73,9 +73,22 @@ static uint64_t syscall_initrd_read(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG0());
     CHECK_PTR(SYSCALL_GET_ARG1());
 
-    if(!proc::initrd::read_file(reinterpret_cast<char*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3())){
+    if(!proc::initrd::read_file(reinterpret_cast<char*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG1()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3())){
         return 1;
     }
+
+    return 0;
+}
+
+// ARG0: void* to addr
+// ARG1: size_t length
+// ARG2: int prot
+// ARG3: int flags
+
+static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
+    CHECK_PTR(SYSCALL_GET_ARG0());
+
+    proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3());
 
     return 0;
 }
@@ -92,7 +105,8 @@ kernel_syscall syscalls[] = {
     {syscall_set_fsbase, "set_fsbase"},
     {syscall_kill, "kill"},
     {syscall_valloc, "valloc"},
-    {syscall_initrd_read, "inird_read"}
+    {syscall_initrd_read, "inird_read"},
+    {syscall_vm_map, "vm_map"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

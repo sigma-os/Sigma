@@ -11,6 +11,13 @@ _start:
     mov rdx, 10
     int 249
 
+    mov rax, 5
+    mov rbx, 0x1000
+    mov rcx, 0x4000
+    mov rdx, 0xFF
+    mov rsi, 0xFF
+    int 249
+
     mov rax, 2
     int 249
 

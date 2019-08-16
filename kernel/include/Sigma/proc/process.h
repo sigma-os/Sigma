@@ -30,8 +30,8 @@ namespace proc::process
         types::vector<uint64_t> frames;
     };
 
-    constexpr uint64_t default_stack_top = 0x80000000;
-    constexpr uint64_t default_heap_bottom = 0x800000;
+    constexpr uint64_t default_stack_top = 0x800000000;
+    constexpr uint64_t default_heap_bottom = 0x400000000;
 
     struct thread_image {
         thread_image(): stack_top(default_stack_top), stack_bottom(default_stack_top), \
@@ -90,6 +90,18 @@ namespace proc::process
     // Internal Thread Modifying functions
     void expand_thread_stack(proc::process::thread* thread, size_t pages);
     void* expand_thread_heap(proc::process::thread* thread, size_t pages);
+
+    #define PROT_NONE 0x00
+    #define PROT_READ 0x01
+    #define PROT_WRITE 0x02
+    #define PROT_EXEC 0x04
+
+    #define MAP_PRIVATE 0x01
+    #define MAP_SHARED 0x02
+    #define MAP_FIXED 0x04
+    #define MAP_ANON 0x08
+
+    void map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags);
 
     // General Thread Modifying functions
     void set_thread_fs(tid_t tid, uint64_t fs);

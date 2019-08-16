@@ -415,3 +415,27 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 
     PANIC("idle_cpu returned, how is this happening");
 }
+
+void proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags){
+    x86_64::spinlock::acquire(&thread->thread_lock);
+
+    if(!(flags & MAP_ANON)) PANIC("Only MAP_ANONYMOUS is defined");
+
+    uint64_t map_flags = ((prot & PROT_READ) ? (map_page_flags_present) : 0) | \
+                     ((prot & PROT_WRITE) ? (map_page_flags_writable) : 0) | \
+                     (!(prot & PROT_EXEC) ? (map_page_flags_no_execute) : 0) | \
+                     map_page_flags_user;
+
+    size_t pages = DIV_CEIL(size, mm::pmm::block_size);
+    uint64_t virt = reinterpret_cast<uint64_t>(addr);
+
+    for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size){
+        void* phys = mm::pmm::alloc_block();
+        if(phys == nullptr) PANIC("Couldn't allocate pages for map_anonymous");
+        thread->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
+
+        thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), virt, map_flags);
+    }
+
+    x86_64::spinlock::release(&thread->thread_lock);
+}
