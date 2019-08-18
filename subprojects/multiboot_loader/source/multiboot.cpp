@@ -13,7 +13,7 @@ static int memcmp(const void* s1, const void* s2, size_t n){
 }
 
 void loader::multiboot::parse_mbd(){
-    uint32_t* base = reinterpret_cast<uint32_t*>(this->mbd);
+    uint32_t* base = static_cast<uint32_t*>(this->mbd);
     uint64_t total_size = *base;
 
     uint64_t add_size = 0;

@@ -28,7 +28,7 @@ namespace types
     template<typename T>
     class vector {
         public:
-        vector(): length(16), offset(0), data(reinterpret_cast<T*>(malloc(sizeof(T) * length))){
+        vector(): length(16), offset(0){
             data = new (malloc(sizeof(T) * length)) T;
         }
 
@@ -39,8 +39,9 @@ namespace types
         void push_back(T value){
             if((offset + 1) >= length){
                 //data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
-                data = new (realloc(data, sizeof(T) * (length * 2))) T;
                 length *= 2;
+                data = new (realloc(data, sizeof(T) * length)) T;
+                
             } 
             data[offset++] = value;
         }

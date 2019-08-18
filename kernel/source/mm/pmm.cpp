@@ -66,7 +66,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     mbd_start = boot_protocol->reserve_start;
     mbd_end = (boot_protocol->reserve_start + boot_protocol->reserve_length);
     initrd_start = boot_protocol->kernel_initrd_ptr;
-    initrd_end = boot_protocol->kernel_initrd_size;
+    initrd_end = boot_protocol->kernel_initrd_size + initrd_start;
 
     multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
     for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
@@ -96,7 +96,7 @@ void* mm::pmm::alloc_block(){
     if(ent.n_pages != 0) push(ent);
 
     if(((addr >= (kernel_start - KERNEL_VBASE)) && (addr <= (kernel_end - KERNEL_VBASE))) || ((addr >= (mbd_start - KERNEL_VBASE) && addr <= (mbd_end - KERNEL_VBASE))) || ((addr >= (initrd_start) && addr <= (initrd_end)))){
-        // Addr is in kernel or multiboot info so just ignore it and get a new one
+        // Addr is in kernel, multiboot info or initrd so just ignore it and get a new one
         x86_64::spinlock::release(&pmm_global_mutex);
         return mm::pmm::alloc_block();
     }

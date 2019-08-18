@@ -326,7 +326,7 @@ void x86_64::pci::parse_pci(){
             }
             enumerate_bus(seg_result, bbn_result);
         }
-    }   
+    }
 
     for(const auto& entry : pci_devices) debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code));
 }
