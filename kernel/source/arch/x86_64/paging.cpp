@@ -285,7 +285,7 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
 
     x86_64::paging::pml4* new_info_pml4 = reinterpret_cast<x86_64::paging::pml4*>(new_info.get_paging_info());
 
-    for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
+    for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries / 2; i++){
         uint64_t old_pml4_entry = this->paging_info->entries[i];
 
         uint64_t pml4_entry_flags = get_flags(old_pml4_entry);
@@ -305,6 +305,12 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
             }
         } // Don't do anything with non-present entries, swapping is not implemented yet
 
+    }
+
+    for(uint64_t i = x86_64::paging::paging_structures_n_entries / 2; i < x86_64::paging::paging_structures_n_entries; i++){
+        uint64_t old_pml4_entry = this->paging_info->entries[i];
+
+        new_info_pml4->entries[i] = old_pml4_entry; // Just the page over
     }
 }
 

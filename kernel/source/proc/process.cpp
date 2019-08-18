@@ -132,6 +132,7 @@ auto scheduler_mutex = x86_64::spinlock::mutex();
 
 C_LINKAGE void proc_idle(uint64_t stack);
 
+[[noreturn]]
 NOINLINE_ATTRIBUTE static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cpu* cpu){
     auto* current_thread = cpu->current_thread;
     if(current_thread != nullptr){ // Is this the second time in a row that the cpu has idled a quantum?

@@ -1,6 +1,7 @@
 [section .text]
 global _start
 _start:
+    jmp _start
     mov rax, 0
     mov rbx, t
     int 249

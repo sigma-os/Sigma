@@ -94,6 +94,32 @@ namespace proc::elf
     constexpr uint16_t pf_w = 2;
     constexpr uint16_t pf_r = 4;
 
+    struct auxvals {
+        uint64_t at_execfd;
+        uint64_t at_phdr;
+        uint64_t at_phent;
+        uint64_t at_phnum;
+        uint64_t at_pagesz;
+        uint64_t at_base;
+        uint64_t at_flags;
+        uint64_t at_entry;
+        uint64_t at_notelf;
+        uint64_t at_uid;
+        uint64_t at_euid;
+        uint64_t at_gid;
+        uint64_t at_egid;
+    };
+
+    struct auxv {
+        int a_type;
+        union a_un
+        {
+            uint64_t a_val;
+            void* a_ptr;
+            void (*a_fnc)();
+        };
+    };
+
     bool start_elf_executable(const char* initrd_filename, proc::process::thread** thread);
 } // proc::elf
 

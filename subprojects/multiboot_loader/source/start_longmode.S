@@ -68,7 +68,11 @@ p3_table:
 p2_table:
 	.quad 0x0000000000000083
 	.quad 0x0000000000200083
-	.fill 510,8,0
+	.quad 0x0000000000400083
+	.quad 0x0000000000600083
+	.quad 0x0000000000800083
+	.quad 0x0000000000A00083
+	.fill 506,8,0
 
 .globl _start_multiboot_info
 _start_multiboot_info: .fill 1,4,0

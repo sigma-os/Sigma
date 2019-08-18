@@ -14,7 +14,7 @@ libsigma_sources = files(
     'source/memory.c',
     'source/file.c')
 
-c_args = ['-std=gnu18']
+c_args = ['-std=gnu18', '-fvisibility=hidden']
 
 libsigma = static_library('sigma', libsigma_sources, c_args: c_args, include_directories: libsigma_includes, pic: false, install: true)
 
