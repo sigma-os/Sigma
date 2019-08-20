@@ -63,7 +63,7 @@ bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_
 	return true;
 }
 
-bool thread_ipc_manager::receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data)
+bool thread_ipc_manager::receive_message(tid_t& origin, size_t& size, uint8_t* data)
 {
 	this->lock.acquire();
 	if (this->current_unread_messages_count == 0) return false; // No new messages
@@ -86,7 +86,7 @@ bool thread_ipc_manager::receive_message(tid_t& origin, size_t& size, types::vec
 	size = header->buffer_length;
 
 	uint8_t* raw_msg = reinterpret_cast<uint8_t*>(header + 1);
-	for(uint64_t i = 0; i < size; i++) data.push_back(raw_msg[i]);
+	memcpy(static_cast<void*>(data), static_cast<void*>(raw_msg), size);
 
 	this->current_unread_messages_count--;
 	this->current_offset -= (sizeof(ipc_message_header) + header->buffer_length + sizeof(ipc_message_footer));
@@ -94,7 +94,28 @@ bool thread_ipc_manager::receive_message(tid_t& origin, size_t& size, types::vec
 	return true;
 }
 
-void thread_ipc_manager::receive_message_sync(tid_t& origin, size_t& size, types::vector<uint8_t>& data){
+size_t thread_ipc_manager::get_msg_size(){
+	this->lock.acquire();
+	ipc_message_footer* footer = reinterpret_cast<ipc_message_footer*>(this->msg_buffer + this->current_offset - sizeof(ipc_message_footer));
+	if(!footer->check_magic()){
+		printf("[IPC]: Footer [%x] magic invalid", footer);
+		this->lock.release();
+		return 0;
+	}
+
+	ipc_message_header* header = footer->header;
+	if(!header->check_magic()){
+		printf("[IPC]: Header [%x] magic invalid", header);
+		this->lock.release();
+		return 0;
+	}
+
+	size_t size = header->buffer_length;
+	this->lock.release();
+	return size;
+}
+
+void thread_ipc_manager::receive_message_sync(tid_t& origin, size_t& size, uint8_t* data){
 	if(this->current_unread_messages_count != 0){
 		this->receive_message(origin, size, data);
 		return;

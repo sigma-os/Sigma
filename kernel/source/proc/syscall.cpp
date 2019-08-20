@@ -99,6 +99,43 @@ static uint64_t syscall_initrd_get_size(x86_64::idt::idt_registers* regs){
     return proc::initrd::get_size(reinterpret_cast<char*>(SYSCALL_GET_ARG0()));
 }
 
+// ARG0: destination
+// ARG1: buf size
+// ARG2: buf
+static uint64_t syscall_send_message(x86_64::idt::idt_registers* regs){
+    CHECK_PTR(SYSCALL_GET_ARG2());
+
+    proc::process::thread* thread = proc::process::thread_for_tid(SYSCALL_GET_ARG0());
+
+    if(!thread->ipc_manager.send_message(proc::process::get_current_tid(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG2()))){
+        return 1;
+    }
+
+    return 0;
+}
+
+// ARG1: buf
+// ARG0: pointer to size_t (buf_size)
+// ARG2: pointer to tid (origin)
+static uint64_t syscall_receive_message(x86_64::idt::idt_registers* regs){
+    CHECK_PTR(SYSCALL_GET_ARG0());
+    CHECK_PTR(SYSCALL_GET_ARG1());
+    CHECK_PTR(SYSCALL_GET_ARG2());
+
+    uint64_t* buf_size_ptr = reinterpret_cast<uint64_t*>(SYSCALL_GET_ARG1());
+    uint64_t* origin_ptr = reinterpret_cast<uint64_t*>(SYSCALL_GET_ARG2());
+    uint8_t* buf_ptr = reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0());
+    if(!proc::process::receive_message(*buf_size_ptr, *origin_ptr, buf_ptr)){
+        return 1;
+    }
+    return 0;
+}
+
+static uint64_t syscall_get_message_size(x86_64::idt::idt_registers* regs){
+    UNUSED(regs);
+    return proc::process::get_message_size();
+}
+
 
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
@@ -114,7 +151,10 @@ kernel_syscall syscalls[] = {
     {syscall_valloc, "valloc"},
     {syscall_vm_map, "vm_map"},
     {syscall_initrd_read, "inird_read"},
-    {syscall_initrd_get_size, "initrd_get_size"}
+    {syscall_initrd_get_size, "initrd_get_size"},
+    {syscall_send_message, "IPC send"},
+    {syscall_receive_message, "IPC receive"},
+    {syscall_get_message_size, "IPC get message size"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

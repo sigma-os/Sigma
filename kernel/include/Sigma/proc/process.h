@@ -111,8 +111,8 @@ namespace proc::process
     void set_current_thread_fs(uint64_t fs);
     void kill(x86_64::idt::idt_registers* regs);
 
-    bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
-    bool receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data);
+    bool receive_message(tid_t& origin, size_t& size, uint8_t* data);
+    size_t get_message_size();
 } // namespace proc::sched
 
 

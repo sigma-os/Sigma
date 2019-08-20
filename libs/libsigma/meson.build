@@ -12,7 +12,8 @@ libsigma_sources = files(
     'source/klog.c',
     'source/thread.c',
     'source/memory.c',
-    'source/file.c')
+    'source/file.c',
+    'source/ipc.c')
 
 c_args = ['-std=gnu18', '-fvisibility=hidden']
 
@@ -29,7 +30,8 @@ libsigma_api_headers = files(
     'include/libsigma/syscall.h',
     'include/libsigma/thread.h',
     'include/libsigma/memory.h',
-    'include/libsigma/file.h')
+    'include/libsigma/file.h',
+    'include/libsigma/ipc.h')
 
 install_headers(libsigma_api_headers, subdir: 'libsigma')
 

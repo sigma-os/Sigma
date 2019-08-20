@@ -1,5 +1,5 @@
-#ifndef LIGSIGMA_THREAD_H
-#define LIGSIGMA_THREAD_H
+#ifndef LIBSIGMA_THREAD_H
+#define LIBSIGMA_THREAD_H
 
 #if defined(__cplusplus)
 extern "C" {

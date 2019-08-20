@@ -93,10 +93,12 @@ namespace proc::ipc {
 
 		// Async
 		bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
-		bool receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data);
+		bool receive_message(tid_t& origin, size_t& size, uint8_t* data);
+
+		size_t get_msg_size();
 
 		// Sync
-		void receive_message_sync(tid_t& origin, size_t& size, types::vector<uint8_t>& data);
+		void receive_message_sync(tid_t& origin, size_t& size, uint8_t* data);
 	private:
 		uint8_t* msg_buffer;
 		uint64_t current_offset;

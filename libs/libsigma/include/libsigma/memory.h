@@ -1,5 +1,5 @@
-#ifndef LIGSIGMA_MEMORY_H
-#define LIGSIGMA_MEMORY_H
+#ifndef LIBSIGMA_MEMORY_H
+#define LIBSIGMA_MEMORY_H
 
 #if defined(__cplusplus)
 extern "C" {

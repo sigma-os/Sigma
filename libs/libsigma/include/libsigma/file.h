@@ -1,5 +1,5 @@
-#ifndef LIGSIGMA_FILE_H
-#define LIGSIGMA_FILE_H
+#ifndef LIBSIGMA_FILE_H
+#define LIBSIGMA_FILE_H
 
 #if defined(__cplusplus)
 extern "C" {

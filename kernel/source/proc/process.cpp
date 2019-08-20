@@ -310,12 +310,12 @@ proc::process::thread* proc::process::get_current_thread(){
     return get_current_managed_cpu()->current_thread;
 }
 
-bool proc::process::send_message(tid_t origin, size_t buffer_length, uint8_t* buffer){
-    return get_current_thread()->ipc_manager.send_message(origin, buffer_length, buffer);
+bool proc::process::receive_message(tid_t& origin, size_t& size, uint8_t* data){
+    return get_current_thread()->ipc_manager.receive_message(origin, size, data);
 }
 
-bool proc::process::receive_message(tid_t& origin, size_t& size, types::vector<uint8_t>& data){
-    return get_current_thread()->ipc_manager.receive_message(origin, size, data);
+size_t proc::process::get_message_size(){
+    return get_current_thread()->ipc_manager.get_msg_size();
 }
 
 void proc::process::expand_thread_stack(proc::process::thread* thread, size_t pages){
