@@ -84,7 +84,8 @@ namespace proc::ipc {
 	class thread_ipc_manager
 	{
 	public:
-		thread_ipc_manager(): msg_buffer(nullptr), current_offset(0), current_unread_messages_count(0), tid(0){}
+		thread_ipc_manager(): msg_buffer(nullptr), current_offset(0), current_unread_messages_count(0), \
+							  tid(0), lock(x86_64::spinlock::mutex()) {}
 		~thread_ipc_manager(){}
 
 		void init(tid_t tid);
@@ -101,6 +102,7 @@ namespace proc::ipc {
 		uint64_t current_offset;
 		uint64_t current_unread_messages_count;
 		tid_t tid;
+		x86_64::spinlock::mutex lock;
 	};
 }
 
