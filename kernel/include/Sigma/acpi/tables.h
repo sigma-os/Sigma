@@ -40,16 +40,14 @@ namespace acpi
         uint32_t creator_revision;
     };
 
-    constexpr uint64_t n_unique_acpi_tables = 28;
-
     struct PACKED_ATTRIBUTE rsdt {
         acpi::sdt_header header;
-        uint32_t tables[n_unique_acpi_tables]; // TODO: other way to have this line, because multiple tables with the same signature exist, also do xsdt
+        uint32_t tables[];
     };
 
     struct PACKED_ATTRIBUTE xsdt {
         acpi::sdt_header header;
-        uint64_t tables[n_unique_acpi_tables];
+        uint64_t tables[];
     };    
 
     struct PACKED_ATTRIBUTE generic_address_structure {
