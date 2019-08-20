@@ -64,11 +64,22 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
+// ARG0: void* to addr
+// ARG1: size_t length
+// ARG2: int prot
+// ARG3: int flags
+static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
+    CHECK_PTR(SYSCALL_GET_ARG0());
+
+    proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3());
+
+    return 0;
+}
+
 // ARG0: Char* to filename
 // ARG1: uint8_t* to buf
 // ARG2: Offset
 // ARG3: size
-
 static uint64_t syscall_initrd_read(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG0());
     CHECK_PTR(SYSCALL_GET_ARG1());
@@ -80,18 +91,14 @@ static uint64_t syscall_initrd_read(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
-// ARG0: void* to addr
-// ARG1: size_t length
-// ARG2: int prot
-// ARG3: int flags
-
-static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
+// ARG0: Char* to filename
+// RET: size
+static uint64_t syscall_initrd_get_size(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG0());
 
-    proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3());
-
-    return 0;
+    return proc::initrd::get_size(reinterpret_cast<char*>(SYSCALL_GET_ARG0()));
 }
+
 
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
@@ -105,8 +112,9 @@ kernel_syscall syscalls[] = {
     {syscall_set_fsbase, "set_fsbase"},
     {syscall_kill, "kill"},
     {syscall_valloc, "valloc"},
+    {syscall_vm_map, "vm_map"},
     {syscall_initrd_read, "inird_read"},
-    {syscall_vm_map, "vm_map"}
+    {syscall_initrd_get_size, "initrd_get_size"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
