@@ -48,7 +48,7 @@ namespace types
             }
 
             T* push_back(T entry){
-                x86_64::spinlock::acquire(&this->mutex);
+                this->mutex.acquire();
                 linked_list_entry<T>* new_entry = new linked_list_entry<T>;
 
                 new_entry->item = entry;
@@ -60,7 +60,7 @@ namespace types
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
                     this->length++;
-                    x86_64::spinlock::release(&this->mutex);
+                    this->mutex.release();
                     return &(new_entry->item);
                 }
 
@@ -68,12 +68,12 @@ namespace types
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
                 this->length++;
-                x86_64::spinlock::release(&this->mutex);
+                this->mutex.release();
                 return &(new_entry->item);
             }
 
             T* empty_entry(){
-                x86_64::spinlock::acquire(&this->mutex);
+                this->mutex.acquire();
                 linked_list_entry<T>* new_entry = new linked_list_entry<T>;
                 
                 new_entry->next = nullptr;
@@ -84,7 +84,7 @@ namespace types
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
                     this->length++;
-                    x86_64::spinlock::release(&this->mutex);
+                    this->mutex.release();
                     return &(new_entry->item);
                 }
 
@@ -92,7 +92,7 @@ namespace types
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
                 this->length++;
-                x86_64::spinlock::release(&this->mutex);
+                this->mutex.release();
                 return &(new_entry->item);
             }
 

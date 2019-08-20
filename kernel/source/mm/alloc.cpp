@@ -62,7 +62,7 @@ void alloc::print_list(){
 void* alloc::alloc(size_t size){
     if(size == 0) return nullptr;
 
-    x86_64::spinlock::acquire(&alloc_global_mutex);
+    alloc_global_mutex.acquire();
 
     alloc::header* header = get_free_block(size);
     if(header){
@@ -70,20 +70,21 @@ void* alloc::alloc(size_t size){
             debug_printf("[ALLOC]: Invalid header magic: allocation size: %x, header ptr: %x\n", size, header);
             alloc::print_list();
             debug::trace_stack(10);
+            alloc_global_mutex.release();
             return nullptr;
         }
 
         // TODO: Carve rest of block up into other usable spaces
 
         header->is_free = false;
-        x86_64::spinlock::release(&alloc_global_mutex);
+        alloc_global_mutex.release();
         return static_cast<void*>(header + 1);
     }
 
     size_t total_size = size + sizeof(alloc::header);
     uint64_t block = morecore(total_size);
     if(block == 0){
-        x86_64::spinlock::release(&alloc_global_mutex);
+        alloc_global_mutex.release();
         debug_printf("[ALLOC]: Failed to allocate block with size: %x\n", total_size);
         return nullptr;
     }
@@ -98,7 +99,7 @@ void* alloc::alloc(size_t size){
     if(tail) tail->next = header;
     tail = header;
 
-    x86_64::spinlock::release(&alloc_global_mutex);
+    alloc_global_mutex.release();
     return static_cast<void*>(header + 1);
 }
 
@@ -135,26 +136,26 @@ void* alloc::realloc(void* ptr, size_t size){
 
 void alloc::free(void* ptr){
     if(!ptr) return;
-    x86_64::spinlock::acquire(&alloc_global_mutex);
+    alloc_global_mutex.acquire();
     alloc::header* header = (static_cast<alloc::header*>(ptr) - 1);
 
     if(!check_magic(header)){
         printf("[ALLOC]: Invalid header magic: header ptr: %x\n", header);
         alloc::print_list();
         debug::trace_stack(10);
-        x86_64::spinlock::release(&alloc_global_mutex);
+        alloc_global_mutex.release();
         return;
     }
 
     if(header->is_free){
         debug_printf("[ALLOC]: Tried to double free ptr: %x!\n", ptr);
-        x86_64::spinlock::release(&alloc_global_mutex);
+        alloc_global_mutex.release();
         return;
     }
 
     header->is_free = true;
 
-    x86_64::spinlock::release(&alloc_global_mutex);
+    alloc_global_mutex.release();
     return;
 }
 

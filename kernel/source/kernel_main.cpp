@@ -167,7 +167,7 @@ C_LINKAGE void kernel_main(){
 x86_64::spinlock::mutex ap_mutex = x86_64::spinlock::mutex();
 
 C_LINKAGE void smp_kernel_main(){
-    x86_64::spinlock::acquire(&ap_mutex);
+    ap_mutex.acquire();
 
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
@@ -189,7 +189,7 @@ C_LINKAGE void smp_kernel_main(){
 
     printf("Booted CPU with lapic_id: %d\n", entry->lapic_id);
 
-    x86_64::spinlock::release(&ap_mutex);
+    ap_mutex.release();
 
     enable_cpu_tasking();
     asm("cli; hlt"); // Wait what?

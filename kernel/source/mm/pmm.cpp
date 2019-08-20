@@ -54,7 +54,7 @@ void mm::pmm::print_stack(){
 static void sort_stack();
 
 void mm::pmm::init(boot::boot_protocol* boot_protocol){
-    x86_64::spinlock::acquire(&pmm_global_mutex);
+    pmm_global_mutex.acquire();
 
     stack_base = reinterpret_cast<rle_stack_entry*>(kernel_end);
     stack_pointer = stack_base;
@@ -78,7 +78,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     sort_stack();
 
-    x86_64::spinlock::release(&pmm_global_mutex);
+    pmm_global_mutex.release();
 
     // TODO: Remove this hack and just ignore any memory under 1mb
     for(uint8_t i = 0; i < 10; i++){ // Reserve first 10 blocks for BIOS stuff and Trampoline code
@@ -87,7 +87,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 }
 
 void* mm::pmm::alloc_block(){
-    x86_64::spinlock::acquire(&pmm_global_mutex);
+    pmm_global_mutex.acquire();
     rle_stack_entry ent = pop();
     while(ent.n_pages == 0) ent = pop();
     uint64_t addr = ent.base;
@@ -97,15 +97,15 @@ void* mm::pmm::alloc_block(){
 
     if(((addr >= (kernel_start - KERNEL_VBASE)) && (addr <= (kernel_end - KERNEL_VBASE))) || ((addr >= (mbd_start - KERNEL_VBASE) && addr <= (mbd_end - KERNEL_VBASE))) || ((addr >= (initrd_start) && addr <= (initrd_end)))){
         // Addr is in kernel, multiboot info or initrd so just ignore it and get a new one
-        x86_64::spinlock::release(&pmm_global_mutex);
+        pmm_global_mutex.release();
         return mm::pmm::alloc_block();
     }
-    x86_64::spinlock::release(&pmm_global_mutex);
+    pmm_global_mutex.release();
     return reinterpret_cast<void*>(addr);
 }
 
 void* mm::pmm::alloc_n_blocks(size_t n){
-    x86_64::spinlock::acquire(&pmm_global_mutex);
+    pmm_global_mutex.acquire();
     uint64_t base = 0;
     for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
         if(entry->n_pages >= n){
@@ -121,15 +121,15 @@ void* mm::pmm::alloc_n_blocks(size_t n){
 
     if(((base >= (kernel_start - KERNEL_VBASE)) && (base <= (kernel_end - KERNEL_VBASE))) || ((base >= (mbd_start - KERNEL_VBASE) && base <= (mbd_end - KERNEL_VBASE))) || ((base >= (initrd_start) && base <= (initrd_end)))){
         // Addr is in kernel or multiboot info so just ignore it and get a new one
-        x86_64::spinlock::release(&pmm_global_mutex);
+        pmm_global_mutex.release();
         return mm::pmm::alloc_n_blocks(n);
     }
-    x86_64::spinlock::release(&pmm_global_mutex);
+    pmm_global_mutex.release();
     return reinterpret_cast<void*>(base);
 }
 
 void mm::pmm::free_block(void* block){
-    x86_64::spinlock::acquire(&pmm_global_mutex);
+    pmm_global_mutex.acquire();
 
     uint64_t addr = reinterpret_cast<uint64_t>(block);
 
@@ -151,7 +151,7 @@ void mm::pmm::free_block(void* block){
     // We're not consecutive to any entry, add our own
     push({addr, 1});
 
-    x86_64::spinlock::release(&pmm_global_mutex);
+    pmm_global_mutex.release();
     return;
 }
 

@@ -35,14 +35,14 @@ namespace x86_64::serial
         }
 
         void nprint(const char* str, size_t n){
-            x86_64::spinlock::acquire(&this->mutex);
+            this->mutex.acquire();
 
             for(size_t i = 0; i < n; i++){
                 uint8_t c = str[i];
 
                 this->print_char(c);
             }
-            x86_64::spinlock::release(&this->mutex);
+            this->mutex.release();
         }
 
 

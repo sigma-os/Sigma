@@ -15,25 +15,25 @@ const uint64_t x86_64::vga::mmio = (0xb8000 + KERNEL_VBASE);
 
 
 void x86_64::vga::writer::nprint(const char* str, size_t n){
-    x86_64::spinlock::acquire(&this->mutex);
+    this->mutex.acquire();
 
     for(size_t i = 0; i < n; i++){
         uint8_t c = str[i];
 
         this->print_char(c);
     }
-    x86_64::spinlock::release(&this->mutex);
+    this->mutex.release();
 }
 
 void x86_64::vga::writer::print(const char* str){
-    x86_64::spinlock::acquire(&this->mutex);
+    this->mutex.acquire();
 
     for(; *str; str++){
         uint8_t c = *str;
 
         this->print_char(c);
     }
-    x86_64::spinlock::release(&this->mutex);
+    this->mutex.release();
 }
 
 void x86_64::vga::writer::print_char(const char c){
@@ -87,18 +87,18 @@ void x86_64::vga::writer::print_char(const char c){
 }
 
 void x86_64::vga::writer::set_foreground(x86_64::vga::text_colour colour) {
-    x86_64::spinlock::acquire(&this->mutex);
+    this->mutex.acquire();
     this->foreground = colour;
-    x86_64::spinlock::release(&this->mutex);
+    this->mutex.release();
 }
 void x86_64::vga::writer::set_background(x86_64::vga::text_colour colour) {
-    x86_64::spinlock::acquire(&this->mutex);
+    this->mutex.acquire();
     this->background = colour;
-    x86_64::spinlock::release(&this->mutex);
+    this->mutex.release();
 }
 
 void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
-    x86_64::spinlock::acquire(&this->mutex);
+    this->mutex.acquire();
     this->x = x;
     this->y = y;
     if(this->x > 80){
@@ -111,7 +111,7 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
     }
 
     this->update_hardware_cursor();
-    x86_64::spinlock::release(&this->mutex);
+    this->mutex.release();
 }
 
 void x86_64::vga::writer::scroll(){
