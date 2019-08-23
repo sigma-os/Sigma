@@ -156,7 +156,7 @@ C_LINKAGE void kernel_main(){
 
     proc::process::thread* thread;
 
-    if(!proc::elf::start_elf_executable("/usr/bin/ctest", &thread)) printf("Failed to load test executable\n");
+    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread)) printf("Failed to load test executable\n");
 
     enable_cpu_tasking();
     asm("cli; hlt"); // Wait what?

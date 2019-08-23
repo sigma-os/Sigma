@@ -150,7 +150,7 @@ kernel_syscall syscalls[] = {
     {syscall_kill, "kill"},
     {syscall_valloc, "valloc"},
     {syscall_vm_map, "vm_map"},
-    {syscall_initrd_read, "inird_read"},
+    {syscall_initrd_read, "initrd_read"},
     {syscall_initrd_get_size, "initrd_get_size"},
     {syscall_send_message, "IPC send"},
     {syscall_receive_message, "IPC receive"},
