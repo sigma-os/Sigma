@@ -142,10 +142,16 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
             uint64_t page_addr = xsdt->tables[i] & 0xFFFFFFFFFFFFF000;
             mm::vmm::kernel_vmm::get_instance().map_page((page_addr + 0x1000), ((page_addr + 0x1000) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
-
             mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
 
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+
+            uint64_t n_pages = DIV_CEIL(h->length, mm::pmm::block_size);
+            for(uint64_t i = 0; i < n_pages; i++){
+                uint64_t phys = (xsdt->tables[i] + (i * mm::pmm::block_size));
+                uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+            }
 
             if(do_checksum(h)){
                 debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id:%c%c%c%c%c%c, Revision: %d\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision);
