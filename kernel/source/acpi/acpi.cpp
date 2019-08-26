@@ -254,8 +254,11 @@ void acpi::init_ec(){
         struct lai_ns_child_iterator child_it = LAI_NS_CHILD_ITERATOR_INITIALIZER(node);
         lai_nsnode_t *child_node;
         while((child_node = lai_ns_child_iterate(&child_it))){
-            if(lai_ns_get_node_type(child_node) == LAI_NODETYPE_OPREGION)
-                lai_ns_override_opregion(child_node, &lai_ec_opregion_override, driver);
+            if(lai_ns_get_node_type(child_node) == LAI_NODETYPE_OPREGION){
+                if(lai_ns_get_opregion_address_space(child_node) == ACPI_OPREGION_EC){
+                    lai_ns_override_opregion(child_node, &lai_ec_opregion_override, driver);
+                }
+            }
         }
     }
 }
