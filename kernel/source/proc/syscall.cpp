@@ -136,6 +136,11 @@ static uint64_t syscall_get_message_size(x86_64::idt::idt_registers* regs){
     return proc::process::get_message_size();
 }
 
+static tid_t um_tid = 0;
+static uint64_t syscall_get_um_tid(x86_64::idt::idt_registers* regs){
+    UNUSED(regs);
+    return um_tid;
+}
 
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
@@ -152,9 +157,10 @@ kernel_syscall syscalls[] = {
     {syscall_vm_map, "vm_map"},
     {syscall_initrd_read, "initrd_read"},
     {syscall_initrd_get_size, "initrd_get_size"},
-    {syscall_send_message, "IPC send"},
-    {syscall_receive_message, "IPC receive"},
-    {syscall_get_message_size, "IPC get message size"}
+    {syscall_send_message, "ipc_send"},
+    {syscall_receive_message, "ipc_receive"},
+    {syscall_get_message_size, "ipc_get_message_size"},
+    {syscall_get_um_tid, "get_user_manager_tid"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
@@ -189,4 +195,8 @@ void proc::syscall::init_syscall(){
     }*/
 
     x86_64::idt::register_interrupt_handler(proc::syscall::syscall_isr_number, syscall_handler, false, true);
+}
+
+void proc::syscall::set_user_manager_tid(tid_t tid){
+    um_tid = tid;
 }

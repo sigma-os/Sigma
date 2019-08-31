@@ -154,9 +154,17 @@ C_LINKAGE void kernel_main(){
 
     proc::syscall::init_syscall();
 
-    proc::process::thread* thread;
+    // TODO: Start this in modular way
+    proc::process::thread* thread = nullptr;
+    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread)) printf("Failed to load Zeta\n");
+    proc::syscall::set_user_manager_tid(thread->tid);
 
-    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread)) printf("Failed to load test executable\n");
+    /*proc::process::create_kernel_thread([](){
+        // TODO: Initialize ACPI kernel thread and PCI kernel thread
+
+
+        proc::process::set_thread_state(proc::process::get_current_thread(), proc::process::thread_state::BLOCKED);
+    });*/
 
     enable_cpu_tasking();
     asm("cli; hlt"); // Wait what?
