@@ -15,7 +15,7 @@ static bool do_checksum(acpi::sdt_header* header){
 
     for(size_t i = 0; i < header->length; i++) sum += ((uint8_t*)header)[i];
 
-    return (sum == 0) ? (true) : (false);
+    return (sum == 0);
 }
 
 acpi::table* acpi::get_table(const char* signature, uint64_t index){
