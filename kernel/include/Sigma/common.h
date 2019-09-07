@@ -49,8 +49,6 @@ using std::size_t;
 
 #define IS_CANONICAL(addr) ((((addr) <= 0x00007fffffffffff)) || (((addr) >= 0xffff800000000000) && ((addr) <= 0xffffffffffffffff)))
 
-#define DIV_CEIL(val, div) (((val) + (div) - 1) / (div))
-
 #ifdef __GNUC__
 #define PACKED_ATTRIBUTE [[gnu::packed]]
 #define NOINLINE_ATTRIBUTE [[gnu::noinline]]
@@ -60,5 +58,13 @@ using std::size_t;
 #endif
 
 using tid_t = uint64_t;
+
+namespace common
+{
+    constexpr uint64_t div_ceil(uint64_t val, uint64_t div){
+        return (val + div - 1) / div;
+    }
+} // namespace common
+
 
 #endif

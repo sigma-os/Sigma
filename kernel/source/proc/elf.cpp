@@ -47,7 +47,7 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
             //proc::elf::Elf64_Word p_flags = program_section_header.p_flags;
             //if((p_flags & proc::elf::pf_x) == 0) flags |= map_page_flags_no_execute;
 
-            uint64_t n_pages = DIV_CEIL(program_section_header.p_memsz, mm::pmm::block_size);
+            uint64_t n_pages = common::div_ceil(program_section_header.p_memsz, mm::pmm::block_size);
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
                 if(frame == 0){

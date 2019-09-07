@@ -436,7 +436,7 @@ void proc::process::map_anonymous(proc::process::thread* thread, size_t size, vo
                      (!(prot & PROT_EXEC) ? (map_page_flags_no_execute) : 0) | \
                      map_page_flags_user;
 
-    size_t pages = DIV_CEIL(size, mm::pmm::block_size);
+    size_t pages = common::div_ceil(size, mm::pmm::block_size);
     uint64_t virt = reinterpret_cast<uint64_t>(addr);
 
     for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size){

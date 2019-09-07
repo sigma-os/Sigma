@@ -146,7 +146,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
-            uint64_t n_pages = DIV_CEIL(h->length, mm::pmm::block_size);
+            uint64_t n_pages = common::div_ceil(h->length, mm::pmm::block_size);
             for(uint64_t i = 0; i < n_pages; i++){
                 uint64_t phys = (xsdt->tables[i] + (i * mm::pmm::block_size));
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
