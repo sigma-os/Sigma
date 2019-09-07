@@ -18,6 +18,15 @@ namespace alloc
         size_t size;
         bool is_free;
         uint16_t magic_high;
+        bool check_magic(){
+            if((this->magic_low == alloc::magic_low) && (this->magic_high == alloc::magic_high)) return true;
+            return false;
+        }
+
+        void set_magic(){
+            this->magic_low = alloc::magic_low;
+            this->magic_high = alloc::magic_high;
+        }
     };
 
     void init();

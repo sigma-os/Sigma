@@ -7,16 +7,6 @@ static x86_64::spinlock::mutex alloc_global_mutex = x86_64::spinlock::mutex();
 static alloc::header* head = nullptr;
 static alloc::header* tail = nullptr;
 
-static bool check_magic(alloc::header* header){
-    if((header->magic_low == alloc::magic_low) && (header->magic_high == alloc::magic_high)) return true;
-    return false;
-}
-
-static void set_magic(alloc::header* header){
-    header->magic_low = alloc::magic_low;
-    header->magic_high = alloc::magic_high;
-}
-
 static alloc::header* get_free_block(size_t size){
     // Basic First Fit algorithm
     alloc::header* curr = head;
@@ -51,7 +41,7 @@ void alloc::print_list(){
 	debug_printf("head = %x, tail = %x\n", head, tail);
 	while(curr) {
 		debug_printf("addr = %x, size = %x, is_free=%d, next=%x, magic_low: %x, magic_high: %x\n", curr, curr->size, curr->is_free, curr->next, curr->magic_low, curr->magic_high);
-        if(((uint64_t)curr->next < (0xffffffffd0000000 - 1) && ((uint64_t)curr->next != 0)) || (uint64_t)curr->next == 0xffffffffffffffff || !check_magic(curr)){
+        if(((uint64_t)curr->next < (0xffffffffd0000000 - 1) && ((uint64_t)curr->next != 0)) || (uint64_t)curr->next == 0xffffffffffffffff || !curr->check_magic()){
             debug_printf("Heap corruption detected in entry: addr: %x\n", curr);
             return;
         }
@@ -66,7 +56,7 @@ void* alloc::alloc(size_t size){
 
     alloc::header* header = get_free_block(size);
     if(header){
-        if(!check_magic(header)){
+        if(!header->check_magic()){
             debug_printf("[ALLOC]: Invalid header magic: allocation size: %x, header ptr: %x\n", size, header);
             alloc::print_list();
             debug::trace_stack(10);
@@ -92,7 +82,7 @@ void* alloc::alloc(size_t size){
     header = reinterpret_cast<alloc::header*>(block);
     header->size = size;
     header->next = nullptr;
-    set_magic(header);
+    header->set_magic();
     header->is_free = false;
 
     if(head == nullptr) head = header;
@@ -117,7 +107,7 @@ void* alloc::alloc_a(size_t size, uint64_t align){
     auto* header = reinterpret_cast<alloc::header*>(block);
     header->size = size;
     header->next = nullptr;
-    set_magic(header);
+    header->set_magic();
     header->is_free = false;
 
     if(head == nullptr) head = header;
@@ -144,7 +134,7 @@ void* alloc::realloc(void* ptr, size_t size){
         return nullptr;
     }
 
-    if(!check_magic(header)){
+    if(!header->check_magic()){
         debug_printf("[ALLOC]: Invalid header magic: header ptr: %x\n", header);
         return nullptr;
     }
@@ -164,7 +154,7 @@ void alloc::free(void* ptr){
     alloc_global_mutex.acquire();
     alloc::header* header = (static_cast<alloc::header*>(ptr) - 1);
 
-    if(!check_magic(header)){
+    if(!header->check_magic()){
         printf("[ALLOC]: Invalid header magic: header ptr: %x\n", header);
         alloc::print_list();
         debug::trace_stack(10);
