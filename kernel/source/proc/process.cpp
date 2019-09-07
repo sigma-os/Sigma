@@ -3,16 +3,15 @@
 auto thread_list = types::linked_list<proc::process::thread>();
 static uint64_t current_thread_list_offset = 0;
 
-auto cpus = types::linked_list<proc::process::managed_cpu>();
+auto cpus = lazy_initializer<types::vector<proc::process::managed_cpu>>();
 
 proc::process::thread* kernel_thread;
 
-static proc::process::managed_cpu* get_current_managed_cpu(){
+proc::process::managed_cpu* proc::process::get_current_managed_cpu(){
     uint8_t current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
-    for(auto& entry : cpus){
+    for(auto& entry : *cpus){
         if(entry.cpu.lapic_id == current_apic_id){
-            if(entry.enabled) return &entry; // Found this CPU
-            else return nullptr; // Entry is not enabled
+            return &entry; // Found this CPU
         }
     }
 
@@ -87,6 +86,7 @@ static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread
     thread->context.rflags = regs->rflags;
 
     thread->context.cr3 = reinterpret_cast<uint64_t>(x86_64::paging::get_current_info());
+    proc::simd::save_state(thread);
 
     thread->context.fs = x86_64::msr::read(x86_64::msr::fs_base);
 }
@@ -121,9 +121,11 @@ static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thre
 
     if(old_thread == nullptr){
         x86_64::paging::set_current_info(reinterpret_cast<x86_64::paging::pml4*>(new_thread->context.cr3));
+        proc::simd::restore_state(new_thread);
     } else {
         if(old_thread->context.cr3 != new_thread->context.cr3){
             x86_64::paging::set_current_info(reinterpret_cast<x86_64::paging::pml4*>(new_thread->context.cr3));
+            proc::simd::restore_state(new_thread);
         }
     }
 }
@@ -164,7 +166,7 @@ NOINLINE_ATTRIBUTE static void idle_cpu(x86_64::idt::idt_registers* regs, proc::
 
 static void timer_handler(x86_64::idt::idt_registers* regs){
     scheduler_mutex.acquire();
-    auto* cpu = get_current_managed_cpu();
+    auto* cpu = proc::process::get_current_managed_cpu();
     if(cpu == nullptr){
         // This CPU is not managed abort
         debug_printf("[SCHEDULER]: Tried to schedule unmanaged CPU\n");
@@ -193,19 +195,24 @@ static void timer_handler(x86_64::idt::idt_registers* regs){
     
     cpu->current_thread = new_thread;
     cpu->current_thread->state = proc::process::thread_state::RUNNING;
+    
     scheduler_mutex.release();
 }
 
 void proc::process::init_multitasking(acpi::madt& madt){
     auto cpu_list = types::linked_list<smp::cpu_entry>();
     madt.get_cpus(cpu_list);
-    for(auto entry : cpu_list) cpus.push_back(proc::process::managed_cpu(entry, false, nullptr));
+
+    cpus.init();
+
+    for(auto& entry : cpu_list) cpus->push_back(proc::process::managed_cpu(entry, false, nullptr));
 
     kernel_thread = thread_list.empty_entry();
     kernel_thread->tid = current_thread_list_offset++;
     kernel_thread->state = proc::process::thread_state::BLOCKED;
 
     x86_64::idt::register_interrupt_handler(proc::process::cpu_quantum_interrupt_vector, timer_handler, true);
+    proc::simd::init_simd();
 }
 
 auto init_mutex = x86_64::spinlock::mutex();
@@ -213,7 +220,7 @@ auto init_mutex = x86_64::spinlock::mutex();
 void proc::process::init_cpu(){
     init_mutex.acquire();
     uint8_t current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
-    for(auto& entry : cpus){
+    for(auto& entry : *cpus){
         if(entry.cpu.lapic_id == current_apic_id){
             // Found this CPU
             smp::cpu::get_current_cpu()->lapic.enable_timer(proc::process::cpu_quantum_interrupt_vector, proc::process::cpu_quantum, x86_64::apic::lapic_timer_modes::PERIODIC);
@@ -400,6 +407,8 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 
 
     thread->state = proc::process::thread_state::DISABLED;
+
+    if(thread->context.simd_state) delete[] thread->context.simd_state;
     thread->context = proc::process::thread_context(); // Remove all traces from previous function
     thread->ipc_manager.deinit();
     thread->privilege = proc::process::thread_privilege_level::APPLICATION; // Lowest privilege

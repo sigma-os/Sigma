@@ -9,6 +9,10 @@ void* mm::hmm::kmalloc(size_t size){
     return alloc::alloc(size);
 }
 
+void* mm::hmm::kmalloc_a(size_t size, uint64_t align){
+    return alloc::alloc_a(size, align);
+}
+
 void mm::hmm::kfree(void* ptr){
     alloc::free(ptr);
 }

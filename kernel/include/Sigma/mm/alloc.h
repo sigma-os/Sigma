@@ -12,7 +12,7 @@ namespace alloc
     constexpr uint16_t magic_low = 0xBEEF;
     constexpr uint16_t magic_high = 0xC0DE;
 
-    struct alignas(8) header {
+    struct alignas(16) header {
         uint16_t magic_low;
         struct header* next;
         size_t size;
@@ -22,6 +22,7 @@ namespace alloc
 
     void init();
     void* alloc(size_t size);
+    void* alloc_a(size_t size, uint64_t align);
     void* realloc(void* ptr, size_t size);
     void free(void* ptr);
     void print_list();

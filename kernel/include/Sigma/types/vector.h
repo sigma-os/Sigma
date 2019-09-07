@@ -47,6 +47,17 @@ namespace types
         }
 
         [[nodiscard]]
+        T* empty_entry(){
+            if((offset + 1) >= length){
+                //data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
+                length *= 2;
+                data = new (realloc(data, sizeof(T) * length)) T;
+                
+            } 
+            return &data[offset++];
+        }
+
+        [[nodiscard]]
         T& operator[](size_t index){
             if(index >= length) PANIC("Tried to access vector out of bounds");
 

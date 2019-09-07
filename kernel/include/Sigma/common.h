@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <new>
 
 using std::uint8_t;
 using std::uint16_t;
@@ -18,12 +19,6 @@ using std::size_t;
 
 #include <Sigma/bitops.h>
 #include <Sigma/panic.h>
-
-// normally would be in <new> but that doesnt exist here
-inline void *operator new(size_t, void *p)     throw() { return p; } 
-inline void *operator new[](size_t, void *p)   throw() { return p; }
-inline void  operator delete  (void *, void *) throw() { };
-inline void  operator delete[](void *, void *) throw() { };
 
 #define DEBUG
 #define LOG_SYSCALLS
@@ -49,8 +44,8 @@ inline void  operator delete[](void *, void *) throw() { };
 #define ARCH_X86_64 // TODO: Actually separate archs
 //#define ARCH_ARM
 
-#define ALIGN_DOWN(val, align) (((uint64_t)(val)) & ~((align) - 1))
-#define ALIGN_UP(val, align) (ALIGN_DOWN((((uint64_t)(val)) + (align) - 1), (align)))
+#define ALIGN_DOWN(n, a) (((uint64_t)n) & ~((a) - 1ul))
+#define ALIGN_UP(n, a) ALIGN_DOWN(((uint64_t)n) + (a) - 1ul, (a))
 
 #define IS_CANONICAL(addr) ((((addr) <= 0x00007fffffffffff)) || (((addr) >= 0xffff800000000000) && ((addr) <= 0xffffffffffffffff)))
 

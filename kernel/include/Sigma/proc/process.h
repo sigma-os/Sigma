@@ -10,6 +10,7 @@
 #include <Sigma/types/vector.h>
 #include <Sigma/types/pair.h>
 #include <Sigma/proc/ipc.h>
+#include <Sigma/proc/simd.h>
 
 namespace proc::process
 {
@@ -17,12 +18,14 @@ namespace proc::process
         thread_context(): rax(0), rbx(0), rcx(0), rdx(0), rsi(0), rdi(0), rbp(0), rsp(0), \
                           r8(0), r9(0), r10(0), r11(0), r12(0), r13(0), r14(0), r15(0), \
                           rip(0), cr3(0), rflags(0), \
-                          ss(0), ds(0), cs(0), fs(0) {}
+                          ss(0), ds(0), cs(0), fs(0), \
+                          simd_state(nullptr) {}
         uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp; // Normal Registers
         uint64_t r8, r9, r10, r11, r12, r13, r14, r15; // General Purpose Registers
         uint64_t rip, cr3, rflags; // Control Registers
         uint16_t ss, ds, cs; // Segment Registers
         uint64_t fs; // Thread Local Base
+        uint8_t* simd_state;
     };
 
     struct thread_resources {
@@ -64,7 +67,8 @@ namespace proc::process
 
     struct managed_cpu {
         managed_cpu() {}
-        managed_cpu(smp::cpu_entry cpu, bool enabled, proc::process::thread* current_thread): cpu(cpu), enabled(enabled), current_thread(current_thread) {}
+        managed_cpu(smp::cpu_entry cpu, bool enabled, proc::process::thread* current_thread): cpu(cpu), \
+             enabled(enabled), current_thread(current_thread) {}
         smp::cpu_entry cpu;
         bool enabled;
         proc::process::thread* current_thread;
@@ -85,6 +89,7 @@ namespace proc::process
 
     proc::process::thread* thread_for_tid(tid_t tid);
     proc::process::thread* get_current_thread();
+    proc::process::managed_cpu* get_current_managed_cpu();
     tid_t get_current_tid();
 
     // Internal Thread Modifying functions

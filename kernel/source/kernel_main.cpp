@@ -35,7 +35,7 @@
 #include <Sigma/boot_protocol.h>
 #include <config.h>
 
-auto cpu_list = types::linked_list<smp::cpu::entry>();
+auto cpu_list = lazy_initializer<types::vector<smp::cpu::entry>>();
 C_LINKAGE boot::boot_protocol boot_data;
 
 static void enable_cpu_tasking(){
@@ -123,7 +123,9 @@ C_LINKAGE void kernel_main(){
     x86_64::apic::lapic lapic = x86_64::apic::lapic();
     lapic.init(); 
 
-    auto* entry = cpu_list.empty_entry();
+    cpu_list.init();
+
+    auto* entry = cpu_list->empty_entry();;
     entry->lapic = lapic;
     entry->lapic_id = entry->lapic.get_id();
     entry->tss = &tss;
@@ -187,7 +189,7 @@ C_LINKAGE void smp_kernel_main(){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
 
-    auto* entry = cpu_list.empty_entry();
+    auto* entry = cpu_list->empty_entry();
 
     entry->lapic = x86_64::apic::lapic();
     entry->lapic.init();

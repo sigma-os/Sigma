@@ -30,8 +30,8 @@ static alloc::header* get_free_block(size_t size){
 uint64_t current_heap_page_offset = 0xffffffffd0000000;
 uint64_t current_heap_offset = 0xffffffffd0000000;
 
-static uint64_t morecore(size_t size){
-    current_heap_offset = ALIGN_UP(current_heap_offset, 8);
+static uint64_t morecore(size_t size, uint64_t align = 8){
+    current_heap_offset = ALIGN_UP(current_heap_offset, align);
     uint64_t ret = current_heap_offset;
     current_heap_offset += size;
 
@@ -51,7 +51,7 @@ void alloc::print_list(){
 	debug_printf("head = %x, tail = %x\n", head, tail);
 	while(curr) {
 		debug_printf("addr = %x, size = %x, is_free=%d, next=%x, magic_low: %x, magic_high: %x\n", curr, curr->size, curr->is_free, curr->next, curr->magic_low, curr->magic_high);
-        if(!IS_CANONICAL((uint64_t)curr->next) || (uint64_t)curr->next < 0xffffffffd0000000 || (uint64_t)curr->next == 0xffffffffffffffff){
+        if(((uint64_t)curr->next < (0xffffffffd0000000 - 1) && ((uint64_t)curr->next != 0)) || (uint64_t)curr->next == 0xffffffffffffffff || !check_magic(curr)){
             debug_printf("Heap corruption detected in entry: addr: %x\n", curr);
             return;
         }
@@ -90,6 +90,31 @@ void* alloc::alloc(size_t size){
     }
 
     header = reinterpret_cast<alloc::header*>(block);
+    header->size = size;
+    header->next = nullptr;
+    set_magic(header);
+    header->is_free = false;
+
+    if(head == nullptr) head = header;
+    if(tail) tail->next = header;
+    tail = header;
+
+    alloc_global_mutex.release();
+    return static_cast<void*>(header + 1);
+}
+
+void* alloc::alloc_a(size_t size, uint64_t align){
+    alloc_global_mutex.acquire();
+
+    size_t total_size = size + sizeof(alloc::header);
+    uint64_t block = morecore(total_size, align);
+    if(block == 0){
+        alloc_global_mutex.release();
+        debug_printf("[ALLOC]: Failed to allocate block with size: %x\n", total_size);
+        return nullptr;
+    }
+
+    auto* header = reinterpret_cast<alloc::header*>(block);
     header->size = size;
     header->next = nullptr;
     set_magic(header);

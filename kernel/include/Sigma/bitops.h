@@ -8,38 +8,38 @@ class bitops
 {
 public:
     static bool bit_set(T* item, uint64_t bit){
-        int set = *item & (1ULL << bit);
+        T set = *item & (1ULL << bit);
         *item |= (1ULL << bit);
-        return (set == 0) ? (false) : (true);
+        return !(set == 0);
     }
 
     static bool bit_clear(T* item, uint64_t bit){
-        int set = *item & (1ULL << bit);
+        T set = *item & (1ULL << bit);
         *item &= ~(1ULL << bit);
-        return (set == 0) ? (false) : (true);
+        return !(set == 0);
     }
 
     static bool bit_test(T* item, uint64_t bit){
-        int set = *item & (1ULL << bit);
-        return (set == 0) ? (false) : (true);
+        T set = *item & (1ULL << bit);
+        return !(set == 0);
     }
 
 
     static bool bit_set(T& item, uint64_t bit){
-        int set = item & (1ULL << bit);
+        T set = item & (1ULL << bit);
         item |= (1ULL << bit);
-        return (set == 0) ? (false) : (true);
+        return !(set == 0);
     }
 
     static bool bit_clear(T& item, uint64_t bit){
-        int set = item & (1ULL << bit);
+        T set = item & (1ULL << bit);
         item &= ~(1ULL << bit);
-        return (set == 0) ? (false) : (true);
+        return !(set == 0);
     }
 
     static bool bit_test(T& item, uint64_t bit){
-        int set = item & (1ULL << bit);
-        return (set == 0) ? (false) : (true);
+        T set = item & (1ULL << bit);
+        return !(set == 0);
     }
 };
 

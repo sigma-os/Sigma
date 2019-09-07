@@ -33,6 +33,7 @@ main_sources = files(
     'source/proc/process.cpp',
     'source/proc/elf.cpp',
     'source/proc/syscall.cpp',
+    'source/proc/simd.cpp',
     'source/cpp_support.cpp',
     'source/crti.S',
     'source/crtn.S',

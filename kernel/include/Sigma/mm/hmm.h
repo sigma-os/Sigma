@@ -8,6 +8,7 @@ namespace mm::hmm
 {
     void init();
     void* kmalloc(size_t size);
+    void* kmalloc_a(size_t size, uint64_t align);
     void kfree(void* ptr);
     void* realloc(void* ptr, size_t size);
 } // mm::hmm
