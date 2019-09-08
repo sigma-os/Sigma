@@ -45,6 +45,7 @@ cpp_includes = include_directories('include')
 
 nasm_sources = files(
     'source/arch/x86_64/misc/spinlock.asm',
+    'source/arch/x86_64/misc/misc_low.asm',
     'source/arch/x86_64/interrupts.asm',
     'source/proc/process_low.asm',
     'source/smp/gs.asm',

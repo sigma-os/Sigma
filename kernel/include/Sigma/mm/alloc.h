@@ -12,7 +12,7 @@ namespace alloc
     constexpr uint16_t magic_low = 0xBEEF;
     constexpr uint16_t magic_high = 0xC0DE;
 
-    struct alignas(16) header {
+    struct alignas(64) header {
         uint16_t magic_low;
         struct header* next;
         size_t size;

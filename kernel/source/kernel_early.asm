@@ -23,24 +23,19 @@ initialize_sse:
 .no_sse:    
     ret
 
-initialize_avx:
+initialize_osxsave:
     mov eax, 1
     cpuid
     bt ecx, 26
-    jnc .no_avx
+    jnc .no_osxsave
 
     mov rax, cr4
-    bts rax, 18 ; Set OSXSAVE bit for access to xgetbv and xsetbv
+    bts rax, 18 ; Set OSXSAVE bit for access to xgetbv and xsetbv and possibly xsave, xsaveopt and xrestor
     mov cr4, rax
-
-    mov rcx, 0
-    xgetbv
-    or eax, 7
-    xsetbv
 
     ret
 
-.no_avx:
+.no_osxsave:
     ret
 
 initialize_efer:
@@ -80,7 +75,7 @@ _kernel_early:
     mov rbp, rsp
 
     call initialize_sse
-    call initialize_avx
+    call initialize_osxsave
     call initialize_efer
     ;call initialize_cr0
     call initialize_cr4
@@ -112,7 +107,7 @@ _smp_kernel_early:
     mov byte [trampoline_booted], 1
 
     call initialize_sse
-    call initialize_avx
+    call initialize_osxsave
     call initialize_efer
     ;call initialize_cr0
     call initialize_cr4

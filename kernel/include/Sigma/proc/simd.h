@@ -13,6 +13,7 @@ namespace proc::process
 namespace proc::simd
 {
     void init_simd();
+    void init_ap_simd();
     void save_state(proc::process::thread* thread);
     void restore_state(proc::process::thread* thread);
 } // namespace proc::simd
