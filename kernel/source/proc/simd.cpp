@@ -77,11 +77,13 @@ void proc::simd::init_ap_simd(){
     uint32_t a1, b1, c1, d1;
     if(!x86_64::cpuid(1, a1, b1, c1, d1)) PANIC("Default CPUID leaf does not exist");
 
-    // TODO, move this to an x86_64::regs::xcr0 class
-    uint64_t xcr0 = 0;
-    bitops<uint64_t>::bit_set(xcr0, 0); // Set FPU bit, since it is *always* required to be set
-    if(d1 & bit_SSE) bitops<uint64_t>::bit_set(xcr0, 1); // Enable SSE, is always done becuase this is long mode but check because why not
-    if(c1 & bit_AVX) bitops<uint64_t>::bit_set(xcr0, 2); // Enable AVX-256
+    if(c1 & bit_XSAVE){
+        // TODO, move this to an x86_64::regs::xcr0 class
+        uint64_t xcr0 = 0;
+        bitops<uint64_t>::bit_set(xcr0, 0); // Set FPU bit, since it is *always* required to be set
+        if(d1 & bit_SSE) bitops<uint64_t>::bit_set(xcr0, 1); // Enable SSE, is always done becuase this is long mode but check because why not
+        if(c1 & bit_AVX) bitops<uint64_t>::bit_set(xcr0, 2); // Enable AVX-256
 
-    x86_64::write_xcr(0, xcr0);
+        x86_64::write_xcr(0, xcr0);
+    }
 }
