@@ -4,7 +4,8 @@ include_dirs = include_directories('include')
 
 
 source_files = files(
-                    'source/main.cpp')
+                    'source/main.cpp',
+                    'source/vfs.cpp')
 
 libsigma_dep = dependency('sigma')
 deps = [libsigma_dep]
