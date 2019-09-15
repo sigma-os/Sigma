@@ -1,4 +1,4 @@
-project('zeta', 'cpp', version: '0.0.1')
+project('zeta', 'cpp', version: '0.0.1', default_options : ['cpp_std=c++17'])
 
 include_dirs = include_directories('include')
 

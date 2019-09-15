@@ -1,6 +1,7 @@
 #ifndef ZETA_TREE
 #define ZETA_TREE
 
+#include <iostream>
 #include <vector>
 #include <string>
 

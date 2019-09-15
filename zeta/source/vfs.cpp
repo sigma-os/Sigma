@@ -1,16 +1,17 @@
 #include <Zeta/vfs.h>
 #include <Zeta/singleton.h>
 #include <algorithm>
+#include <string_view>
 
 using namespace fs;
 
 
 #pragma region global_vfs
 
-singleton<vfs> global_vfs;
+vfs global_vfs;
 
 vfs& get_vfs(){
-    return global_vfs.getInstance();
+    return global_vfs;
 }
 
 #pragma endregion
@@ -79,8 +80,52 @@ std::vector<std::string_view> vfs::split_path(std::string& path){
     return ret;
 }
 
-void vfs::mount(uint64_t tid, fs_node* node, std::string_view path){
- // TODO:
+/*fs_node* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path){
+    auto absolute = this->make_path_absolute(tid, path);
+    auto absolute_parts = this->split_path(absolute);
+
+    
+}*/
+
+void* vfs::mount(fs_node* node, std::string& path){
+    if(path[0] != root_char) return nullptr;
+
+    auto parts = this->split_path(path);
+
+    auto* current = this->mount_tree.get_root();
+
+    void* ret = nullptr;
+
+    // Iterate trough all parts of the path
+    std::for_each(parts.begin(), parts.end(), [&](auto& part){
+
+        bool found = false;
+        // Iterate through all children of the current node
+        for(auto it = current->children.begin(); it != current->children.end(); ++it){
+            auto* entry = *it;
+            auto& vfs_entry = entry->item;
+
+            if(vfs_entry.name == part){
+                found = true;
+                current = entry;
+                ret = static_cast<void*>(current);
+                break;
+            }
+        }
+        if(!found){
+            // This part of the path doesn't exist, thus create a vfs_node. Not an actual file, just a reference in the VFS
+            vfs_entry new_entry{};
+            new_entry.name = part;
+            current = this->mount_tree.insert(*current, new_entry);
+            
+        }
+    });
+
+    auto& vfs_entry = current->item;
+    vfs_entry.file = node;
+    ret = static_cast<void*>(current);
+
+    return ret;
 }
 
 #pragma endregion
