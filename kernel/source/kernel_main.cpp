@@ -35,7 +35,7 @@
 #include <Sigma/boot_protocol.h>
 #include <config.h>
 
-auto cpu_list = lazy_initializer<types::vector<smp::cpu::entry>>();
+auto cpu_list = misc::lazy_initializer<types::vector<smp::cpu::entry>>();
 C_LINKAGE boot::boot_protocol boot_data;
 
 static void enable_cpu_tasking(){

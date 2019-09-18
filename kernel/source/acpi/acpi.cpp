@@ -84,9 +84,9 @@ uint16_t acpi::get_arch_boot_flags(){
 
     uint16_t flags = 0;
 
-    #ifdef ARCH_X86_64
+    #if defined(ARCH_X86_64)
     flags = fadt->iapc_boot_arch;
-    #elif ARCH_ARM
+    #elif defined(ARCH_ARM)
     flags = fadt->arm_boot_arch;
     #endif
 

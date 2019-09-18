@@ -3,7 +3,7 @@
 #include <Sigma/misc.h>
 #include <Sigma/types/vector.h>
 
-lazy_initializer<types::vector<proc::initrd::tar_header*>> headers;
+misc::lazy_initializer<types::vector<proc::initrd::tar_header*>> headers;
 
 static uint64_t get_header_number(char* in){
     size_t size = 0;

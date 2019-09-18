@@ -2,6 +2,7 @@
 #define SIGMA_ARCH_X86_64_VGA
 
 #include <Sigma/common.h>
+#include <Sigma/misc.h>
 
 #include <Sigma/arch/x86_64/io.h>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
@@ -15,7 +16,7 @@ namespace x86_64::vga
     struct PACKED_ATTRIBUTE text_entry_t
     {
         text_entry_t(uint8_t ascii, text_colour foreground, text_colour background): ascii(ascii), \
-                colour((static_cast<uint8_t>(background) << 4) | static_cast<uint8_t>(foreground)) { }
+                colour((misc::as_integer(background) << 4) | misc::as_integer(foreground)) { }
         uint8_t ascii;
         uint8_t colour;
     };

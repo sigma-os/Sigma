@@ -3,7 +3,7 @@
 auto thread_list = types::linked_list<proc::process::thread>();
 static uint64_t current_thread_list_offset = 0;
 
-auto cpus = lazy_initializer<types::vector<proc::process::managed_cpu>>();
+auto cpus = misc::lazy_initializer<types::vector<proc::process::managed_cpu>>();
 
 proc::process::thread* kernel_thread;
 

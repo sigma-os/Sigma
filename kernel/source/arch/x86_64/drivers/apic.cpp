@@ -92,26 +92,9 @@ finalize:
 
 void x86_64::apic::lapic::set_timer_mode(x86_64::apic::lapic_timer_modes mode){
     uint32_t lint_entry = this->read(x86_64::apic::lapic_lvt_timer);
-    switch (mode)
-    {
-    case x86_64::apic::lapic_timer_modes::ONE_SHOT:
-        bitops<uint32_t>::bit_clear(lint_entry, 17);
-        bitops<uint32_t>::bit_clear(lint_entry, 18);
-        break;
 
-    case x86_64::apic::lapic_timer_modes::PERIODIC:
-        bitops<uint32_t>::bit_set(lint_entry, 17);
-        bitops<uint32_t>::bit_clear(lint_entry, 18);
-        break;
-        
-    case x86_64::apic::lapic_timer_modes::TSC_DEADLINE:
-        bitops<uint32_t>::bit_clear(lint_entry, 17);
-        bitops<uint32_t>::bit_set(lint_entry, 18);
-        break;
-    
-    default:
-        break;
-    }
+    lint_entry &= ~(0b11 << 17); // Clear Mode bits
+    lint_entry |= (misc::as_integer(mode) << 17);
 
     this->write(x86_64::apic::lapic_lvt_timer, lint_entry);
 }
@@ -187,39 +170,8 @@ void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint64_t data){
 void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination){
     uint64_t data = 0;
     data |= vector;
-    switch (delivery_mode)
-    {
-    case x86_64::apic::ioapic_delivery_modes::FIXED:
-        data |= (0b000 << 8);
-        break;
-    case x86_64::apic::ioapic_delivery_modes::LOW_PRIORITY:
-        data |= (0b001 << 8);
-        break;
-    case x86_64::apic::ioapic_delivery_modes::SMI:
-        data |= (0b010 << 8);
-        break;
-    case x86_64::apic::ioapic_delivery_modes::NMI:
-        data |= (0b100 << 8);
-        break;
-    case x86_64::apic::ioapic_delivery_modes::INIT:
-        data |= (0b101 << 8);
-        break;
-    case x86_64::apic::ioapic_delivery_modes::EXTINT:
-        data |= (0b111 << 8);
-        break;
-    }
-    
-    switch (destination_mode)
-    {
-    case x86_64::apic::ioapic_destination_modes::PHYSICAL:
-        data |= (0 << 11);
-        break;
-
-    case x86_64::apic::ioapic_destination_modes::LOGICAL:
-        data |= (1 << 11);
-        break;
-    
-    }
+    data |= (misc::as_integer(delivery_mode) << 8);
+    data |= (misc::as_integer(destination_mode) << 11);
     
     if(flags & 2) data |= ((uint64_t)1 << 13);
     if(flags & 8) data |= ((uint64_t)1 << 15);
