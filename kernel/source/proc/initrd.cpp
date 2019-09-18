@@ -37,7 +37,7 @@ bool proc::initrd::read_file(const char* file_name, uint8_t* buf, uint64_t offse
         if(memcmp(header->filename, file_name, strlen(file_name)) == 0){
             // Found it
             void* data = static_cast<void*>(static_cast<uint8_t*>(static_cast<void*>(header)) + 512 + offset);
-            memcpy(reinterpret_cast<void*>(buf), data, size);
+            memcpy(static_cast<void*>(buf), data, size);
 
             return true;
         }
