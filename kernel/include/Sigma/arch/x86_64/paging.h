@@ -58,6 +58,8 @@ namespace x86_64::paging
             uint64_t get_paging_info();
             void invalidate_addr(uint64_t addr);
 
+            uint64_t get_free_range(uint64_t base, uint64_t end, size_t size);
+
         private:
             // Virtual address!
             pml4* paging_info; 
