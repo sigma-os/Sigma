@@ -4,6 +4,8 @@
 #include <Sigma/common.h>
 #include <Sigma/misc.h>
 
+#include <Sigma/types/pair.h>
+
 #include <Sigma/arch/x86_64/io.h>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
 
@@ -45,6 +47,8 @@ namespace x86_64::vga
 
         void set_cursor(uint8_t x, uint8_t y);
 
+        void set_cursor_to_hw();
+
         
 
         int8_t x, y;
@@ -57,6 +61,7 @@ namespace x86_64::vga
         void scroll();
 
         void enable_hardware_cursor();
+        types::pair<int8_t, int8_t> get_hardware_cursor();
         void disable_hardware_cursor();
         void update_hardware_cursor();
     };

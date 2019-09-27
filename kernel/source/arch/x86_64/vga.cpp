@@ -114,6 +114,16 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
     this->mutex.release();
 }
 
+void x86_64::vga::writer::set_cursor_to_hw(){
+    this->mutex.acquire();
+
+    const auto [x, y] = this->get_hardware_cursor();
+    this->x = x;
+    this->y = y;
+
+    this->mutex.release();
+}
+
 void x86_64::vga::writer::scroll(){
     for(uint64_t i = 1; i < x86_64::vga::terminal_height; i++){
         uint64_t dest_offset = 2 * ((i - 1) * x86_64::vga::terminal_width);
@@ -140,6 +150,19 @@ void x86_64::vga::writer::update_hardware_cursor(){
 
     x86_64::io::outb(vga::vga_hardware_cursor_command_port, 0x0E);
     x86_64::io::outb(vga::vga_hardware_cursor_data_port, (uint8_t)((pos >> 8) & 0xFF));
+}
+
+types::pair<int8_t, int8_t> x86_64::vga::writer::get_hardware_cursor(){
+    int16_t pos{};
+
+    x86_64::io::outb(vga::vga_hardware_cursor_command_port, 0x0F);
+    pos += x86_64::io::inb(vga::vga_hardware_cursor_data_port);
+
+    x86_64::io::outb(vga::vga_hardware_cursor_command_port, 0x0E);
+    pos += x86_64::io::inb(vga::vga_hardware_cursor_data_port) << 8;
+
+
+    return {(int8_t)(pos / x86_64::vga::terminal_width), (int8_t)(pos - ((pos / x86_64::vga::terminal_width) * x86_64::vga::terminal_height))};
 }
 
 void x86_64::vga::writer::enable_hardware_cursor(){
