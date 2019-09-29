@@ -2,6 +2,7 @@
 #include <Zeta/singleton.h>
 #include <algorithm>
 #include <string_view>
+#include <cstring>
 
 using namespace fs;
 
@@ -80,52 +81,62 @@ std::vector<std::string_view> vfs::split_path(std::string& path){
     return ret;
 }
 
-/*fs_node* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path){
+fs_node* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path){
     auto absolute = this->make_path_absolute(tid, path);
-    auto absolute_parts = this->split_path(absolute);
 
-    
-}*/
+    size_t guess_size = 0;
+    vfs_entry* guess = nullptr;
+
+    std::for_each(this->mount_list.begin(), this->mount_list.end(), [&](auto& mountpoint){
+        size_t mount_len = mountpoint.name.length();
+        if(absolute.length() < mount_len) return;
+
+        if(std::memcmp(absolute.c_str(), mountpoint.name.c_str(), mount_len) == 0){
+            if((absolute[mount_len] == path_separator || absolute[mount_len] == '\0' || std::strcmp(mountpoint.name.c_str(), "/") == 0) && mount_len > guess_size){ 
+                guess_size = mount_len;
+                guess = &mountpoint;
+            }
+        }
+    });
+
+    out_local_path = path;
+
+    if(guess_size > 1)
+        out_local_path = out_local_path.substr(guess_size);
+
+    if(out_local_path[0] == '\0')
+        out_local_path[0] = '/';
+
+    return guess->file;
+}
 
 void* vfs::mount(fs_node* node, std::string& path){
     if(path[0] != root_char) return nullptr;
 
-    auto parts = this->split_path(path);
-
-    auto* current = this->mount_tree.get_root();
-
-    void* ret = nullptr;
-
-    // Iterate trough all parts of the path
-    std::for_each(parts.begin(), parts.end(), [&](auto& part){
-
-        bool found = false;
-        // Iterate through all children of the current node
-        for(auto it = current->children.begin(); it != current->children.end(); ++it){
-            auto* entry = *it;
-            auto& vfs_entry = entry->item;
-
-            if(vfs_entry.name == part){
-                found = true;
-                current = entry;
-                ret = static_cast<void*>(current);
-                break;
-            }
-        }
-        if(!found){
-            // This part of the path doesn't exist, thus create a vfs_node. Not an actual file, just a reference in the VFS
-            vfs_entry new_entry{};
-            new_entry.name = part;
-            current = this->mount_tree.insert(*current, new_entry);
-            
-        }
-    });
-
-    auto& vfs_entry = current->item;
+    auto& vfs_entry = this->mount_list.emplace_back();
     vfs_entry.file = node;
-    ret = static_cast<void*>(current);
+    vfs_entry.name = path;
 
-    return ret;
+    return nullptr;
+}
+
+int vfs::open(uint64_t tid, std::string& path, int mode){
+    std::string out_local_path{};
+    auto* node = this->get_mountpoint(tid, path, out_local_path);
+    if(node == nullptr) return -1;
+
+    int res = node->open(out_local_path.c_str(), mode);
+    if(res == -1) return -1;
+
+    auto& thread = this->thread_data[tid];
+
+    int fd = thread.free_fd;
+    thread.free_fd++;
+
+    thread.fd_map[fd] = {.fd = fd, .node = node, .mode = mode, .offset = 0};
+
+    return fd;
+
 }
 
 #pragma endregion

@@ -10,6 +10,15 @@
 
 namespace fs
 {
+    template<typename Ret, typename... Args>
+    class fs_call {
+        public:
+        Ret operator()(Args... args){
+            // TODO:
+            return {};
+        }
+    };
+
     // TODO: File things
     #pragma region file_data
 
@@ -28,14 +37,16 @@ namespace fs
         uint64_t flags;
         uint64_t owner;
         uint64_t group;
+        fs_call<int, const char*, int> open;
     };
 
     #pragma endregion
 
     #pragma region thread_data
     struct fd_data {
-        fd_data(): fd(0), offset(0) {}
         int fd;
+        fs::fs_node* node;
+        int mode;
         std::uint64_t offset;
     };
 
@@ -49,6 +60,7 @@ namespace fs
         }
         // TODO: use tid_t or pid_t
         uint64_t tid;
+        int free_fd = 500; //TODO: Handle this correctly
         std::unordered_map<int, fd_data> fd_map;
         std::string cwd;
         bool enabled;
@@ -67,13 +79,11 @@ namespace fs
 
     class vfs {
         public:
-        vfs(): mount_tree(tree<vfs_entry>()), thread_data(std::unordered_map<uint64_t, thread_vfs_entry>()) {
-            auto& root = mount_tree.get_root()->item;
-            root = {};
-            root.name = "[root]";
+        vfs(): mount_list(std::vector<vfs_entry>()), thread_data(std::unordered_map<uint64_t, thread_vfs_entry>()) {
         }
 
         void* mount(fs_node* node, std::string& path);
+        int open(uint64_t tid, std::string& path, int mode);
 
         std::string make_path_absolute(uint64_t tid, std::string_view path);
         std::vector<std::string_view> split_path(std::string& path);
@@ -82,7 +92,7 @@ namespace fs
 
         private:
         thread_vfs_entry& get_thread_entry(uint64_t tid);
-        tree<vfs_entry> mount_tree;
+        std::vector<vfs_entry> mount_list;
         // TODO: use tid_t
         std::unordered_map<uint64_t, thread_vfs_entry> thread_data;
     };
