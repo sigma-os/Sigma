@@ -7,16 +7,42 @@
 #include <unordered_map>
 #include <Zeta/tree.h>
 #include <Zeta/singleton.h>
+#include <functional>
 
 namespace fs
 {
     template<typename Ret, typename... Args>
     class fs_call {
+        // TODO: Add IPC call
         public:
+        fs_call(std::function<Ret(Args...)> func): func(func), type(call_types::function) {}
+
+        using func_ptr_t = Ret(*)(Args...);
+        fs_call(func_ptr_t func_ptr): func_ptr(func_ptr), type(call_types::function_ptr) {}
+
+
         Ret operator()(Args... args){
-            // TODO:
+            switch (this->type)
+            {
+            case call_types::function:
+                return this->func(args...);
+
+            case call_types::function_ptr:
+                return this->func_ptr(args...);
+            
+            default:
+                std::cerr << "Unknown call type";
+                break;
+            }
             return {};
         }
+
+        private:
+        enum class call_types {function, function_ptr};
+        call_types type;
+
+        std::function<Ret(Args...)> func;
+        func_ptr_t func_ptr;
     };
 
     // TODO: File things
