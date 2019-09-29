@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string_view>
 #include <cstring>
+#include <fcntl.h>
 
 using namespace fs;
 
@@ -138,6 +139,62 @@ int vfs::open(uint64_t tid, std::string& path, int mode){
     return fd;
 
 }
+
+int vfs::read(uint64_t tid, int fd, void* buf, size_t count){
+	auto& thread = this->thread_data[tid];
+	auto& file_descriptor = thread.fd_map[fd];
+	if(file_descriptor.fd == fd){ // Check for initialization
+		//TODO: Check for permission
+
+		return file_descriptor.node->read(file_descriptor.node, buf, count, file_descriptor.offset);
+	}
+
+	return -1;
+}
+
+int vfs::write(uint64_t tid, int fd, const void* buf, size_t count){
+	auto& thread = this->thread_data[tid];
+	auto& file_descriptor = thread.fd_map[fd];
+	if(file_descriptor.fd == fd){ // Check for initialization
+		//TODO: Check for permission
+
+		return file_descriptor.node->write(file_descriptor.node, buf, count, file_descriptor.offset);
+	}
+
+	return -1;
+}
+
+int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
+	auto& thread = this->thread_data[tid];
+	auto& file_descriptor = thread.fd_map[fd];
+	if(file_descriptor.fd == fd){ // Check for initialization
+		//TODO: Check for permission
+		//TODO: Pipes
+		switch (whence)
+		{
+		case SEEK_SET:
+			file_descriptor.offset = offset;
+			ret = offset;
+			break;
+
+		case SEEK_CUR:
+			ret = file_descriptor.offset;
+			break;
+
+		case SEEK_END:
+			file_descriptor.offset = file_descriptor.node->length;
+			ret = file_descriptor.offset;
+			break;
+		
+		default:
+			break;
+		}
+	}
+
+	return -1;
+}
+
+
 
 #pragma endregion
 
