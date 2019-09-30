@@ -82,8 +82,8 @@ std::vector<std::string_view> vfs::split_path(std::string& path){
     return ret;
 }
 
-fs_node* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path){
-    auto absolute = this->make_path_absolute(tid, path);
+fs_mount* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path) {
+	auto absolute = this->make_path_absolute(tid, path);
 
     size_t guess_size = 0;
     vfs_entry* guess = nullptr;
@@ -92,13 +92,16 @@ fs_node* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_l
         size_t mount_len = mountpoint.name.length();
         if(absolute.length() < mount_len) return;
 
-        if(std::memcmp(absolute.c_str(), mountpoint.name.c_str(), mount_len) == 0){
-            if((absolute[mount_len] == path_separator || absolute[mount_len] == '\0' || std::strcmp(mountpoint.name.c_str(), "/") == 0) && mount_len > guess_size){ 
-                guess_size = mount_len;
-                guess = &mountpoint;
-            }
-        }
-    });
+		if(std::memcmp(absolute.c_str(), mountpoint.name.c_str(), mount_len) == 0) {
+			if((absolute[mount_len] == path_separator || absolute[mount_len] == '\0' ||
+				std::strcmp(mountpoint.name.c_str(), "/") == 0) &&
+			    mount_len > guess_size) {
+				
+				guess_size = mount_len;
+				guess = &mountpoint;
+			}
+		}
+	});
 
     out_local_path = path;
 
@@ -108,57 +111,61 @@ fs_node* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_l
     if(out_local_path[0] == '\0')
         out_local_path[0] = '/';
 
-    return guess->file;
+	return guess->fs;
 }
 
-void* vfs::mount(fs_node* node, std::string& path){
-    if(path[0] != root_char) return nullptr;
+void* vfs::mount(fs_node* node, std::string& path, fs_mount* fs) {
+	if(path[0] != root_char)
+		return nullptr;
 
-    auto& vfs_entry = this->mount_list.emplace_back();
-    vfs_entry.file = node;
-    vfs_entry.name = path;
+	auto& vfs_entry = this->mount_list.emplace_back();
+	vfs_entry.file = node;
+	vfs_entry.name = path;
+	vfs_entry.fs = fs;
 
     return nullptr;
 }
 
-int vfs::open(uint64_t tid, std::string& path, int mode){
-    std::string out_local_path{};
-    auto* node = this->get_mountpoint(tid, path, out_local_path);
-    if(node == nullptr) return -1;
+int vfs::open(uint64_t tid, std::string& path, int mode) {
+	std::string out_local_path{};
+	auto* fs_calls_node = this->get_mountpoint(tid, path, out_local_path);
+	if(fs_calls_node == nullptr)
+		return -1;
 
-    int res = node->open(out_local_path.c_str(), mode);
-    if(res == -1) return -1;
+	fs_node* real_node = nullptr;
+	int res = fs_calls_node->calls.open(&real_node, out_local_path.c_str(), mode);
+	if(res == -1)
+		return -1;
 
-    auto& thread = this->thread_data[tid];
-
+	auto& thread = this->get_thread_entry(tid);
+    
     int fd = thread.free_fd;
     thread.free_fd++;
 
-    thread.fd_map[fd] = {.fd = fd, .node = node, .mode = mode, .offset = 0};
+	thread.fd_map[fd] = {.fd = fd, .node = real_node, .mode = mode, .offset = 0};
 
     return fd;
-
 }
 
 int vfs::read(uint64_t tid, int fd, void* buf, size_t count){
-	auto& thread = this->thread_data[tid];
+	auto& thread = this->get_thread_entry(tid);
 	auto& file_descriptor = thread.fd_map[fd];
 	if(file_descriptor.fd == fd){ // Check for initialization
 		//TODO: Check for permission
 
-		return file_descriptor.node->read(file_descriptor.node, buf, count, file_descriptor.offset);
+		return file_descriptor.node->calls.read(file_descriptor.node, buf, count, file_descriptor.offset);
 	}
 
 	return -1;
 }
 
 int vfs::write(uint64_t tid, int fd, const void* buf, size_t count){
-	auto& thread = this->thread_data[tid];
+	auto& thread = this->get_thread_entry(tid);
 	auto& file_descriptor = thread.fd_map[fd];
 	if(file_descriptor.fd == fd){ // Check for initialization
 		//TODO: Check for permission
 
-		return file_descriptor.node->write(file_descriptor.node, buf, count, file_descriptor.offset);
+		return file_descriptor.node->calls.write(file_descriptor.node, buf, count, file_descriptor.offset);
 	}
 
 	return -1;
