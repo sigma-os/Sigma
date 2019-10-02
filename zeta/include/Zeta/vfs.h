@@ -32,11 +32,6 @@ namespace fs {
 		std::function<int(fs_node*, const void*, size_t, size_t)> write;
 	};
 
-	struct fs_mount {
-		std::string name;
-		fs_calls calls;
-	};
-
 	// TODO:
 	struct fs_node {
 		public:
@@ -84,16 +79,17 @@ namespace fs {
 		std::string name;
 		fs_node* file;
 		std::string device;
-		fs_mount* fs;
+		fs_calls* fs;
 	};
 
 	class vfs {
 		public:
 		vfs():
 			mount_list(std::vector<vfs_entry>()), thread_data(std::unordered_map<uint64_t, thread_vfs_entry>()),
-			filesystems(std::vector<fs_mount>()) {}
+			filesystems(std::unordered_map<std::string, fs_calls>()) {}
 
-		void* mount(fs_node* node, std::string& path, fs_mount* fs);
+		void* mount(fs_node* node, std::string& path, fs_calls* fs);
+		void* mount(fs_node* node, std::string& path, std::string& fs_type);
 		int open(uint64_t tid, std::string& path, int mode);
 		int read(uint64_t tid, int fd, void* buf, size_t count);
 		int write(uint64_t tid, int fd, const void* buf, size_t count);
@@ -102,14 +98,16 @@ namespace fs {
 		std::string make_path_absolute(uint64_t tid, std::string_view path);
 		std::vector<std::string_view> split_path(std::string& path);
 
-		fs_mount* get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path);
+		fs_calls* get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path);
+
+		void register_fs(std::string& fs_name, fs_calls calls);
 
 		private:
 		thread_vfs_entry& get_thread_entry(uint64_t tid);
 		std::vector<vfs_entry> mount_list;
 		// TODO: use tid_t
 		std::unordered_map<uint64_t, thread_vfs_entry> thread_data;
-		std::vector<fs_mount> filesystems;
+		std::unordered_map<std::string, fs_calls> filesystems;
 	};
 
 #pragma endregion

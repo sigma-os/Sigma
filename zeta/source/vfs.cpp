@@ -82,7 +82,7 @@ std::vector<std::string_view> vfs::split_path(std::string& path){
     return ret;
 }
 
-fs_mount* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path) {
+fs_calls* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path) {
 	auto absolute = this->make_path_absolute(tid, path);
 
     size_t guess_size = 0;
@@ -114,17 +114,38 @@ fs_mount* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_
 	return guess->fs;
 }
 
-void* vfs::mount(fs_node* node, std::string& path, fs_mount* fs) {
+void* vfs::mount(fs_node* node, std::string& path, fs_calls* fs) {
 	if(path[0] != root_char)
 		return nullptr;
 
-	auto& vfs_entry = this->mount_list.emplace_back();
-	vfs_entry.file = node;
-	vfs_entry.name = path;
-	vfs_entry.fs = fs;
+	auto& entry = this->mount_list.emplace_back();
+	entry.file = node;
+	entry.name = path;
+	entry.fs = fs;
 
     return nullptr;
 }
+
+void* vfs::mount(fs_node* node, std::string& path, std::string& fs_type) {
+	if(path[0] != root_char)
+		return nullptr;
+
+	#if 0 // This works for C++20 but not C++17
+	if(!this->filesystems.contains(fs_type))
+		return nullptr;
+	#else // C++17
+	if(this->filesystems.find(fs_type) == this->filesystems.end())
+		return nullptr;
+	#endif
+
+	auto& entry = this->mount_list.emplace_back();
+	entry.file = node;
+	entry.name = path;
+	entry.fs = &this->filesystems[fs_type];
+
+	return nullptr;
+}
+
 
 int vfs::open(uint64_t tid, std::string& path, int mode) {
 	std::string out_local_path{};
@@ -133,7 +154,7 @@ int vfs::open(uint64_t tid, std::string& path, int mode) {
 		return -1;
 
 	fs_node* real_node = nullptr;
-	int res = fs_calls_node->calls.open(&real_node, out_local_path.c_str(), mode);
+	int res = fs_calls_node->open(&real_node, out_local_path.c_str(), mode);
 	if(res == -1)
 		return -1;
 
@@ -199,6 +220,10 @@ int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 	}
 
 	return -1;
+}
+
+void vfs::register_fs(std::string& fs_name, fs_calls calls){
+	this->filesystems[fs_name] = calls;
 }
 
 
