@@ -23,16 +23,14 @@ void smp::ipi::send_ping(){
 }
 
 
-static void shootdown_ipi(x86_64::idt::idt_registers* regs){
-    UNUSED(regs);
-    for(uint64_t offset = 0; offset < shootdown_length; offset += mm::pmm::block_size){
-        mm::vmm::kernel_vmm::get_instance().get_paging_provider().invalidate_addr(shootdown_addr + offset);
-    }
+static void shootdown_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+	for(uint64_t offset = 0; offset < shootdown_length; offset += mm::pmm::block_size) {
+		mm::vmm::kernel_vmm::get_instance().get_paging_provider().invalidate_addr(shootdown_addr + offset);
+	}
 }
 
-static void ping_ipi(x86_64::idt::idt_registers* regs){
-    UNUSED(regs);
-    debug_printf("[IPI]: Pong from cpu: %x\n", smp::cpu::get_current_cpu()->lapic_id);
+static void ping_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+	debug_printf("[IPI]: Pong from cpu: %x\n", smp::cpu::get_current_cpu()->lapic_id);
 }
 
 void smp::ipi::init_ipi(){

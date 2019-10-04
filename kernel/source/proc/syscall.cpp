@@ -131,15 +131,13 @@ static uint64_t syscall_receive_message(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
-static uint64_t syscall_get_message_size(x86_64::idt::idt_registers* regs){
-    UNUSED(regs);
-    return proc::process::get_message_size();
+static uint64_t syscall_get_message_size(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+	return proc::process::get_message_size();
 }
 
 static tid_t um_tid = 0;
-static uint64_t syscall_get_um_tid(x86_64::idt::idt_registers* regs){
-    UNUSED(regs);
-    return um_tid;
+static uint64_t syscall_get_um_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+	return um_tid;
 }
 
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);

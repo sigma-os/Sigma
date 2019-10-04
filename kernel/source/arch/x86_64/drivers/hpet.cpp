@@ -142,11 +142,12 @@ void x86_64::hpet::init_hpet(){
 
 }
 
-bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_types type, uint8_t vector, uint64_t ms){
-    if(comparator > n_counters){
-        printf("[HPET]: Unexisting comparator\n");
-        return false;
-    }
+bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_types type, 
+								MAYBE_UNUSED_ATTRIBUTE uint8_t vector, uint64_t ms) {
+	if(comparator > n_counters) {
+		printf("[HPET]: Unexisting comparator\n");
+		return false;
+	}
 
     uint64_t cap = hpet_read(hpet_timer_configuration_and_capabilities_reg(comparator));
 
@@ -164,8 +165,7 @@ bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_typ
     hpet_write(hpet_timer_comparator_value_reg(comparator), hpet_read(x86_64::hpet::main_counter_reg) + ticks);
     hpet_write(hpet_timer_comparator_value_reg(comparator), ticks);
 
-    UNUSED(vector);
-    // TODO: Initialize interrupt
+	// TODO: Initialize interrupt
 
     return true;
 }

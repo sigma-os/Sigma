@@ -20,51 +20,49 @@ static inline uint32_t make_pci_address(uint32_t bus, uint32_t slot, uint32_t fu
     return ((bus << 16) | (slot << 11) | (function << 8) | (offset & 0xFC) | (1u << 31));
 }
 
-static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size){
-    UNUSED(seg); // Legacy access only supports seg 0
-    x86_64::io::outd(x86_64::pci::config_addr, make_pci_address(bus, slot, function, offset));
-    switch (access_size)
-    {
-    case 1: // Byte
-        return x86_64::io::inb(x86_64::pci::config_data + (offset % 4));
-        break;
-                
-    case 2: // Word
-        return x86_64::io::inw(x86_64::pci::config_data + (offset % 4));
-        break;
+static uint32_t legacy_read(MAYBE_UNUSED_ATTRIBUTE uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, 
+							uint16_t offset, uint8_t access_size) {
+	x86_64::io::outd(x86_64::pci::config_addr, make_pci_address(bus, slot, function, offset));
+	switch(access_size) {
+		case 1: // Byte
+			return x86_64::io::inb(x86_64::pci::config_data + (offset % 4));
+			break;
 
-    case 4: // DWord
-        return x86_64::io::ind(x86_64::pci::config_data + (offset % 4));
-        break;
+		case 2: // Word
+			return x86_64::io::inw(x86_64::pci::config_data + (offset % 4));
+			break;
 
-    default:
-        printf("[PCI]: Unknown Access size [%d]\n", access_size);
-        return 0;
-        break;
-    }
+		case 4: // DWord
+			return x86_64::io::ind(x86_64::pci::config_data + (offset % 4));
+			break;
+
+		default:
+			printf("[PCI]: Unknown Access size [%d]\n", access_size);
+			return 0;
+			break;
+	}
 }
 
-static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size){
-    UNUSED(seg); // Legacy access only supports seg 0
-    x86_64::io::outd(x86_64::pci::config_addr, make_pci_address(bus, slot, function, offset));
-    switch (access_size)
-    {
-    case 1: // Byte
-        x86_64::io::outb(x86_64::pci::config_data + (offset % 4), value);
-        break;
-                
-    case 2: // Word
-        x86_64::io::outw(x86_64::pci::config_data + (offset % 4), value);
-        break;
+static void legacy_write(MAYBE_UNUSED_ATTRIBUTE uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, 
+						uint16_t offset, uint32_t value, uint8_t access_size) {
+	x86_64::io::outd(x86_64::pci::config_addr, make_pci_address(bus, slot, function, offset));
+	switch(access_size) {
+		case 1: // Byte
+			x86_64::io::outb(x86_64::pci::config_data + (offset % 4), value);
+			break;
 
-    case 4: // DWord
-        x86_64::io::outd(x86_64::pci::config_data + (offset % 4), value);   
-        break;
+		case 2: // Word
+			x86_64::io::outw(x86_64::pci::config_data + (offset % 4), value);
+			break;
 
-    default:
-        printf("[PCI]: Unknown Access size [%d]\n", access_size);
-        break;
-    }
+		case 4: // DWord
+			x86_64::io::outd(x86_64::pci::config_data + (offset % 4), value);
+			break;
+
+		default:
+			printf("[PCI]: Unknown Access size [%d]\n", access_size);
+			break;
+	}
 }
 
 static uint32_t mcfg_pci_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size){

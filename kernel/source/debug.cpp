@@ -5,7 +5,7 @@ struct frame {
     uint64_t* rip;
 };
 
-void debug::trace_stack(uint8_t levels){
+void debug::trace_stack(MAYBE_UNUSED_ATTRIBUTE uint8_t levels){
     #if defined(DEBUG)
     frame* current = static_cast<frame*>(__builtin_frame_address(0));
 
@@ -16,8 +16,6 @@ void debug::trace_stack(uint8_t levels){
         current = current->rbp;
     }
 
-    debug_printf("End of Stack Trace\n");
-    #else
-    UNUSED(levels);
-    #endif
-}   
+	debug_printf("End of Stack Trace\n");
+#endif
+}

@@ -210,15 +210,14 @@ void acpi::init(boot::boot_protocol* boot_protocol){
     acpi::init_ec();
 }
 
-static void acpi_sci_handler(x86_64::idt::idt_registers* regs){
-    UNUSED(regs);
-    uint16_t event = lai_get_sci_event();
-    if(event & ACPI_POWER_BUTTON){
-        debug_printf("[ACPI]: Requested ACPI shutdown at tsc: %x\n", x86_64::read_tsc());
-        lai_enter_sleep(5); // S5 is off
-    } else {
-        printf("[ACPI]: Unknown SCI event: %x\n", event);
-    }
+static void acpi_sci_handler(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+	uint16_t event = lai_get_sci_event();
+	if(event & ACPI_POWER_BUTTON) {
+		debug_printf("[ACPI]: Requested ACPI shutdown at tsc: %x\n", x86_64::read_tsc());
+		lai_enter_sleep(5); // S5 is off
+	} else {
+		printf("[ACPI]: Unknown SCI event: %x\n", event);
+	}
 }
 
 void acpi::init_sci(acpi::madt& madt){

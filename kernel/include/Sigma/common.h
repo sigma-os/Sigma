@@ -30,8 +30,6 @@ using std::size_t;
 
 #define C_LINKAGE extern "C"
 
-#define UNUSED(x) ((void)((x)))
-
 #define PANIC(message) (Sigma::panic::panic_m(message, __FILE__, __func__, __LINE__))
 
 #define FUNCTION_CALL_ONCE() ({ \
@@ -53,6 +51,8 @@ using std::size_t;
 #define PACKED_ATTRIBUTE [[gnu::packed]]
 #define NOINLINE_ATTRIBUTE [[gnu::noinline]]
 #define ALWAYSINLINE_ATTRIBUTE [[gnu::always_inline]]
+
+#define MAYBE_UNUSED_ATTRIBUTE [[maybe_unused]]
 #else
 #error "Unknown Compiler"
 #endif
