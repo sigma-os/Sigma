@@ -46,33 +46,34 @@ namespace types
             data[offset++] = value;
         }
 
-        [[nodiscard]]
-        T* empty_entry(){
-            if((offset + 1) >= length){
-                //data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
-                length *= 2;
-                data = new (realloc(data, sizeof(T) * length)) T;
-                
-            } 
-            return &data[offset++];
-        }
+		NODISCARD_ATTRIBUTE
+		T* empty_entry() {
+			if((offset + 1) >= length) {
+				// data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length
+				// * 2)));
+				length *= 2;
+				data = new(realloc(data, sizeof(T) * length)) T;
+			}
+			return &data[offset++];
+		}
 
-        [[nodiscard]]
-        T& operator[](size_t index){
-            if(index >= length) PANIC("Tried to access vector out of bounds");
+		NODISCARD_ATTRIBUTE
+		T& operator[](size_t index) {
+			if(index >= length)
+				PANIC("Tried to access vector out of bounds");
 
             return data[index];
         }
 
-        [[nodiscard]]
-        vector_iterator<T> begin(){
-            return vector_iterator<T>(data);
-        }
+		NODISCARD_ATTRIBUTE
+		vector_iterator<T> begin() {
+			return vector_iterator<T>(data);
+		}
 
-        [[nodiscard]]
-        vector_iterator<T> end(){
-            return vector_iterator<T>(data + offset);
-        }
+		NODISCARD_ATTRIBUTE
+		vector_iterator<T> end() {
+			return vector_iterator<T>(data + offset);
+		}
 
         private:
         size_t length;

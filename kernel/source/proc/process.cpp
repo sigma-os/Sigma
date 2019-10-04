@@ -134,34 +134,38 @@ auto scheduler_mutex = x86_64::spinlock::mutex();
 
 C_LINKAGE void proc_idle(uint64_t stack);
 
-[[noreturn]]
-NOINLINE_ATTRIBUTE static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cpu* cpu){
-    auto* current_thread = cpu->current_thread;
-    if(current_thread != nullptr){ // Is this the second time in a row that the cpu has idled a quantum?
-        save_context(regs, current_thread); // Make sure the current thread can be picked up at a later date
-        switch (current_thread->state) 
-        {
-        case proc::process::thread_state::RUNNING:
-            current_thread->state = proc::process::thread_state::IDLE;
-            break;
-    
-        default:
-            break;
-        }
+NORETURN_ATTRIBUTE
+NOINLINE_ATTRIBUTE 
+static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cpu* cpu) {
+	auto* current_thread = cpu->current_thread;
+	if(current_thread != nullptr) {			// Is this the second time in a row that the
+											// cpu has idled a quantum?
+		save_context(regs, current_thread); // Make sure the current thread can
+											// be picked up at a later date
+		switch(current_thread->state) {
+			case proc::process::thread_state::RUNNING:
+				current_thread->state = proc::process::thread_state::IDLE;
+				break;
 
-        cpu->current_thread = nullptr; // Indicate to the scheduler that there is nothing left running on this cpu
-    }
-    
-    
-    uint64_t rsp = smp::cpu::get_current_cpu()->tss->rsp0;
-    rsp = ALIGN_DOWN(rsp, 16); // Align stack for C code
+			default:
+				break;
+		}
 
-    smp::cpu::get_current_cpu()->lapic.send_eoi();
+		cpu->current_thread = nullptr; // Indicate to the scheduler that there is
+									   // nothing left running on this cpu
+	}
 
-    scheduler_mutex.release();
-    proc_idle(rsp);
 
-    while(true); // proc_idle modifies the stack, it's dangerous, don't return ever
+	uint64_t rsp = smp::cpu::get_current_cpu()->tss->rsp0;
+	rsp = ALIGN_DOWN(rsp, 16); // Align stack for C code
+
+	smp::cpu::get_current_cpu()->lapic.send_eoi();
+
+	scheduler_mutex.release();
+	proc_idle(rsp);
+
+	while(true)
+		; // proc_idle modifies the stack, it's dangerous, don't return ever
 }
 
 static void timer_handler(x86_64::idt::idt_registers* regs){
@@ -235,37 +239,40 @@ void proc::process::init_cpu(){
     printf("[MULTITASKING]: Tried to initialize cpu with apic_id: %x, that is not present in the tables\n", current_apic_id);
 }
 
-static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip, uint64_t cr3, proc::process::thread_privilege_level privilege, proc::process::thread_state state){
-    thread->ipc_manager.init(thread->tid);
-    thread->context = proc::process::thread_context(); // Start with a clean slate, make sure no data leaks to the next thread
-    thread->context.rip = reinterpret_cast<uint64_t>(rip);
-    thread->context.cr3 = cr3;
-    thread->context.rsp = stack;
-    thread->state = state;
-    thread->context.rflags = 0;
-    thread->privilege = privilege;
+static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip,
+												uint64_t cr3, proc::process::thread_privilege_level privilege,
+												proc::process::thread_state state) {
+	thread->ipc_manager.init(thread->tid);
+	thread->context = proc::process::thread_context(); // Start with a clean slate, make sure
+													   // no data leaks to the next thread
+	thread->context.rip = reinterpret_cast<uint64_t>(rip);
+	thread->context.cr3 = cr3;
+	thread->context.rsp = stack;
+	thread->state = state;
+	thread->context.rflags = 0;
+	thread->privilege = privilege;
 
-    switch (thread->privilege)
-    {
-    case proc::process::thread_privilege_level::KERNEL:
-        thread->context.cs = x86_64::gdt::kernel_code_selector;
-        thread->context.ds = x86_64::gdt::kernel_data_selector;
-        thread->context.ss = x86_64::gdt::kernel_data_selector;
-        break;
+	switch(thread->privilege) {
+		case proc::process::thread_privilege_level::KERNEL:
+			thread->context.cs = x86_64::gdt::kernel_code_selector;
+			thread->context.ds = x86_64::gdt::kernel_data_selector;
+			thread->context.ss = x86_64::gdt::kernel_data_selector;
+			break;
 
-    case proc::process::thread_privilege_level::DRIVER:
-        thread->context.rflags |= ((1 << 12) | (1 << 13)); // Set IOPL
-        [[fallthrough]];
-    case proc::process::thread_privilege_level::APPLICATION:
-        thread->context.cs = x86_64::gdt::user_code_selector | 3;
-        thread->context.ds = x86_64::gdt::user_data_selector | 3;
-        thread->context.ss = x86_64::gdt::user_data_selector | 3; // Requested Privilege level 3
-        break;
-    }
+		case proc::process::thread_privilege_level::DRIVER:
+			thread->context.rflags |= ((1 << 12) | (1 << 13)); // Set IOPL
+			FALLTHROUGH_ATTRIBUTE;
+		case proc::process::thread_privilege_level::APPLICATION:
+			thread->context.cs = x86_64::gdt::user_code_selector | 3;
+			thread->context.ds = x86_64::gdt::user_data_selector | 3;
+			thread->context.ss = x86_64::gdt::user_data_selector | 3; // Requested Privilege level 3
+			break;
+	}
 
-    thread->context.rflags |= ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
-                                                     // Bit 9 is IF, Interrupt flag, Force enable this so timer interrupts arrive
-    return thread;
+	thread->context.rflags |= ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
+													 // Bit 9 is IF, Interrupt flag, Force enable this
+													 // so timer interrupts arrive
+	return thread;
 }
 
 proc::process::thread* proc::process::create_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege){
@@ -363,30 +370,8 @@ tid_t proc::process::get_current_tid(){
     return thread->tid;
 }
 
-void proc::process::set_thread_fs(tid_t tid, uint64_t fs){
-    if(!IS_CANONICAL(fs)) PANIC("Tried to set non canonical FS for thread");
-
-    proc::process::thread* thread = proc::process::thread_for_tid(tid);
-    if(thread == nullptr){
-        PANIC("Tried to modify thread on nonexistent thread");
-        return;
-    } 
-
-    thread->thread_lock.acquire();
-    thread->context.fs = fs;
-
-    proc::process::thread* current_thread = proc::process::get_current_thread();
-    if(current_thread != nullptr){
-        if(current_thread->tid == tid) x86_64::msr::write(x86_64::msr::fs_base, fs);
-                                                            // We are setting the FSbase of the current thread
-                                                            // so set it immediatly
-    }
-    
-    thread->thread_lock.release();
-}
-
 void proc::process::set_current_thread_fs(uint64_t fs){
-    if(!IS_CANONICAL(fs)) PANIC("Tried to set non canonical FS for thread");
+    if(!common::is_canonical(fs)) PANIC("Tried to set non canonical FS for thread");
     auto* thread = get_current_thread();
     if(thread == nullptr){
         PANIC("Tried to modify nullptr thread?");

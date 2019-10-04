@@ -105,11 +105,9 @@ fs_calls* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_
 
     out_local_path = path;
 
-    if(guess_size > 1)
-        out_local_path = out_local_path.substr(guess_size);
+    if(guess_size > 1) out_local_path = out_local_path.substr(guess_size);
 
-    if(out_local_path[0] == '\0')
-        out_local_path[0] = '/';
+    if(out_local_path[0] == '\0') out_local_path[0] = '/';
 
 	return guess->fs;
 }

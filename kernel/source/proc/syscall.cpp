@@ -14,7 +14,9 @@
 
 #define PTR_IS_USERLAND(ptr) ((ptr) <= 0x8000000000000000)
 
-#define CHECK_PTR(ptr) if(!IS_CANONICAL((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0) return 1
+#define CHECK_PTR(ptr) \
+	if(!common::is_canonical((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0) \
+	return 1
 
 // ARG0: Pointer to str
 static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){

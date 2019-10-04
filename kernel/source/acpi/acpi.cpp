@@ -18,41 +18,49 @@ static bool do_checksum(acpi::sdt_header* header){
     return (sum == 0);
 }
 
-acpi::table* acpi::get_table(const char* signature, uint64_t index){
-    debug_printf("[ACPI]: Requesting table: %s, index: %d...", signature, index);
-    if(signature == acpi::dsdt_signature){
-        acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
-        uint64_t dsdt_phys_addr = 0;
+acpi::table* acpi::get_table(const char* signature, uint64_t index) {
+	debug_printf("[ACPI]: Requesting table: %s, index: %d...", signature, index);
+	if(signature == acpi::dsdt_signature) {
+		acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
+		uint64_t dsdt_phys_addr = 0;
 
-        if(IS_CANONICAL(fadt->x_dsdt) && revision != 0) dsdt_phys_addr = fadt->x_dsdt;
-        else dsdt_phys_addr = fadt->dsdt;
+		if(common::is_canonical(fadt->x_dsdt) && revision != 0)
+			dsdt_phys_addr = fadt->x_dsdt;
+		else
+			dsdt_phys_addr = fadt->dsdt;
 
-        uint64_t dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+		uint64_t dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
-        mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr, map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
-        for (size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++){
-            mm::vmm::kernel_vmm::get_instance().map_page((dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
-        }
+		mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr,
+													 map_page_flags_present | map_page_flags_cache_disable |
+														 map_page_flags_no_execute);
+		for(size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++) {
+			mm::vmm::kernel_vmm::get_instance().map_page(
+				(dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
+				map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+		}
 
-        debug_printf("Found at: %x\n", dsdt_addr);
-        return reinterpret_cast<acpi::table*>(dsdt_addr);
-    }
+		debug_printf("Found at: %x\n", dsdt_addr);
+		return reinterpret_cast<acpi::table*>(dsdt_addr);
+	}
 
-    uint64_t curr = 0;
-    for(const auto table : acpi_tables){
-        auto* header = reinterpret_cast<acpi::sdt_header*>(table);
+	uint64_t curr = 0;
+	for(const auto table : acpi_tables) {
+		auto* header = reinterpret_cast<acpi::sdt_header*>(table);
 
-        if((signature[0] == header->signature[0]) && (signature[1] == header->signature[1]) && (signature[2] == header->signature[2]) && (signature[3] == header->signature[3])){
-            if(curr != index) curr++;
-            else{
-                debug_printf("Found at: %x\n", header);
-                return reinterpret_cast<acpi::table*>(header);
-            } 
-        }
-    }
+		if((signature[0] == header->signature[0]) && (signature[1] == header->signature[1]) &&
+		   (signature[2] == header->signature[2]) && (signature[3] == header->signature[3])) {
+			if(curr != index)
+				curr++;
+			else {
+				debug_printf("Found at: %x\n", header);
+				return reinterpret_cast<acpi::table*>(header);
+			}
+		}
+	}
 
-    debug_printf("Didn't find\n");
-    return nullptr;
+	debug_printf("Didn't find\n");
+	return nullptr;
 }
 
 acpi::table* acpi::get_table(const char* signature){
@@ -60,7 +68,7 @@ acpi::table* acpi::get_table(const char* signature){
         acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
         uint64_t dsdt_phys_addr = 0;
 
-        if(IS_CANONICAL(fadt->x_dsdt) && revision != 0) dsdt_phys_addr = fadt->x_dsdt;
+        if(common::is_canonical(fadt->x_dsdt) && revision != 0) dsdt_phys_addr = fadt->x_dsdt;
         else dsdt_phys_addr = fadt->dsdt;
 
         uint64_t dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);

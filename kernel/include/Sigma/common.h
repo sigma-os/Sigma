@@ -19,6 +19,7 @@ using std::size_t;
 
 #include <Sigma/bitops.h>
 #include <Sigma/panic.h>
+#include <Sigma/compiler.h>
 
 #define DEBUG
 #define LOG_SYSCALLS
@@ -45,25 +46,16 @@ using std::size_t;
 #define ALIGN_DOWN(n, a) (((uint64_t)n) & ~((a) - 1ul))
 #define ALIGN_UP(n, a) ALIGN_DOWN(((uint64_t)n) + (a) - 1ul, (a))
 
-#define IS_CANONICAL(addr) ((((addr) <= 0x00007fffffffffff)) || (((addr) >= 0xffff800000000000) && ((addr) <= 0xffffffffffffffff)))
-
-#ifdef __GNUC__
-#define PACKED_ATTRIBUTE [[gnu::packed]]
-#define NOINLINE_ATTRIBUTE [[gnu::noinline]]
-#define ALWAYSINLINE_ATTRIBUTE [[gnu::always_inline]]
-
-#define MAYBE_UNUSED_ATTRIBUTE [[maybe_unused]]
-#else
-#error "Unknown Compiler"
-#endif
-
 using tid_t = uint64_t;
 
-namespace common
-{
-    constexpr uint64_t div_ceil(uint64_t val, uint64_t div){
-        return (val + div - 1) / div;
-    }
+namespace common {
+	constexpr uint64_t div_ceil(uint64_t val, uint64_t div) {
+		return (val + div - 1) / div;
+	}
+
+	constexpr bool is_canonical(uint64_t addr){
+		return ((addr <= 0x00007fffffffffff) || ((addr >= 0xffff800000000000) && (addr <= 0xffffffffffffffff)));
+	}
 } // namespace common
 
 

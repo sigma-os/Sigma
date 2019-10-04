@@ -25,11 +25,14 @@ namespace proc::ipc {
 			}
 		}
 
-		[[nodiscard]]
-		ALWAYSINLINE_ATTRIBUTE
+		ALWAYSINLINE_ATTRIBUTE 
+		NODISCARD_ATTRIBUTE
 		bool check_magic() {
-			if (this->magic_low != ipc_message_header_magic_low || this->magic_high != ipc_message_header_magic_high) return false;
-			else return true;
+			if(this->magic_low != ipc_message_header_magic_low ||
+			   this->magic_high != ipc_message_header_magic_high)
+				return false;
+			else
+				return true;
 		}
 
 		ALWAYSINLINE_ATTRIBUTE
@@ -61,11 +64,14 @@ namespace proc::ipc {
 			}
 		}
 
-		[[nodiscard]]
-		ALWAYSINLINE_ATTRIBUTE
-		bool check_magic(){
-			if(this->magic_low != ipc_message_footer_magic_low || this->magic_high != ipc_message_footer_magic_high) return false;
-			else return true;
+		NODISCARD_ATTRIBUTE
+		ALWAYSINLINE_ATTRIBUTE 
+		bool check_magic() {
+			if(this->magic_low != ipc_message_footer_magic_low ||
+			   this->magic_high != ipc_message_footer_magic_high)
+				return false;
+			else
+				return true;
 		}
 
 		ALWAYSINLINE_ATTRIBUTE
