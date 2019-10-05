@@ -162,6 +162,8 @@ static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cp
 	smp::cpu::get_current_cpu()->lapic.send_eoi();
 
 	scheduler_mutex.release();
+
+    mm::vmm::kernel_vmm::get_instance().set();
 	proc_idle(rsp);
 
 	while(true)
