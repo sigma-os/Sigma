@@ -62,26 +62,22 @@ void x86_64::apic::lapic::send_eoi(){
     this->write(x86_64::apic::lapic_eoi, 0); // Anything other than 0 *will* result in a General Protection Fault
 }
 
-
 void x86_64::apic::lapic::enable_timer(uint8_t vector, uint64_t ms, x86_64::apic::lapic_timer_modes mode){  
     uint32_t ticks_per_second;
 
-    if(this->timer_ticks_per_ms != 0) goto finalize;
+    if(this->timer_ticks_per_ms == 0){ // Speed is unknown so calibrate
+        this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
+        this->write(x86_64::apic::lapic_timer_initial_count, 0xFFFFFFFF);
+        this->set_timer_mask(false);
 
-    this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
+        x86_64::hpet::poll_sleep(10);
 
+        this->set_timer_mask(true);
 
-    this->write(x86_64::apic::lapic_timer_initial_count, 0xFFFFFFFF);
-    this->set_timer_mask(false);
+        ticks_per_second = 0xFFFFFFFF - this->read(x86_64::apic::lapic_timer_current_count);
+        this->timer_ticks_per_ms = ticks_per_second / 10;
+    }
 
-    x86_64::hpet::poll_sleep(10);
-
-    this->set_timer_mask(true);
-
-    ticks_per_second = 0xFFFFFFFF - this->read(x86_64::apic::lapic_timer_current_count);
-    this->timer_ticks_per_ms = ticks_per_second / 10;
-
-finalize:
     this->write(x86_64::apic::lapic_timer_divide_configuration, 0x3); // Use divider 16
     this->set_timer_mode(mode);
     this->set_timer_vector(vector);

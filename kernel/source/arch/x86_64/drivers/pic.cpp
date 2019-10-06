@@ -1,7 +1,7 @@
 #include <Sigma/arch/x86_64/drivers/pic.h>
 
-uint8_t pic1_int_base;
-uint8_t pic2_int_base;
+static uint8_t pic1_int_base;
+static uint8_t pic2_int_base;
 
 static uint16_t get_irq_reg(uint8_t ocw3){
     x86_64::io::outb(x86_64::pic::pic1_cmd_port, ocw3);
@@ -13,7 +13,6 @@ static uint16_t get_irq_reg(uint8_t ocw3){
 static uint16_t get_isr(){
     return get_irq_reg(x86_64::pic::read_isr);
 }
-
 
 void x86_64::pic::remap(uint8_t pic1_base, uint8_t pic2_base){
     uint8_t pic1_mask = x86_64::io::inb(x86_64::pic::pic1_data_port); // Save masks
@@ -50,7 +49,6 @@ void x86_64::pic::send_eoi(){
     if(bitops<uint16_t>::bit_test(isr, 2)) x86_64::io::outb(x86_64::pic::pic2_cmd_port, x86_64::pic::eoi_cmd); //PIC2 EOI
     x86_64::io::outb(x86_64::pic::pic1_cmd_port, x86_64::pic::eoi_cmd); //PIC1 EOI
 }
-
 
 void x86_64::pic::set_base_vector(uint8_t base){
     remap(base, (base + 8));

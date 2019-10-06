@@ -7,8 +7,8 @@ extern "C" {
 #include <lai/drivers/ec.h>
 }
 
-uint64_t revision = 0;
-auto acpi_tables = types::linked_list<uint64_t>();
+static uint64_t revision = 0;
+static auto acpi_tables = types::linked_list<uint64_t>();
 
 static bool do_checksum(acpi::sdt_header* header){
     uint8_t sum = 0;
@@ -24,7 +24,7 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 		acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
 		uint64_t dsdt_phys_addr = 0;
 
-		if(common::is_canonical(fadt->x_dsdt) && revision != 0)
+		if(misc::is_canonical(fadt->x_dsdt) && revision != 0)
 			dsdt_phys_addr = fadt->x_dsdt;
 		else
 			dsdt_phys_addr = fadt->dsdt;
@@ -68,7 +68,7 @@ acpi::table* acpi::get_table(const char* signature){
         acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
         uint64_t dsdt_phys_addr = 0;
 
-        if(common::is_canonical(fadt->x_dsdt) && revision != 0) dsdt_phys_addr = fadt->x_dsdt;
+        if(misc::is_canonical(fadt->x_dsdt) && revision != 0) dsdt_phys_addr = fadt->x_dsdt;
         else dsdt_phys_addr = fadt->dsdt;
 
         uint64_t dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
@@ -156,7 +156,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
             mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
-            uint64_t n_pages = common::div_ceil(h->length, mm::pmm::block_size);
+            uint64_t n_pages = misc::div_ceil(h->length, mm::pmm::block_size);
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t phys = (xsdt->tables[i] + (j * mm::pmm::block_size));
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
@@ -193,7 +193,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
             mm::vmm::kernel_vmm::get_instance().map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
 
             uint64_t addr = rsdt->tables[i] - mm::pmm::block_size;
-            auto n_pages = common::div_ceil(h->length, mm::pmm::block_size) + 2;
+            auto n_pages = misc::div_ceil(h->length, mm::pmm::block_size) + 2;
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t phys = addr + (j * mm::pmm::block_size);
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
@@ -258,13 +258,13 @@ void acpi::init_ec(){
     lai_eisaid(&pnp_id, const_cast<char*>(ec_pnp_id));
  
     struct lai_ns_iterator it = {};
-    lai_nsnode_t *node;
+    lai_nsnode_t* node = nullptr;
     while((node = lai_ns_iterate(&it))){
         if(lai_check_device_pnp_id(node, &pnp_id, &state)) // This is not an EC
             continue;
  
         // Found one
-        struct lai_ec_driver *driver = new struct lai_ec_driver; // Dynamically allocate the memory since -
+        struct lai_ec_driver* driver = new struct lai_ec_driver; // Dynamically allocate the memory since -
         lai_init_ec(node, driver);                               // we dont know how many ECs there could be
  
         struct lai_ns_child_iterator child_it = LAI_NS_CHILD_ITERATOR_INITIALIZER(node);

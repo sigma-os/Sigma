@@ -260,7 +260,6 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 			thread->context.ds = x86_64::gdt::kernel_data_selector;
 			thread->context.ss = x86_64::gdt::kernel_data_selector;
 			break;
-
 		case proc::process::thread_privilege_level::DRIVER:
 			thread->context.rflags |= ((1 << 12) | (1 << 13)); // Set IOPL
 			FALLTHROUGH_ATTRIBUTE;
@@ -373,7 +372,7 @@ tid_t proc::process::get_current_tid(){
 }
 
 void proc::process::set_current_thread_fs(uint64_t fs){
-    if(!common::is_canonical(fs)) PANIC("Tried to set non canonical FS for thread");
+    if(!misc::is_canonical(fs)) PANIC("Tried to set non canonical FS for thread");
     auto* thread = get_current_thread();
     if(thread == nullptr){
         PANIC("Tried to modify nullptr thread?");
@@ -424,7 +423,7 @@ void proc::process::map_anonymous(proc::process::thread* thread, size_t size, vo
                      (!(prot & PROT_EXEC) ? (map_page_flags_no_execute) : 0) | \
                      map_page_flags_user;
 
-    size_t pages = common::div_ceil(size, mm::pmm::block_size);
+    size_t pages = misc::div_ceil(size, mm::pmm::block_size);
     uint64_t virt = reinterpret_cast<uint64_t>(addr);
 
     for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size){

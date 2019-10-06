@@ -8,7 +8,6 @@ uint8_t x86_64::io::inb(uint16_t port){
 
 void x86_64::io::outb(uint16_t port, uint8_t value){
     asm volatile ("out %0, %1" : : "a"(value), "Nd"(port));
-
 }
 
 uint16_t x86_64::io::inw(uint16_t port){

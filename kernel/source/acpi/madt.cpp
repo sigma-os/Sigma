@@ -94,13 +94,13 @@ void acpi::madt::parse(){
 
 
 void acpi::madt::get_cpus(types::linked_list<smp::cpu_entry>& cpus){
-    for(auto a : this->cpus) cpus.push_back(a);
+    for(const auto& a : this->cpus) cpus.push_back(a);
 }
 
 void acpi::madt::get_ioapics(types::linked_list<types::pair<uint64_t, uint32_t>>& ioapics){
-    for(auto a : this->ioapics) ioapics.push_back(a);
+    for(const auto& a : this->ioapics) ioapics.push_back(a);
 }
 
 void acpi::madt::get_interrupt_overrides(types::linked_list<x86_64::apic::interrupt_override>& isos){
-    for(auto a : this->isos) isos.push_back(a);
+    for(const auto& a : this->isos) isos.push_back(a);
 }

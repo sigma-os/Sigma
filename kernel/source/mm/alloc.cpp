@@ -7,6 +7,7 @@ static x86_64::spinlock::mutex alloc_global_mutex = x86_64::spinlock::mutex();
 static alloc::header* head = nullptr;
 static alloc::header* tail = nullptr;
 
+NODISCARD_ATTRIBUTE
 static alloc::header* get_free_block(size_t size){
     // Basic First Fit algorithm
     alloc::header* curr = head;
@@ -17,9 +18,10 @@ static alloc::header* get_free_block(size_t size){
     return nullptr;
 }
 
-uint64_t current_heap_page_offset = 0xffffffffd0000000;
-uint64_t current_heap_offset = 0xffffffffd0000000;
+static uint64_t current_heap_page_offset = 0xffffffffd0000000;
+static uint64_t current_heap_offset = 0xffffffffd0000000;
 
+NODISCARD_ATTRIBUTE
 static uint64_t morecore(size_t size, uint64_t align = 8){
     current_heap_offset = ALIGN_UP(current_heap_offset, align);
     uint64_t ret = current_heap_offset;
@@ -49,6 +51,7 @@ void alloc::print_list(){
 	}
 }
 
+NODISCARD_ATTRIBUTE
 void* alloc::alloc(size_t size){
     if(size == 0) return nullptr;
 
@@ -93,6 +96,7 @@ void* alloc::alloc(size_t size){
     return static_cast<void*>(header + 1);
 }
 
+NODISCARD_ATTRIBUTE
 void* alloc::alloc_a(size_t size, uint64_t align){
     alloc_global_mutex.acquire();
 
@@ -118,6 +122,7 @@ void* alloc::alloc_a(size_t size, uint64_t align){
     return static_cast<void*>(header + 1);
 }
 
+NODISCARD_ATTRIBUTE
 void* alloc::realloc(void* ptr, size_t size){
     if(!ptr && size == 0) return nullptr;
 

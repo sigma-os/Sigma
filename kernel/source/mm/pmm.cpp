@@ -6,10 +6,10 @@ C_LINKAGE uint64_t _kernel_end;
 uint64_t kernel_start = reinterpret_cast<uint64_t>(&_kernel_start);
 uint64_t kernel_end = reinterpret_cast<uint64_t>(&_kernel_end);
 
-uint64_t mbd_start, initrd_start;
-uint64_t mbd_end, initrd_end;
+static uint64_t mbd_start, initrd_start;
+static uint64_t mbd_end, initrd_end;
 
-auto pmm_global_mutex = x86_64::spinlock::mutex();
+static auto pmm_global_mutex = x86_64::spinlock::mutex();
 
 
 
@@ -28,8 +28,8 @@ struct rle_stack_entry {
     }
 };
 
-rle_stack_entry* stack_base;
-rle_stack_entry* stack_pointer;
+static rle_stack_entry* stack_base;
+static rle_stack_entry* stack_pointer;
 
 
 //TODO: Check for stack undeflow and overflow
@@ -85,6 +85,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     }
 }
 
+NODISCARD_ATTRIBUTE
 void* mm::pmm::alloc_block(){
     pmm_global_mutex.acquire();
     rle_stack_entry ent = pop();
@@ -103,6 +104,7 @@ void* mm::pmm::alloc_block(){
     return reinterpret_cast<void*>(addr);
 }
 
+NODISCARD_ATTRIBUTE
 void* mm::pmm::alloc_n_blocks(size_t n){
     pmm_global_mutex.acquire();
     uint64_t base = 0;

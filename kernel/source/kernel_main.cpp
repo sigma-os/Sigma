@@ -161,7 +161,7 @@ C_LINKAGE void kernel_main(){
     if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread)) printf("Failed to load Zeta\n");
     proc::syscall::set_user_manager_tid(thread->tid);
 
-    /*proc::process::create_kernel_thread([](){
+    /*proc::process::create_kernel_thread(+[](){
         // TODO: Initialize ACPI kernel thread and PCI kernel thread
 
 

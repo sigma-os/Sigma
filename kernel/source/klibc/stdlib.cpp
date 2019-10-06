@@ -62,10 +62,12 @@ void abort(void){
     while(true);
 }
 
+NODISCARD_ATTRIBUTE
 void *malloc(size_t size){
     return mm::hmm::kmalloc(size);
 }
 
+NODISCARD_ATTRIBUTE
 void *realloc(void* ptr, size_t size){
     return mm::hmm::realloc(ptr, size);
 }

@@ -20,7 +20,6 @@ static void clear_booted_flag(){
     *trampoline_booted_addr = 0;
 }
 
-
 void smp::multiprocessing::boot_apic(smp::cpu_entry& cpu){
     this->bsp_lapic->send_ipi_raw(cpu.lapic_id, (x86_64::apic::lapic_icr_tm_level | x86_64::apic::lapic_icr_levelassert | x86_64::apic::lapic_icr_dm_init));
     //this->send_ipi_raw(cpu.lapic_id, (x86_64::apic::lapic_icr_tm_level | x86_64::apic::lapic_icr_dm_init));    

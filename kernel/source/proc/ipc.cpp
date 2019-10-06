@@ -2,7 +2,6 @@
 
 using namespace proc::ipc;
 
-
 // TODO: Expandable buffers, so start at 128 bytes but expand all the way to 4096bytes
 void thread_ipc_manager::init(tid_t tid)
 {
@@ -18,7 +17,6 @@ void thread_ipc_manager::init(tid_t tid)
 	memset(reinterpret_cast<void*>(this->msg_buffer), 0, thread_ipc_manager_default_msg_buffer_size);
 	this->lock.release();
 }
-
 
 void thread_ipc_manager::deinit()
 {

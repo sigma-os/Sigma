@@ -15,7 +15,7 @@
 #define PTR_IS_USERLAND(ptr) ((ptr) <= 0x8000000000000000)
 
 #define CHECK_PTR(ptr) \
-	if(!common::is_canonical((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0) \
+	if(!misc::is_canonical((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0) \
 	return 1
 
 // ARG0: Pointer to str

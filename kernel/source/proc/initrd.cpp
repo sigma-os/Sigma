@@ -33,7 +33,6 @@ void proc::initrd::init(uint64_t address, uint64_t size){
 
 bool proc::initrd::read_file(const char* file_name, uint8_t* buf, uint64_t offset, uint64_t size){
     for(auto* header : *headers){
-        //debug_printf("%s[%x] vs %s\n", header->filename, header, file_name);
         if(memcmp(header->filename, file_name, strlen(file_name)) == 0){
             // Found it
             void* data = static_cast<void*>(static_cast<uint8_t*>(static_cast<void*>(header)) + 512 + offset);

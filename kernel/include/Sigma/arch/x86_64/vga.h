@@ -23,7 +23,7 @@ namespace x86_64::vga
         uint8_t colour;
     };
 
-    extern const uint64_t mmio;
+    constexpr uint64_t mmio = (0xb8000 + KERNEL_VBASE);
 
     constexpr uint8_t terminal_width = 80;
     constexpr uint8_t terminal_height = 25;

@@ -47,7 +47,7 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
             //proc::elf::Elf64_Word p_flags = program_section_header.p_flags;
             //if((p_flags & proc::elf::pf_x) == 0) flags |= map_page_flags_no_execute;
 
-            uint64_t n_pages = common::div_ceil(program_section_header.p_memsz, mm::pmm::block_size);
+            uint64_t n_pages = misc::div_ceil(program_section_header.p_memsz, mm::pmm::block_size);
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
                 if(frame == 0){
@@ -74,8 +74,6 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
 }
 
 static bool check_elf_executable(proc::elf::Elf64_Ehdr* program_header){
-
-
     if(program_header->e_ident[proc::elf::ei_mag0] != 0x7f || program_header->e_ident[proc::elf::ei_mag1] != 'E' || program_header->e_ident[proc::elf::ei_mag2] != 'L' || program_header->e_ident[proc::elf::ei_mag3] != 'F'){
         printf("[ELF]: ELF magic not intact for\n");
         return false;
@@ -127,13 +125,16 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
         return false;
     }
     
-    check_elf_executable(&program_header);
+    if(!check_elf_executable(&program_header)){
+        printf("[ELF]: Failed file verification: %s\n", initrd_filename);
+        return false;
+    }
 
     // File integrity should be fine now
     switch (program_header.e_type)
     {
     case proc::elf::et_exec:
-        // Static Executable File
+        // Executable File
         {
             proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, proc::process::thread_privilege_level::APPLICATION);
             new_thread->vmm = x86_64::paging::paging();
@@ -187,8 +188,6 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                 push(0);
                 push(0);
 
-                printf("%x, %x, %x, %x\n", aux.at_phdr, aux.at_phent, aux.at_phnum, aux.at_entry);
-
                 new_thread->context.rip = ld_aux.at_entry;
 
                 // Cleanup
@@ -200,11 +199,9 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
             proc::process::set_thread_state(new_thread, proc::process::thread_state::IDLE);
         }
         break;
-    
     default:
         printf("[ELF]: Unknown ELF file type [%x]\n", program_header.e_type);
         return false;
-        break;
     }
 
     return true;

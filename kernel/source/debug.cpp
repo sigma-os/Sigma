@@ -12,11 +12,11 @@ void debug::trace_stack(MAYBE_UNUSED_ATTRIBUTE uint8_t levels){
 	debug_printf("Starting Stack Trace\n");
 	for(size_t i = 0; i < levels; i++) {
 		debug_printf("  Level %d: RIP [%x]\n", i, current->rip);
-		if(!common::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr)
+		if(!misc::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr)
 			break;
 		current = current->rbp;
 	}
 
 	debug_printf("End of Stack Trace\n");
-#endif
+	#endif
 }

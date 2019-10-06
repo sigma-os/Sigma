@@ -4,11 +4,10 @@ extern "C" {
     #include <lai/core.h>
 }
 
-x86_64::hpet::table* acpi_table = nullptr;
-uint64_t main_counter_clk = 0;
-uint16_t minimum_counter = 0xFFFF;
-uint64_t n_counters = 0;
-bool supports_64bit_counter = false;
+static x86_64::hpet::table* acpi_table = nullptr;
+static uint64_t main_counter_clk = 0;
+static uint64_t n_counters = 0;
+static bool supports_64bit_counter = false;
 
 static uint64_t hpet_read(uint64_t reg){
     uint64_t ret = 0;

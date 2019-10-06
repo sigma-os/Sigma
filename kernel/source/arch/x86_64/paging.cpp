@@ -361,7 +361,7 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
                 if(pml4_base == 0) continue;
                 else return pml4_base;
             } else {
-                uint64_t n_pml4s = common::div_ceil(size, 0x8000000000);
+                uint64_t n_pml4s = misc::div_ceil(size, 0x8000000000);
                 for(uint64_t j = 0; j < n_pml4s; j++){
                     uint64_t new_pml4_entry = this->paging_info->entries[pml4_index(pml4_base + (0x8000000000 * j))];
                     if(bitops<uint64_t>::bit_test(new_pml4_entry, x86_64::paging::page_entry_present)){
@@ -382,7 +382,7 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
                 if(pdpt_base == 0) continue;
                 else return pdpt_base;
             } else {
-                uint64_t n_pdpts = common::div_ceil(size, 0x40000000);
+                uint64_t n_pdpts = misc::div_ceil(size, 0x40000000);
                 for(uint64_t j = 0; j < n_pdpts; j++){
                     uint64_t new_pdpt_entry = pdpt->entries[pdpt_index(pdpt_base + (0x40000000 * j))];
                     if(bitops<uint64_t>::bit_test(new_pdpt_entry, x86_64::paging::page_entry_present)){
@@ -403,7 +403,7 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
                 if(pd_base == 0) continue;
                 else return pd_base;  
             } else {
-                uint64_t n_pds = common::div_ceil(size, 0x200000);
+                uint64_t n_pds = misc::div_ceil(size, 0x200000);
                 for(uint64_t j = 0; j < n_pds; j++){
                     uint64_t new_pd_entry = pd->entries[pd_index(pd_base + (0x200000 * j))];
                     if(bitops<uint64_t>::bit_test(new_pd_entry, x86_64::paging::page_entry_present)){
@@ -423,7 +423,7 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
                 if(pt_base == 0) continue;
                 else return pt_base;  
             } else {
-                uint64_t n_pts = common::div_ceil(size, 0x1000);
+                uint64_t n_pts = misc::div_ceil(size, 0x1000);
                 for(uint64_t j = 0; j < n_pts; j++){
                     uint64_t new_pt_entry = pd->entries[pt_index(pt_base + (0x1000 * j))];
                     if(bitops<uint64_t>::bit_test(new_pt_entry, x86_64::paging::page_entry_present)){

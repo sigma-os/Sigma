@@ -1,7 +1,8 @@
 #ifndef SIGMA_MISC
 #define SIGMA_MISC
 
-#include <Sigma/common.h>
+#include <cstdint>
+#include <Sigma/panic.h>
 #include <type_traits>
 
 namespace misc
@@ -50,6 +51,14 @@ namespace misc
     {
         return static_cast<typename std::underlying_type<Enumeration>::type>(value);
     }
+
+    constexpr uint64_t div_ceil(uint64_t val, uint64_t div) {
+		return (val + div - 1) / div;
+	}
+
+	constexpr bool is_canonical(uint64_t addr){
+		return ((addr <= 0x00007fffffffffff) || ((addr >= 0xffff800000000000) && (addr <= 0xffffffffffffffff)));
+	}
 } // namespace misc
 
 #endif

@@ -63,11 +63,11 @@ void proc::simd::init_simd(){
 
         debug_printf("[PROC]: Initializing saving mechanism with xsave, size: %x\n", save_size);
 
-        global_save = [](uint8_t* state){
+        global_save = +[](uint8_t* state){
             xsave_int(state);
         };
 
-        global_restore = [](uint8_t* state){
+        global_restore = +[](uint8_t* state){
             xrstor_int(state);
         };
     } else if(d1 & bit_FXSAVE){
@@ -76,11 +76,11 @@ void proc::simd::init_simd(){
         
         debug_printf("[PROC]: Initializing saving mechanism with fxsave, size: %x\n", save_size);
 
-        global_save = [](uint8_t* state){
+        global_save = +[](uint8_t* state){
             asm("fxsave (%0)" : : "r"(state) : "memory");
         };
 
-        global_restore = [](uint8_t* state){
+        global_restore = +[](uint8_t* state){
             asm("fxrstor (%0)" : : "r"(state) : "memory");
         };
     } else PANIC("no known SIMD save mechanism available");

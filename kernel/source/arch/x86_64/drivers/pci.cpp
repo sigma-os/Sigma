@@ -1,6 +1,6 @@
 #include <Sigma/arch/x86_64/drivers/pci.h>
 
-extern "C"{
+extern "C" {
     #include <lai/core.h>
 }
 
@@ -10,8 +10,8 @@ static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t functi
 using read_func = uint32_t (*)(uint16_t, uint8_t, uint8_t, uint8_t, uint16_t, uint8_t);
 using write_func = void (*)(uint16_t, uint8_t, uint8_t, uint8_t, uint16_t, uint32_t, uint8_t);
 
-read_func internal_read = legacy_read; // Default to legacy functions they should always work
-write_func internal_write = legacy_write;
+static read_func internal_read = legacy_read; // Default to legacy functions they should always work
+static write_func internal_write = legacy_write;
 
 auto mcfg_entries = types::linked_list<acpi::mcfg_table_entry>();
 auto pci_devices = types::linked_list<x86_64::pci::device>();

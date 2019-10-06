@@ -8,7 +8,7 @@ namespace types
     template<typename A, typename B>
     class pair {
         public:
-        pair(A a, B b): a(a), b(b) {}
+        constexpr pair(A a, B b): a(a), b(b) {}
         pair() {}
         A a;
         B b; 

@@ -7,37 +7,37 @@ template<typename T>
 class bitops
 {
 public:
-    static bool bit_set(T* item, uint64_t bit){
+    static constexpr bool bit_set(T* item, uint64_t bit){
         T set = *item & (1ULL << bit);
         *item |= (1ULL << bit);
         return !(set == 0);
     }
 
-    static bool bit_clear(T* item, uint64_t bit){
+    static constexpr bool bit_clear(T* item, uint64_t bit){
         T set = *item & (1ULL << bit);
         *item &= ~(1ULL << bit);
         return !(set == 0);
     }
 
-    static bool bit_test(T* item, uint64_t bit){
+    static constexpr bool bit_test(T* item, uint64_t bit){
         T set = *item & (1ULL << bit);
         return !(set == 0);
     }
 
 
-    static bool bit_set(T& item, uint64_t bit){
+    static constexpr bool bit_set(T& item, uint64_t bit){
         T set = item & (1ULL << bit);
         item |= (1ULL << bit);
         return !(set == 0);
     }
 
-    static bool bit_clear(T& item, uint64_t bit){
+    static constexpr bool bit_clear(T& item, uint64_t bit){
         T set = item & (1ULL << bit);
         item &= ~(1ULL << bit);
         return !(set == 0);
     }
 
-    static bool bit_test(T& item, uint64_t bit){
+    static constexpr bool bit_test(T& item, uint64_t bit){
         T set = item & (1ULL << bit);
         return !(set == 0);
     }

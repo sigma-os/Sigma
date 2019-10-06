@@ -22,7 +22,6 @@ void smp::ipi::send_ping(){
     smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19) | (1 << 18) | smp::ipi::ping_ipi_vector)); // All excluding self
 }
 
-
 static void shootdown_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
 	for(uint64_t offset = 0; offset < shootdown_length; offset += mm::pmm::block_size) {
 		mm::vmm::kernel_vmm::get_instance().get_paging_provider().invalidate_addr(shootdown_addr + offset);
