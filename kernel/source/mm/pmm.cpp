@@ -14,7 +14,6 @@ auto pmm_global_mutex = x86_64::spinlock::mutex();
 
 
 struct rle_stack_entry {
-    rle_stack_entry(uint64_t base, uint64_t n_pages): base(base), n_pages(n_pages) {}
     uint64_t base;
     uint64_t n_pages;
 
@@ -72,7 +71,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
         if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
-            push({entry->addr, (entry->len / mm::pmm::block_size)});
+            push({.base = entry->addr, .n_pages = (entry->len / mm::pmm::block_size)});
         }
     }
 
@@ -149,7 +148,7 @@ void mm::pmm::free_block(void* block){
     }
 
     // We're not consecutive to any entry, add our own
-    push({addr, 1});
+    push({.base = addr, .n_pages = 1});
 
     pmm_global_mutex.release();
     return;

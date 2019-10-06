@@ -150,17 +150,17 @@ struct kernel_syscall {
 };
 
 kernel_syscall syscalls[] = {
-    {syscall_early_klog, "early_klog"},
-    {syscall_set_fsbase, "set_fsbase"},
-    {syscall_kill, "kill"},
-    {syscall_valloc, "valloc"},
-    {syscall_vm_map, "vm_map"},
-    {syscall_initrd_read, "initrd_read"},
-    {syscall_initrd_get_size, "initrd_get_size"},
-    {syscall_send_message, "ipc_send"},
-    {syscall_receive_message, "ipc_receive"},
-    {syscall_get_message_size, "ipc_get_message_size"},
-    {syscall_get_um_tid, "get_user_manager_tid"}
+    {.func = syscall_early_klog, .name = "early_klog"},
+    {.func = syscall_set_fsbase, .name = "set_fsbase"},
+    {.func = syscall_kill, .name = "kill"},
+    {.func = syscall_valloc, .name = "valloc"},
+    {.func = syscall_vm_map, .name = "vm_map"},
+    {.func = syscall_initrd_read, .name = "initrd_read"},
+    {.func = syscall_initrd_get_size, .name = "initrd_get_size"},
+    {.func = syscall_send_message, .name = "ipc_send"},
+    {.func = syscall_receive_message, .name = "ipc_receive"},
+    {.func = syscall_get_message_size, .name = "ipc_get_message_size"},
+    {.func = syscall_get_um_tid, .name = "get_user_manager_tid"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

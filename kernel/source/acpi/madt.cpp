@@ -49,7 +49,7 @@ void acpi::madt::parse_iso(uint8_t* item){
 
     debug_printf("[MADT]: Detected Interrupt Source Override: ISA IRQ: %x, GSI: %x, flags: %x\n", iso->source, iso->gsi, iso->flags);
 
-    this->isos.push_back({iso->source, iso->gsi, iso->flags}); // constructs an x86_64::apic::interrupt_override
+    this->isos.push_back({.source = iso->source, .gsi = iso->gsi, .flags = iso->flags}); // constructs an x86_64::apic::interrupt_override
 }
 
 void acpi::madt::parse(){
