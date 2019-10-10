@@ -1,4 +1,4 @@
-# Sigma
+# Sigma :rocket:
 Sigma OS is located in this repo
  
 It is an x86_64 (semi)POSIX (semi)Microkernel but still in early development
