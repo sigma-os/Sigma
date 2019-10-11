@@ -59,6 +59,12 @@ namespace misc
 	constexpr bool is_canonical(uint64_t addr){
 		return ((addr <= 0x00007fffffffffff) || ((addr >= 0xffff800000000000) && (addr <= 0xffffffffffffffff)));
 	}
+
+    constexpr uint64_t pow(uint64_t base, uint64_t pow){
+        uint64_t tmp = base;
+        for(uint64_t i = 0; i < pow; i++) tmp *= base;
+        return tmp;
+    }
 } // namespace misc
 
 #endif

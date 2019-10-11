@@ -80,16 +80,17 @@ flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffr
 cpp_flags = []
 cpp_flags += flags_c_common
 cpp_flags += extra_warning_flags
-cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit', '-flto']
+cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit', '-fsanitize=undefined']#, '-flto']
 
 c_flags = []
 c_flags += flags_c_common
-c_flags += ['-std=c18', '-flto']
+c_flags += ['-std=c18']#, '-flto']
 
 ld_script = meson.current_source_dir() + '/build/linker.ld'
 
 ld_flags = ['-T', ld_script, '-nostdlib', '-mcmodel=kernel', '-fno-PIC', '-no-pie', '-Wl,--build-id=none', 
-            '-Wl,-z,max-page-size=0x1000,-n', '-lgcc', '-flto']
+            '-Wl,-z,max-page-size=0x1000,-n', '-lgcc']#, '-flto']
+#ld_flags += cpp_flags
 
 
 add_global_arguments(c_flags, language: 'c')

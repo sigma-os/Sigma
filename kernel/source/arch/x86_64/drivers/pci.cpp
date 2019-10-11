@@ -210,8 +210,8 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
     dev.function = function;
     dev.vendor_id = vendor_id;
 
-    uint8_t class_code = ((x86_64::pci::read(seg, bus, device, function, 8, 4) >> 24) & 0xFF);
-    uint8_t subclass_code = ((x86_64::pci::read(seg, bus, device, function, 8, 4) >> 16) & 0xFF);
+    uint8_t class_code = (x86_64::pci::read(seg, bus, device, function, 11, 1) & 0xFF);
+    uint8_t subclass_code = (x86_64::pci::read(seg, bus, device, function, 10, 1) & 0xFF);
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge
         uint8_t secondary_bus = x86_64::pci::read(seg, bus, device, function, 0x19, 1);
@@ -221,7 +221,7 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
     dev.class_code = class_code;
     dev.subclass_code = subclass_code;
 
-    uint8_t header_type = ((x86_64::pci::read(seg, bus, device, 0, 0xC, 4) >> 16) & 0xFF);
+    uint8_t header_type = (x86_64::pci::read(seg, bus, device, 0, 0xE, 1) & 0xFF);
     header_type &= 0x7F; // Ignore Multifunction bit
     dev.header_type = header_type;
     if(header_type == 0){

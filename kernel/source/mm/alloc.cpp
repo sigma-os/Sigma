@@ -75,7 +75,7 @@ void* alloc::alloc(size_t size){
     }
 
     size_t total_size = size + sizeof(alloc::header);
-    uint64_t block = morecore(total_size);
+    uint64_t block = morecore(total_size, 64);
     if(block == 0){
         alloc_global_mutex.release();
         debug_printf("[ALLOC]: Failed to allocate block with size: %x\n", total_size);
