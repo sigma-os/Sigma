@@ -80,7 +80,7 @@ flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffr
 cpp_flags = []
 cpp_flags += flags_c_common
 cpp_flags += extra_warning_flags
-cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit', '-fsanitize=undefined']#, '-flto']
+cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit']#, '-fsanitize=undefined']#, '-flto']
 
 c_flags = []
 c_flags += flags_c_common
