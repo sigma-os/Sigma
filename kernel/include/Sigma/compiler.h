@@ -54,4 +54,13 @@
 
 #endif
 
+#if defined(__GNUC__) || defined(__clang__) // both clang and gcc support __PRETTY_FUNCTION__
+#define SIGMA_FUNCTION_NAME __PRETTY_FUNCTION__
+#elif defined(_MSC_VER) // Check for MSVC
+#undef SIGMA_FUNCTION_NAME
+#define SIGMA_FUNCTION_NAME __FUNCSIG__
+#else // If noone supports it just use __func__ i guess
+#define SIGMA_FUNCTION_NAME __func__
+#endif
+
 #endif

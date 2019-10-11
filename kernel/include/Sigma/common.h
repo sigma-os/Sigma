@@ -21,7 +21,7 @@ using std::size_t;
 #include <Sigma/panic.h>
 #include <Sigma/compiler.h>
 
-#define PANIC(message) (Sigma::panic::panic_m(message, __FILE__, __func__, __LINE__))
+#define PANIC(message) (Sigma::panic::panic_m(message, __FILE__, SIGMA_FUNCTION_NAME, __LINE__))
 
 #include <Sigma/misc.h>
 
