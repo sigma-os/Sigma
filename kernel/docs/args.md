@@ -6,3 +6,4 @@ There are 2 things you can do
 
 Options
 - `dsdt_override` which should be a string with the path to the file to read the dsdt from on initrd
+- `acpi_trace` is a bool that enabled tracing of AML opcodes

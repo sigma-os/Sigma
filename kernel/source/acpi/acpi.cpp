@@ -247,7 +247,9 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
         dsdt_override = reinterpret_cast<acpi::table*>(buffer);
     }
-    //lai_enable_tracing(1);
+
+    if(misc::kernel_args::get_bool("acpi_trace"))
+        lai_enable_tracing(1);
 
     lai_set_acpi_revision(rsdp->revision);
 
