@@ -104,6 +104,13 @@ C_LINKAGE void kernel_main(){
     mm::hmm::init(); 
 
 
+    // Initialize initrd as early as possible so it can be used for reading files for command line args
+    for(uint64_t i = 0; i < boot_data.kernel_initrd_size; i += mm::pmm::block_size){
+        mm::vmm::kernel_vmm::get_instance().map_page(boot_data.kernel_initrd_ptr + i, (boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + i), map_page_flags_present | map_page_flags_global | map_page_flags_no_execute);    
+    }
+
+    proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
+
     auto cpus = types::linked_list<smp::cpu_entry>();
 
     acpi::init(boot_protocol);
@@ -149,12 +156,6 @@ C_LINKAGE void kernel_main(){
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
     (void)(smp);
-
-    for(uint64_t i = 0; i < boot_data.kernel_initrd_size; i += mm::pmm::block_size){
-        mm::vmm::kernel_vmm::get_instance().map_page(boot_data.kernel_initrd_ptr + i, (boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + i), map_page_flags_present | map_page_flags_global | map_page_flags_no_execute);    
-    }
-
-    proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
 
     proc::syscall::init_syscall();
 
