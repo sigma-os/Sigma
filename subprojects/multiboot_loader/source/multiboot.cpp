@@ -32,6 +32,13 @@ void loader::multiboot::parse_mbd(){
 
         switch (*type)
         {
+            case MULTIBOOT_TAG_TYPE_CMDLINE:
+            {
+                auto info = reinterpret_cast<multiboot_tag_string*>(type);
+                this->kernel_cmdline = info->string;
+            }
+            break;
+
             case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
             {
                 multiboot_tag_basic_meminfo* info = reinterpret_cast<multiboot_tag_basic_meminfo*>(type);

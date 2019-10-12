@@ -55,6 +55,8 @@ C_LINKAGE void kernel_main(){
     auto* boot_protocol = &boot_data;
     printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, boot_protocol->memsize);
 
+    misc::kernel_args::init(boot_protocol->cmdline);
+    
     mm::pmm::init(boot_protocol);
 
     x86_64::tss::table tss = x86_64::tss::table();

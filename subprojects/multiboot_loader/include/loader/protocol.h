@@ -15,6 +15,7 @@ namespace loader
         uint64_t kernel_n_elf_sections;
         uint64_t kernel_initrd_ptr;
         uint64_t kernel_initrd_size;
+        char* cmdline;
     };
 } // namespace loader
 

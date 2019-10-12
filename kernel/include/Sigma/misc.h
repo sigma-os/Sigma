@@ -2,6 +2,7 @@
 #define SIGMA_MISC
 
 #include <cstdint>
+#include <cstddef>
 #include <Sigma/panic.h>
 #include <type_traits>
 
@@ -46,6 +47,13 @@ namespace misc
         std::aligned_storage_t<sizeof(T), alignof(T)> _storage;
     };
 
+    namespace kernel_args {
+        void init(char* str);
+
+        bool get_bool(const char* key);
+        const char* get_str(const char* key);
+    }
+
     template <typename Enumeration>
     constexpr auto as_integer(Enumeration const value) -> typename std::underlying_type<Enumeration>::type
     {
@@ -64,6 +72,10 @@ namespace misc
         uint64_t tmp = base;
         for(uint64_t i = 0; i < pow; i++) tmp *= base;
         return tmp;
+    }
+
+    constexpr size_t min(size_t a, size_t b){
+        return (a < b) ? a : b;
     }
 } // namespace misc
 

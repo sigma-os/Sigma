@@ -39,7 +39,8 @@ main_sources = files(
     'source/crtn.S',
     'source/kernel_main.cpp',
     'source/panic.cpp',
-    'source/debug.cpp')
+    'source/debug.cpp',
+    'source/misc.cpp')
 
 cpp_includes = include_directories('include')
 

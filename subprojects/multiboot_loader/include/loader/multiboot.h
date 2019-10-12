@@ -58,6 +58,10 @@ namespace loader
             return this->initrd_size;
         }
 
+        char* get_kernel_cmdline(){
+            return this->kernel_cmdline;
+        }
+
         private:
         uint32_t mem_low, mem_high;
         uint64_t* rsdp;
@@ -67,6 +71,7 @@ namespace loader
         uint64_t initrd_ptr, initrd_size;
 
         uint64_t mmap_entry;
+        char* kernel_cmdline;
 
         void parse_mbd();
         void* mbd;

@@ -24,6 +24,7 @@ extern "C" {
         boot_data.reserve_length = mboot.get_mbd_size();
         boot_data.kernel_initrd_ptr = mboot.get_initrd_ptr();
         boot_data.kernel_initrd_size = mboot.get_initrd_size();
+        boot_data.cmdline = mboot.get_kernel_cmdline();
 
         _kernel_early();
     }
