@@ -6,7 +6,7 @@
 
 namespace types
 {
-    template<typename T>
+    /*template<typename T>
     class vector_iterator {
         public:
         explicit vector_iterator(T* entry): entry(entry) { }
@@ -23,11 +23,14 @@ namespace types
             return true;
         }
         T* entry;
-    };
+    };*/
 
     template<typename T>
     class vector {
         public:
+        using iterator = T*;
+        using const_iterator = const T*;
+
         vector(): length(16), offset(0){
             data = new (malloc(sizeof(T) * length)) T;
         }
@@ -66,13 +69,23 @@ namespace types
         }
 
 		NODISCARD_ATTRIBUTE
-		vector_iterator<T> begin() {
-			return vector_iterator<T>(data);
+		iterator begin() {
+			return data;
 		}
 
 		NODISCARD_ATTRIBUTE
-		vector_iterator<T> end() {
-			return vector_iterator<T>(data + offset);
+		iterator end() {
+			return data + offset;
+		}
+
+        NODISCARD_ATTRIBUTE
+		const_iterator begin() const {
+			return data;
+		}
+
+		NODISCARD_ATTRIBUTE
+		const_iterator end() const {
+			return data + offset;
 		}
 
         private:

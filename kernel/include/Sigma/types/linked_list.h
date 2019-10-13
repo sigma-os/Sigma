@@ -6,37 +6,39 @@
 
 namespace types
 {
-    template<typename T>
-    struct linked_list_entry {
-        public:
-        linked_list_entry(): item(T()), prev(nullptr), next(nullptr) {}
-        T item;
-        linked_list_entry<T>* prev;
-        linked_list_entry<T>* next;
-    };
+    
 
-    template<typename T>
-    class linked_list_iterator {
-        public:
-        explicit linked_list_iterator(linked_list_entry<T>* entry): entry(entry) { }
-        T& operator*(){
-            return entry->item;
-        }
-        void operator++(){
-            if(this->entry) this->entry = this->entry->next;
-        }
-        bool operator!=(linked_list_iterator& it){
-            //if((this->entry->item == it.entry->item) && (this->entry->prev == it.entry->prev) && (this->entry->next == it.entry->next)) return false;
-            if(this->entry == it.entry) return false;
-
-            return true;
-        }
-        linked_list_entry<T>* entry;
-    };
+    
 
     template<typename T>
     class linked_list {
         public:
+            template<typename entry_T>
+            struct linked_list_entry {
+                public:
+                    linked_list_entry(): item(entry_T()), prev(nullptr), next(nullptr) {}
+                    entry_T item;
+                    linked_list_entry<entry_T>* prev;
+                    linked_list_entry<entry_T>* next;
+            };
+
+            template<typename iterator_T>
+            class linked_list_iterator {
+                public:
+                    explicit linked_list_iterator(linked_list_entry<iterator_T>* entry): entry(entry) { }
+                    T& operator*(){
+                        return entry->item;
+                    }
+                    void operator++(){
+                        if(this->entry) this->entry = this->entry->next;
+                    }
+                    bool operator!=(linked_list_iterator& it){
+                        if(this->entry == it.entry) return false;
+                        return true;
+                    }
+                    linked_list_entry<iterator_T>* entry;
+            };
+
             linked_list(): head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), length(0) {}
 
             ~linked_list() {
@@ -97,10 +99,6 @@ namespace types
             }
 
             linked_list_entry<T>* get_entry_for_item(T* entry){
-                /*for(auto& entry : *this){
-                    if(&entry == item) return &entry;
-                }*/
-
                 for(linked_list_entry<T>* item = head; item != nullptr; item = item->next){
                     if(&(item->item) == entry) return item;
                 }
