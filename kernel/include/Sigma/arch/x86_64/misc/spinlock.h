@@ -10,15 +10,18 @@ namespace x86_64::spinlock {
     C_LINKAGE void release(mutex* lock);
 
     struct mutex {
-        mutex(): lock(0) {}
-        uint16_t lock;
-        void acquire(){
+        mutex(): _lock(0) {}
+        
+        void lock(){
             x86_64::spinlock::acquire(this);
         }
 
-        void release(){
+        void unlock(){
             x86_64::spinlock::release(this);
         }
+
+        private:
+        uint16_t _lock;
     };
 }
 

@@ -6,12 +6,11 @@ static uint64_t shootdown_length = 0;
 auto shootdown_mutex = x86_64::spinlock::mutex();
 
 void smp::ipi::send_shootdown(uint64_t address, uint64_t length){
-    shootdown_mutex.acquire();
+    std::lock_guard guard{shootdown_mutex};
     shootdown_addr = address;
     shootdown_length = length;
     debug_printf("[IPI]: Requested TLB shootdown on addr: %x, length: %x\n", shootdown_addr, shootdown_length);
     smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19) | smp::ipi::shootdown_ipi_vector)); // All including self
-    shootdown_mutex.release();
 }
 
 void smp::ipi::send_ping(uint8_t apic_id){

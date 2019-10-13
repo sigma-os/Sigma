@@ -1,5 +1,5 @@
 #include <Sigma/arch/x86_64/vga.h>
-
+#include <klibcxx/mutex.hpp>
 #include <klibc/stdio.h>
 
 void x86_64::vga::write_entry(text_entry_t character, uint8_t x, uint8_t y){
@@ -12,25 +12,23 @@ void x86_64::vga::write_entry(text_entry_t character, uint8_t x, uint8_t y){
 }
 
 void x86_64::vga::writer::nprint(const char* str, size_t n){
-    this->mutex.acquire();
+    std::lock_guard guard{this->mutex};
 
     for(size_t i = 0; i < n; i++){
         uint8_t c = str[i];
 
         this->print_char(c);
     }
-    this->mutex.release();
 }
 
 void x86_64::vga::writer::print(const char* str){
-    this->mutex.acquire();
+    std::lock_guard guard{this->mutex};
 
     for(; *str; str++){
         uint8_t c = *str;
 
         this->print_char(c);
     }
-    this->mutex.release();
 }
 
 void x86_64::vga::writer::print_char(const char c){
@@ -84,18 +82,16 @@ void x86_64::vga::writer::print_char(const char c){
 }
 
 void x86_64::vga::writer::set_foreground(x86_64::vga::text_colour colour) {
-    this->mutex.acquire();
+    std::lock_guard guard{this->mutex};
     this->foreground = colour;
-    this->mutex.release();
 }
 void x86_64::vga::writer::set_background(x86_64::vga::text_colour colour) {
-    this->mutex.acquire();
+    std::lock_guard guard{this->mutex};
     this->background = colour;
-    this->mutex.release();
 }
 
 void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
-    this->mutex.acquire();
+    std::lock_guard guard{this->mutex};
     this->x = x;
     this->y = y;
     if(this->x > 80){
@@ -108,17 +104,14 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
     }
 
     this->update_hardware_cursor();
-    this->mutex.release();
 }
 
 void x86_64::vga::writer::set_cursor_to_hw(){
-    this->mutex.acquire();
+    std::lock_guard guard{this->mutex};
 
     const auto [x, y] = this->get_hardware_cursor();
     this->x = x;
     this->y = y;
-
-    this->mutex.release();
 }
 
 void x86_64::vga::writer::scroll(){

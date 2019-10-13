@@ -3,7 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/bitops.h>
-
+#include <klibcxx/mutex.hpp>
 #include <Sigma/arch/x86_64/io.h>
 
 namespace x86_64::serial
@@ -35,14 +35,13 @@ namespace x86_64::serial
         }
 
         void nprint(const char* str, size_t n){
-            this->mutex.acquire();
+            std::lock_guard guard{this->mutex};
 
             for(size_t i = 0; i < n; i++){
                 uint8_t c = str[i];
 
                 this->print_char(c);
             }
-            this->mutex.release();
         }
 
 

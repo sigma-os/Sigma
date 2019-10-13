@@ -26,7 +26,7 @@ static bool print(const char* data, size_t length){
 }
 
 int printf(const char* format, ...){
-    printf_lock.acquire();
+    std::lock_guard guard{printf_lock};
 
     va_list parameters;
     va_start(parameters, format);
@@ -44,13 +44,11 @@ int printf(const char* format, ...){
 
             if(maxrem < amount){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
             if(!print(format, amount)){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
@@ -66,13 +64,11 @@ int printf(const char* format, ...){
             char c = (char)va_arg(parameters, int);
             if(!maxrem){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
             if(!print(&c, sizeof(c))){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
@@ -84,12 +80,10 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
             if(!print(str, len)){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
@@ -105,12 +99,10 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
             if(!print(str, len)){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
@@ -128,12 +120,10 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
             if(!print(str, len)){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
@@ -144,12 +134,10 @@ int printf(const char* format, ...){
 
             if(maxrem < len){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
             if(!print(format, len)){
                 va_end(parameters);
-                printf_lock.release();
                 return -1;
             } 
 
@@ -159,7 +147,6 @@ int printf(const char* format, ...){
     }
 
     va_end(parameters);
-    printf_lock.release();
     return written;
 }
 

@@ -161,7 +161,7 @@ static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cp
 
 	smp::cpu::get_current_cpu()->lapic.send_eoi();
 
-	scheduler_mutex.release();
+	scheduler_mutex.unlock();
 
     mm::vmm::kernel_vmm::get_instance().set();
 	proc_idle(rsp);
@@ -171,12 +171,12 @@ static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cp
 }
 
 static void timer_handler(x86_64::idt::idt_registers* regs){
-    scheduler_mutex.acquire();
+    scheduler_mutex.lock();
     auto* cpu = proc::process::get_current_managed_cpu();
     if(cpu == nullptr){
         // This CPU is not managed abort
         debug_printf("[SCHEDULER]: Tried to schedule unmanaged CPU\n");
-        scheduler_mutex.release();
+        scheduler_mutex.unlock();
         return;
     }
     proc::process::thread* new_thread = schedule(cpu->current_thread);
@@ -202,7 +202,7 @@ static void timer_handler(x86_64::idt::idt_registers* regs){
     cpu->current_thread = new_thread;
     cpu->current_thread->state = proc::process::thread_state::RUNNING;
     
-    scheduler_mutex.release();
+    scheduler_mutex.unlock();
 }
 
 void proc::process::init_multitasking(acpi::madt& madt){
@@ -224,7 +224,7 @@ void proc::process::init_multitasking(acpi::madt& madt){
 auto init_mutex = x86_64::spinlock::mutex();
 
 void proc::process::init_cpu(){
-    init_mutex.acquire();
+    std::lock_guard guard{init_mutex};
     uint8_t current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
     for(auto& entry : *cpus){
         if(entry.cpu.lapic_id == current_apic_id){
@@ -233,11 +233,9 @@ void proc::process::init_cpu(){
             entry.enabled = true;
             entry.current_thread = kernel_thread;
             proc::simd::init_ap_simd();
-            init_mutex.release();
             return;
         }
     }
-    init_mutex.release();
     printf("[MULTITASKING]: Tried to initialize cpu with apic_id: %x, that is not present in the tables\n", current_apic_id);
 }
 
@@ -335,7 +333,7 @@ size_t proc::process::get_message_size(){
 }
 
 void proc::process::expand_thread_stack(proc::process::thread* thread, size_t pages){
-    thread->thread_lock.acquire();
+    std::lock_guard guard{thread->thread_lock};
     for(uint64_t i = 0; i < pages; i++){
         void* phys = mm::pmm::alloc_block();
         if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread stack");
@@ -344,11 +342,10 @@ void proc::process::expand_thread_stack(proc::process::thread* thread, size_t pa
         thread->image.stack_bottom -= mm::pmm::block_size;
         thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), thread->image.stack_bottom, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
     }
-    thread->thread_lock.release();
 }
 
 void* proc::process::expand_thread_heap(proc::process::thread* thread, size_t pages){
-    thread->thread_lock.acquire();
+    std::lock_guard guard{thread->thread_lock};
     uint64_t base = thread->image.heap_top;
 
     for(uint64_t i = 0; i < pages; i++){
@@ -359,7 +356,6 @@ void* proc::process::expand_thread_heap(proc::process::thread* thread, size_t pa
         thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), thread->image.heap_top, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
         thread->image.heap_top += mm::pmm::block_size;
     }
-    thread->thread_lock.release();
     return reinterpret_cast<void*>(base);
 }
 
@@ -379,18 +375,16 @@ void proc::process::set_current_thread_fs(uint64_t fs){
         return;
     }
 
-    thread->thread_lock.acquire();
+    std::lock_guard guard{thread->thread_lock};
 
     thread->context.fs = fs;
     x86_64::msr::write(x86_64::msr::fs_base, fs);
-    
-    thread->thread_lock.release();
 }
 
 void proc::process::kill(x86_64::idt::idt_registers* regs){
     mm::vmm::kernel_vmm::get_instance().set(); // We want nothing to do with this thread anymore
     proc::process::thread* thread = proc::process::get_current_thread();
-    thread->thread_lock.acquire();
+    thread->thread_lock.lock();
 
 
     thread->state = proc::process::thread_state::DISABLED;
@@ -403,7 +397,7 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     thread->image = proc::process::thread_image();
     thread->vmm.deinit();
     thread->vmm.init();
-    thread->thread_lock.release();
+    thread->thread_lock.unlock();
 
     auto* cpu = get_current_managed_cpu();
     cpu->current_thread = nullptr; // May this thread rest in peace
@@ -414,7 +408,7 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 }
 
 void proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags){
-    thread->thread_lock.acquire();
+    std::lock_guard guard{thread->thread_lock};
 
     if(!(flags & MAP_ANON)) PANIC("Only MAP_ANONYMOUS is defined");
 
@@ -433,6 +427,4 @@ void proc::process::map_anonymous(proc::process::thread* thread, size_t size, vo
 
         thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), virt, map_flags);
     }
-
-    thread->thread_lock.release();
 }

@@ -2,14 +2,11 @@
 #define SIGMA_KERNEL_TYPES_LINKED_LIST
 
 #include <Sigma/common.h>
+#include <klibcxx/mutex.hpp>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
 
 namespace types
 {
-    
-
-    
-
     template<typename T>
     class linked_list {
         public:
@@ -50,7 +47,7 @@ namespace types
             }
 
             T* push_back(T entry){
-                this->mutex.acquire();
+                std::lock_guard guard{this->mutex};
                 linked_list_entry<T>* new_entry = new linked_list_entry<T>;
 
                 new_entry->item = entry;
@@ -62,7 +59,6 @@ namespace types
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
                     this->length++;
-                    this->mutex.release();
                     return &(new_entry->item);
                 }
 
@@ -70,12 +66,11 @@ namespace types
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
                 this->length++;
-                this->mutex.release();
                 return &(new_entry->item);
             }
 
             T* empty_entry(){
-                this->mutex.acquire();
+                std::lock_guard guard{this->mutex};
                 linked_list_entry<T>* new_entry = new linked_list_entry<T>;
                 
                 new_entry->next = nullptr;
@@ -86,7 +81,6 @@ namespace types
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
                     this->length++;
-                    this->mutex.release();
                     return &(new_entry->item);
                 }
 
@@ -94,7 +88,6 @@ namespace types
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
                 this->length++;
-                this->mutex.release();
                 return &(new_entry->item);
             }
 
