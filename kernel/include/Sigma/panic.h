@@ -1,8 +1,12 @@
 #ifndef SIGMA_KERNEL_PANIC
 #define SIGMA_KERNEL_PANIC
 
-namespace Sigma::panic {
-    void panic_m(const char* message, const char* file, const char* func, int line);
+#include <klibcxx/experimental/source_location.hpp>
+
+namespace misc::panic {
+    // Add ability to override function due to source_location not supporting __PRETTY_FUNCTION__ or any of its equivalents
+    void panic_m(const char* message, const char* function_override, std::experimental::source_location loc);
+    void panic_m(const char* message, std::experimental::source_location loc);
 }
 
 #endif
