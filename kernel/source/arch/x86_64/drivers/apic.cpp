@@ -177,17 +177,17 @@ void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_6
 }
 
 auto interrupt_overrides = types::linked_list<x86_64::apic::interrupt_override>();
-auto ioapics = types::linked_list<types::pair<x86_64::apic::ioapic_device, uint32_t>>(); // ioapic, and gsi_base
+auto ioapics = types::linked_list<std::pair<x86_64::apic::ioapic_device, uint32_t>>(); // ioapic, and gsi_base
 
 void x86_64::apic::ioapic::init(acpi::madt& madt){
-    auto ioapics_base = types::linked_list<types::pair<uint64_t, uint32_t>>(); // base, and gsi_base
+    auto ioapics_base = types::linked_list<std::pair<uint64_t, uint32_t>>(); // base, and gsi_base
     madt.get_ioapics(ioapics_base);
     madt.get_interrupt_overrides(interrupt_overrides);
 
     for(auto& a : ioapics_base){
         auto* ioapic = ioapics.empty_entry();
-        ioapic->a.init(a.a);
-        ioapic->b = a.b;
+        ioapic->first.init(a.first);
+        ioapic->second = a.second;
     }
 
     if(madt.supports_legacy_pic()){
@@ -220,9 +220,9 @@ void x86_64::apic::ioapic::init(acpi::madt& madt){
 
 void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination){
     for(auto& entry : ioapics){
-        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+        if((entry.second <= gsi) && ((entry.first.get_max_redirection_entries() + entry.second) > gsi)){
             // Found correct ioapic
-            entry.a.set_entry((gsi - entry.b), vector, delivery_mode, destination_mode, flags, destination);
+            entry.first.set_entry((gsi - entry.second), vector, delivery_mode, destination_mode, flags, destination);
             return;
         }
     }
@@ -231,9 +231,9 @@ void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint8_t vector, ioapic_delive
 
 void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint64_t data){
     for(auto& entry : ioapics){
-        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+        if((entry.second <= gsi) && ((entry.first.get_max_redirection_entries() + entry.second) > gsi)){
             // Found correct ioapic
-            entry.a.set_entry(gsi - entry.b, data);
+            entry.first.set_entry(gsi - entry.second, data);
             return;
         }
     }
@@ -242,9 +242,9 @@ void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint64_t data){
 
 uint64_t x86_64::apic::ioapic::read_entry(uint32_t gsi){
     for(auto& entry : ioapics){
-        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+        if((entry.second <= gsi) && ((entry.first.get_max_redirection_entries() + entry.second) > gsi)){
             // Found correct ioapic
-            return entry.a.read_entry(gsi - entry.b);
+            return entry.first.read_entry(gsi - entry.second);
         }
     }
     debug_printf("[I/OAPIC]: Couldn't find IOAPIC for reading gsi entry: %x\n", gsi);
@@ -253,9 +253,9 @@ uint64_t x86_64::apic::ioapic::read_entry(uint32_t gsi){
 
 void x86_64::apic::ioapic::mask_gsi(uint32_t gsi){
     for(auto& entry : ioapics){
-        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+        if((entry.second <= gsi) && ((entry.first.get_max_redirection_entries() + entry.second) > gsi)){
             // Found correct ioapic
-            entry.a.set_entry((gsi - entry.b), (entry.a.read_entry((gsi - entry.b)) | (1 << 16))); // Mask
+            entry.first.set_entry((gsi - entry.second), (entry.first.read_entry((gsi - entry.second)) | (1 << 16))); // Mask
             return;
         }
     }
@@ -264,9 +264,9 @@ void x86_64::apic::ioapic::mask_gsi(uint32_t gsi){
 
 void x86_64::apic::ioapic::unmask_gsi(uint32_t gsi){
     for(auto& entry : ioapics){
-        if((entry.b <= gsi) && ((entry.a.get_max_redirection_entries() + entry.b) > gsi)){
+        if((entry.second <= gsi) && ((entry.first.get_max_redirection_entries() + entry.second) > gsi)){
             // Found correct ioapic
-            entry.a.unmask((gsi - entry.b));
+            entry.first.unmask((gsi - entry.second));
             return;
         }
     }

@@ -4,7 +4,7 @@
 acpi::madt::madt(): legacy_pic(false) {
     this->table = reinterpret_cast<acpi::madt_header*>(acpi::get_table(acpi::madt_signature));
     this->cpus = types::linked_list<smp::cpu_entry>();
-    this->ioapics = types::linked_list<types::pair<uint64_t, uint32_t>>();
+    this->ioapics = types::linked_list<std::pair<uint64_t, uint32_t>>();
     this->isos = types::linked_list<x86_64::apic::interrupt_override>();
 }
 
@@ -41,7 +41,9 @@ void acpi::madt::parse_ioapic(uint8_t* item){
 
     debug_printf("[MADT]: Detected IOAPIC: base: %x, GSI base: %x\n", ioapic->ioapic_addr, ioapic->gsi_base);
 
-    this->ioapics.push_back({ioapic->ioapic_addr, ioapic->gsi_base});
+    auto addr = ioapic->ioapic_addr;
+    auto gsi_base = ioapic->gsi_base;
+    this->ioapics.push_back({addr, gsi_base});
 }
 
 void acpi::madt::parse_iso(uint8_t* item){
@@ -97,7 +99,7 @@ void acpi::madt::get_cpus(types::linked_list<smp::cpu_entry>& cpus){
     for(const auto& a : this->cpus) cpus.push_back(a);
 }
 
-void acpi::madt::get_ioapics(types::linked_list<types::pair<uint64_t, uint32_t>>& ioapics){
+void acpi::madt::get_ioapics(types::linked_list<std::pair<uint64_t, uint32_t>>& ioapics){
     for(const auto& a : this->ioapics) ioapics.push_back(a);
 }
 

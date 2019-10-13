@@ -8,7 +8,6 @@
 #include <Sigma/acpi/madt.h>
 #include <Sigma/smp/cpu.h>
 #include <Sigma/types/vector.h>
-#include <Sigma/types/pair.h>
 #include <Sigma/proc/ipc.h>
 #include <Sigma/proc/simd.h>
 

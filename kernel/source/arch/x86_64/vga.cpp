@@ -142,7 +142,7 @@ void x86_64::vga::writer::update_hardware_cursor(){
     x86_64::io::outb(vga::vga_hardware_cursor_data_port, (uint8_t)((pos >> 8) & 0xFF));
 }
 
-types::pair<int8_t, int8_t> x86_64::vga::writer::get_hardware_cursor(){
+std::pair<int8_t, int8_t> x86_64::vga::writer::get_hardware_cursor(){
     int16_t pos{};
 
     x86_64::io::outb(vga::vga_hardware_cursor_command_port, 0x0F);

@@ -14,7 +14,7 @@ namespace misc
         template<typename... Args>
         void init(Args&&... args){
             if(this->_initialized) return;
-            new (&_storage) T(args...);
+            new (&_storage) T(std::forward<Args>(args)...);
             this->_initialized = true;
         }
 

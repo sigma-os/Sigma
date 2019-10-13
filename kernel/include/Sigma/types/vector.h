@@ -6,25 +6,6 @@
 
 namespace types
 {
-    /*template<typename T>
-    class vector_iterator {
-        public:
-        explicit vector_iterator(T* entry): entry(entry) { }
-        T& operator*(){
-            return *entry;
-        }
-        void operator++(){
-            if(this->entry) this->entry++;
-        }
-        bool operator!=(vector_iterator& it){
-            //if((this->entry->item == it.entry->item) && (this->entry->prev == it.entry->prev) && (this->entry->next == it.entry->next)) return false;
-            if(this->entry == it.entry) return false;
-
-            return true;
-        }
-        T* entry;
-    };*/
-
     template<typename T>
     class vector {
         public:

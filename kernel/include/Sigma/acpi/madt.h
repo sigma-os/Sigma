@@ -4,7 +4,7 @@
 #include <Sigma/common.h>
 #include <Sigma/acpi/acpi.h>
 #include <Sigma/types/linked_list.h>
-#include <Sigma/types/pair.h>
+#include <klibcxx/utility.hpp>
 #include <Sigma/smp/smp.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
@@ -80,7 +80,7 @@ namespace acpi
         void parse();
 
         void get_cpus(types::linked_list<smp::cpu_entry>& cpus);
-        void get_ioapics(types::linked_list<types::pair<uint64_t, uint32_t>>& ioapics);
+        void get_ioapics(types::linked_list<std::pair<uint64_t, uint32_t>>& ioapics);
         void get_interrupt_overrides(types::linked_list<x86_64::apic::interrupt_override>& ioapics);
         uint64_t get_lapic_address();
         bool supports_legacy_pic(){
@@ -99,7 +99,7 @@ namespace acpi
 
         bool legacy_pic;
         types::linked_list<smp::cpu_entry> cpus;
-        types::linked_list<types::pair<uint64_t, uint32_t>> ioapics;
+        types::linked_list<std::pair<uint64_t, uint32_t>> ioapics;
         types::linked_list<x86_64::apic::interrupt_override> isos;
         madt_header* table;
     };
