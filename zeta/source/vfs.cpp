@@ -12,7 +12,7 @@ using namespace fs;
 
 vfs global_vfs;
 
-vfs& get_vfs(){
+vfs& fs::get_vfs(){
     return global_vfs;
 }
 
@@ -82,7 +82,7 @@ std::vector<std::string_view> vfs::split_path(std::string& path){
     return ret;
 }
 
-fs_calls* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path) {
+fs_calls* vfs::get_mountpoint(uint64_t tid, std::string path, std::string& out_local_path) {
 	auto absolute = this->make_path_absolute(tid, path);
 
     size_t guess_size = 0;
@@ -90,17 +90,17 @@ fs_calls* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_
 
     std::for_each(this->mount_list.begin(), this->mount_list.end(), [&](auto& mountpoint){
         size_t mount_len = mountpoint.name.length();
-        if(absolute.length() < mount_len) return;
-
-		if(std::memcmp(absolute.c_str(), mountpoint.name.c_str(), mount_len) == 0) {
-			if((absolute[mount_len] == path_separator || absolute[mount_len] == '\0' ||
-				std::strcmp(mountpoint.name.c_str(), "/") == 0) &&
-			    mount_len > guess_size) {
+        if(!(absolute.length() < mount_len)){
+			if(std::memcmp(absolute.c_str(), mountpoint.name.c_str(), mount_len) == 0) {
+				if((absolute[mount_len] == path_separator || absolute[mount_len] == '\0' ||
+					std::strcmp(mountpoint.name.c_str(), "/") == 0) &&
+			    	mount_len > guess_size) {
 				
-				guess_size = mount_len;
-				guess = &mountpoint;
+					guess_size = mount_len;
+					guess = &mountpoint;
+				}
 			}
-		}
+		}		
 	});
 
     out_local_path = path;
@@ -112,7 +112,7 @@ fs_calls* vfs::get_mountpoint(uint64_t tid, std::string& path, std::string& out_
 	return guess->fs;
 }
 
-void* vfs::mount(fs_node* node, std::string& path, fs_calls* fs) {
+void* vfs::mount(fs_node* node, std::string_view path, fs_calls* fs) {
 	if(path[0] != root_char)
 		return nullptr;
 
@@ -124,7 +124,7 @@ void* vfs::mount(fs_node* node, std::string& path, fs_calls* fs) {
     return nullptr;
 }
 
-void* vfs::mount(fs_node* node, std::string& path, std::string& fs_type) {
+void* vfs::mount(fs_node* node, std::string_view path, std::string_view fs_type) {
 	if(path[0] != root_char)
 		return nullptr;
 
@@ -132,22 +132,22 @@ void* vfs::mount(fs_node* node, std::string& path, std::string& fs_type) {
 	if(!this->filesystems.contains(fs_type))
 		return nullptr;
 	#else // C++17
-	if(this->filesystems.find(fs_type) == this->filesystems.end())
+	if(this->filesystems.find(std::string{fs_type}) == this->filesystems.end())
 		return nullptr;
 	#endif
 
 	auto& entry = this->mount_list.emplace_back();
 	entry.file = node;
 	entry.name = path;
-	entry.fs = &this->filesystems[fs_type];
+	entry.fs = &this->filesystems[std::string{fs_type}];
 
 	return nullptr;
 }
 
 
-int vfs::open(uint64_t tid, std::string& path, int mode) {
+int vfs::open(uint64_t tid, std::string_view path, int mode) {
 	std::string out_local_path{};
-	auto* fs_calls_node = this->get_mountpoint(tid, path, out_local_path);
+	auto* fs_calls_node = this->get_mountpoint(tid, std::string{path}, out_local_path);
 	if(fs_calls_node == nullptr)
 		return -1;
 
@@ -220,8 +220,8 @@ int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 	return -1;
 }
 
-void vfs::register_fs(std::string& fs_name, fs_calls calls){
-	this->filesystems[fs_name] = calls;
+void vfs::register_fs(std::string_view fs_name, fs_calls calls){
+	this->filesystems[std::string{fs_name}] = calls;
 }
 
 

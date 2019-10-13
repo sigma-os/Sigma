@@ -1,7 +1,9 @@
 #include <libsigma/klog.h>
 #include <libsigma/ipc.h>
+#include <libsigma/thread.h>
 #include <memory>
 #include <iostream>
+#include <Zeta/devfs.h>
 
 void handle_request(){
     while(libsigma_ipc_get_msg_size() == 0); // 0 = No message
@@ -26,13 +28,26 @@ void handle_request(){
 
 
 int main(){
-    libsigma_klog("[ZETA]: Starting");
+    libsigma_klog("[ZETA]: Starting VFS");
 
     // TODO: VFS and shit
+    
+    fs::devfs devfs{};
+    devfs.init();
+    devfs.add_file("/sysout", fs::devfs::create_sysout_node());
+    // Setupped /dev/sysout
 
 
-    auto loop = [&](){
+
+
+    int fd = fs::get_vfs().open(1, "/dev/sysout", 0);
+    char* yes = "[ZETA]: Hello from /dev/sysout";
+    fs::get_vfs().write(1, fd, static_cast<void*>(yes), 31);
+
+    /*auto loop = [&](){
         while(true) handle_request();
     };
-    loop();
+    loop();*/
+
+    while(true);
 }

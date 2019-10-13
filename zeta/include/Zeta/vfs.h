@@ -24,7 +24,7 @@ namespace fs {
 	struct fs_node; // Forward decleration for use in fs_calls
 
 	struct fs_calls {
-		//                out_node, Path,        Mode
+		//                out_node,  Path,        Mode
 		std::function<int(fs_node**, const char*, int)> open;
 		//                Node,     Buf,   Count,  Offset
 		std::function<int(fs_node*, void*, size_t, size_t)> read;
@@ -88,9 +88,9 @@ namespace fs {
 			mount_list(std::vector<vfs_entry>()), thread_data(std::unordered_map<uint64_t, thread_vfs_entry>()),
 			filesystems(std::unordered_map<std::string, fs_calls>()) {}
 
-		void* mount(fs_node* node, std::string& path, fs_calls* fs);
-		void* mount(fs_node* node, std::string& path, std::string& fs_type);
-		int open(uint64_t tid, std::string& path, int mode);
+		void* mount(fs_node* node, std::string_view path, fs_calls* fs);
+		void* mount(fs_node* node, std::string_view path, std::string_view fs_type);
+		int open(uint64_t tid, std::string_view path, int mode);
 		int read(uint64_t tid, int fd, void* buf, size_t count);
 		int write(uint64_t tid, int fd, const void* buf, size_t count);
 		int seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& new_offset);
@@ -98,9 +98,9 @@ namespace fs {
 		std::string make_path_absolute(uint64_t tid, std::string_view path);
 		std::vector<std::string_view> split_path(std::string& path);
 
-		fs_calls* get_mountpoint(uint64_t tid, std::string& path, std::string& out_local_path);
+		fs_calls* get_mountpoint(uint64_t tid, std::string path, std::string& out_local_path);
 
-		void register_fs(std::string& fs_name, fs_calls calls);
+		void register_fs(std::string_view fs_name, fs_calls calls);
 
 		private:
 		thread_vfs_entry& get_thread_entry(uint64_t tid);
