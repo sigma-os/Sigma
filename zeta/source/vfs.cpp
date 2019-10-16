@@ -104,12 +104,11 @@ fs_calls* vfs::get_mountpoint(uint64_t tid, std::string path, std::string& out_l
 	});
 
     out_local_path = path;
-
     if(guess_size > 1) out_local_path = out_local_path.substr(guess_size);
-
     if(out_local_path[0] == '\0') out_local_path[0] = '/';
-
-	return guess->fs;
+	
+	if(!guess) return nullptr;
+	else return guess->fs;
 }
 
 void* vfs::mount(fs_node* node, std::string_view path, fs_calls* fs) {
@@ -161,7 +160,7 @@ int vfs::open(uint64_t tid, std::string_view path, int mode) {
     int fd = thread.free_fd;
     thread.free_fd++;
 
-	thread.fd_map[fd] = {.fd = fd, .node = real_node, .mode = mode, .offset = 0};
+	thread.fd_map[fd] = {.open = true, .fd = fd, .node = real_node, .mode = mode, .offset = 0};
 
     return fd;
 }
@@ -181,7 +180,7 @@ int vfs::read(uint64_t tid, int fd, void* buf, size_t count){
 int vfs::write(uint64_t tid, int fd, const void* buf, size_t count){
 	auto& thread = this->get_thread_entry(tid);
 	auto& file_descriptor = thread.fd_map[fd];
-	if(file_descriptor.fd == fd){ // Check for initialization
+	if(file_descriptor.open){ // Check for initialization
 		//TODO: Check for permission
 
 		return file_descriptor.node->calls.write(file_descriptor.node, buf, count, file_descriptor.offset);
@@ -218,6 +217,18 @@ int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 	}
 
 	return -1;
+}
+
+int vfs::dup2(uint64_t tid, int oldfd, int newfd){
+	auto& thread_entry = this->get_thread_entry(tid);
+
+	if(!thread_entry.fd_map[oldfd].open) return -1;
+	if(oldfd == newfd && thread_entry.fd_map[oldfd].open) return newfd;
+
+	// TODO: Close newfd
+	thread_entry.fd_map[newfd] = thread_entry.fd_map[oldfd];
+	
+	return newfd;
 }
 
 void vfs::register_fs(std::string_view fs_name, fs_calls calls){

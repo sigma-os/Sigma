@@ -99,7 +99,7 @@ namespace proc::ipc {
 
 		// Async
 		bool send_message(tid_t origin, size_t buffer_length, uint8_t* buffer);
-		bool receive_message(tid_t& origin, size_t& size, uint8_t* data);
+		bool receive_message(tid_t* origin, size_t* size, uint8_t* data);
 
 		size_t get_msg_size();
 

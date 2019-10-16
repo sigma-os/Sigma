@@ -174,7 +174,10 @@ static bool debug_print(const char* data, size_t length){
     return true;
 }
 
+static x86_64::spinlock::mutex debug_mutex{};
+
 int debug_printf(const char* format, ...){
+    std::lock_guard guard{debug_mutex};
     va_list parameters;
     va_start(parameters, format);
 

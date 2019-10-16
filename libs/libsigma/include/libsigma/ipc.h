@@ -17,6 +17,7 @@ extern "C" {
 typedef struct libsigma_message {
     uint64_t command;
     uint8_t checksum;
+    uint64_t msg_id;
     // TODO, anything more?
     uint8_t command_data[];
 } libsigma_message_t;
@@ -30,6 +31,50 @@ int libsigma_ipc_receive(uint64_t* origin, size_t* buf_size, uint8_t* buffer);
 
 size_t libsigma_ipc_get_msg_size();
 
+enum {
+    RET,
+    OPEN,
+    WRITE,
+    DUP2
+};
+
+struct libsigma_ret_message {
+    uint64_t command;
+    uint8_t checksum;
+    uint64_t msg_id;
+
+    int ret;
+};
+
+
+struct libsigma_open_message {
+    uint64_t command;
+    uint8_t checksum;
+    uint64_t msg_id;
+    
+    int flags;
+    size_t path_len;
+    char path[];
+};
+
+struct libsigma_write_message {
+    uint64_t command;
+    uint8_t checksum;
+    uint64_t msg_id;
+
+    int fd;
+    size_t count;
+    char buf[];
+};
+
+struct libsigma_dup2_message {
+    uint64_t command;
+    uint8_t checksum;
+    uint64_t msg_id;
+
+    int oldfd;
+    int newfd;
+};
 
 #if defined(__cplusplus)
 }

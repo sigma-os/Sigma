@@ -249,7 +249,9 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 	thread->context.cr3 = cr3;
 	thread->context.rsp = stack;
 	thread->state = state;
-	thread->context.rflags = 0;
+	thread->context.rflags = ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
+													 // Bit 9 is IF, Interrupt flag, Force enable this
+													 // so timer interrupts arrive
 	thread->privilege = privilege;
 
 	switch(thread->privilege) {
@@ -268,9 +270,6 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 			break;
 	}
 
-	thread->context.rflags |= ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
-													 // Bit 9 is IF, Interrupt flag, Force enable this
-													 // so timer interrupts arrive
 	return thread;
 }
 
@@ -324,7 +323,7 @@ proc::process::thread* proc::process::get_current_thread(){
     return get_current_managed_cpu()->current_thread;
 }
 
-bool proc::process::receive_message(tid_t& origin, size_t& size, uint8_t* data){
+bool proc::process::receive_message(tid_t* origin, size_t* size, uint8_t* data){
     return get_current_thread()->ipc_manager.receive_message(origin, size, data);
 }
 

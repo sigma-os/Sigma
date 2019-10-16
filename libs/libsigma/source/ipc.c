@@ -19,7 +19,7 @@ void libsigma_ipc_set_message_checksum(libsigma_message_t* msg, size_t size){
     uint8_t* raw = (uint8_t*)msg;
     for(uint64_t i = 0; i < size; i++) checksum += raw[i];
 
-    msg->checksum = 255 - checksum;
+    msg->checksum = (UINT8_MAX + 1) - checksum;
 }
 
 int libsigma_ipc_send(uint64_t dest, size_t buf_size, uint8_t* buffer){

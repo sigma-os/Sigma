@@ -2,6 +2,7 @@
 #include <Sigma/proc/process.h>
 #include <Sigma/proc/initrd.h>
 #include <Sigma/arch/x86_64/idt.h>
+#include <atomic>
 
 #define SYSCALL_GET_FUNC() (regs->rax)
 #define SYSCALL_GET_ARG0() (regs->rbx)
@@ -108,7 +109,6 @@ static uint64_t syscall_send_message(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG2());
 
     proc::process::thread* thread = proc::process::thread_for_tid(SYSCALL_GET_ARG0());
-
     if(!thread->ipc_manager.send_message(proc::process::get_current_tid(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG2()))){
         return 1;
     }
@@ -116,18 +116,18 @@ static uint64_t syscall_send_message(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
-// ARG1: buf
-// ARG0: pointer to size_t (buf_size)
+// ARG0: buf
+// ARG1: pointer to size_t (buf_size)
 // ARG2: pointer to tid (origin)
 static uint64_t syscall_receive_message(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG0());
     CHECK_PTR(SYSCALL_GET_ARG1());
     CHECK_PTR(SYSCALL_GET_ARG2());
 
-    uint64_t* buf_size_ptr = reinterpret_cast<uint64_t*>(SYSCALL_GET_ARG1());
-    uint64_t* origin_ptr = reinterpret_cast<uint64_t*>(SYSCALL_GET_ARG2());
     uint8_t* buf_ptr = reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0());
-    if(!proc::process::receive_message(*buf_size_ptr, *origin_ptr, buf_ptr)){
+    uint64_t* buf_size_ptr = reinterpret_cast<uint64_t*>(SYSCALL_GET_ARG1());
+    tid_t* origin_ptr = reinterpret_cast<tid_t*>(SYSCALL_GET_ARG2());
+    if(!proc::process::receive_message(origin_ptr, buf_size_ptr, buf_ptr)){
         return 1;
     }
     return 0;
@@ -137,7 +137,7 @@ static uint64_t syscall_get_message_size(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt
 	return proc::process::get_message_size();
 }
 
-static tid_t um_tid = 0;
+static std::atomic<tid_t> um_tid = 0;
 static uint64_t syscall_get_um_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
 	return um_tid;
 }

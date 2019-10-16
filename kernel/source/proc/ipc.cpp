@@ -57,7 +57,7 @@ bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_
 	return true;
 }
 
-bool thread_ipc_manager::receive_message(tid_t& origin, size_t& size, uint8_t* data)
+bool thread_ipc_manager::receive_message(tid_t* origin, size_t* size, uint8_t* data)
 {
 	std::lock_guard guard{this->lock};
 	if (this->current_unread_messages_count == 0) return false; // No new messages
@@ -74,11 +74,12 @@ bool thread_ipc_manager::receive_message(tid_t& origin, size_t& size, uint8_t* d
 		return false;
 	}
 
-	origin = header->origin;
-	size = header->buffer_length;
+
+	*origin = header->origin;
+	*size = header->buffer_length;
 
 	uint8_t* raw_msg = reinterpret_cast<uint8_t*>(header + 1);
-	memcpy(static_cast<void*>(data), static_cast<void*>(raw_msg), size);
+	memcpy(static_cast<void*>(data), static_cast<void*>(raw_msg), header->buffer_length);
 
 	this->current_unread_messages_count--;
 	this->current_offset -= (sizeof(ipc_message_header) + header->buffer_length + sizeof(ipc_message_footer));
@@ -108,11 +109,11 @@ size_t thread_ipc_manager::get_msg_size(){
 
 void thread_ipc_manager::receive_message_sync(tid_t& origin, size_t& size, uint8_t* data){
 	if(this->current_unread_messages_count != 0){
-		this->receive_message(origin, size, data);
+		this->receive_message(&origin, &size, data);
 		return;
 	}
 
 	volatile uint64_t old_count = this->current_unread_messages_count;
-	while(this->current_offset == old_count);
-	this->receive_message(origin, size, data);
+	while(this->current_unread_messages_count == old_count);
+	this->receive_message(&origin, &size, data);
 }

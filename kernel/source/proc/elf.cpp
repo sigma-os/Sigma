@@ -174,6 +174,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                     *(uint64_t*)(new_thread->context.rsp) = value;
                 };
 
+                push(0); // Align stack
                 push(0); // Null
                 push(0); // Null data
                 push(aux.at_phdr);

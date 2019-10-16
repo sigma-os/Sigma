@@ -48,6 +48,7 @@ namespace fs {
 
 #pragma region thread_data
 	struct fd_data {
+		bool open;
 		int fd;
 		fs::fs_node* node;
 		int mode;
@@ -94,6 +95,7 @@ namespace fs {
 		int read(uint64_t tid, int fd, void* buf, size_t count);
 		int write(uint64_t tid, int fd, const void* buf, size_t count);
 		int seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& new_offset);
+		int dup2(uint64_t tid, int oldfd, int newfd);
 
 		std::string make_path_absolute(uint64_t tid, std::string_view path);
 		std::vector<std::string_view> split_path(std::string& path);
