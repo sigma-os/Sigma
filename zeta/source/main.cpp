@@ -22,7 +22,8 @@ void send_return(uint64_t dest, uint64_t msg_id, Ret ret){
 }
 
 void handle_request(){
-    while(libsigma_ipc_get_msg_size() == 0); // 0 = No message
+    if(libsigma_ipc_get_msg_size() == 0) // No new message so block until there is
+        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
     auto msg_size = libsigma_ipc_get_msg_size();
     auto msg = std::make_unique<uint8_t>(msg_size);

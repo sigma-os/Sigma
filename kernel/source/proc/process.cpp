@@ -216,6 +216,7 @@ void proc::process::init_multitasking(acpi::madt& madt){
     kernel_thread = thread_list.empty_entry();
     kernel_thread->tid = current_thread_list_offset++;
     kernel_thread->state = proc::process::thread_state::BLOCKED;
+    kernel_thread->blocking_reason = proc::process::block_reason::FOREVER;
 
     x86_64::idt::register_interrupt_handler(proc::process::cpu_quantum_interrupt_vector, timer_handler, true);
     proc::simd::init_simd();
@@ -249,6 +250,7 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 	thread->context.cr3 = cr3;
 	thread->context.rsp = stack;
 	thread->state = state;
+    thread->blocking_reason = proc::process::block_reason::FOREVER;
 	thread->context.rflags = ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
 													 // Bit 9 is IF, Interrupt flag, Force enable this
 													 // so timer interrupts arrive
@@ -321,6 +323,62 @@ proc::process::thread* proc::process::thread_for_tid(tid_t tid){
 
 proc::process::thread* proc::process::get_current_thread(){
     return get_current_managed_cpu()->current_thread;
+}
+
+void proc::process::block_thread(tid_t tid, proc::process::block_reason reason, x86_64::idt::idt_registers* regs){
+    for(auto& entry : thread_list){
+        if(entry.tid == tid){
+            proc::process::block_thread(&entry, reason, regs);
+            return;
+        }
+    }
+}
+
+void proc::process::block_thread(proc::process::thread* thread, proc::process::block_reason reason, x86_64::idt::idt_registers* regs){
+    thread->thread_lock.lock();
+    thread->blocking_reason = reason;
+    thread->state = proc::process::thread_state::BLOCKED;
+    thread->thread_lock.unlock();
+    timer_handler(regs); // Switch out of the thread
+}
+
+void proc::process::wake_thread(tid_t tid){
+    for(auto& entry : thread_list){
+        if(entry.tid == tid){
+            proc::process::wake_thread(&entry);
+            return;
+        }
+    }
+}
+
+void proc::process::wake_thread(proc::process::thread* thread){
+    std::lock_guard guard{thread->thread_lock};
+    thread->state = proc::process::thread_state::IDLE;
+}
+
+bool proc::process::is_blocked(proc::process::thread* thread, proc::process::block_reason reason){
+    std::lock_guard guard{thread->thread_lock};
+
+    if(thread->state == proc::process::thread_state::BLOCKED && thread->blocking_reason == reason)
+        return true;
+    else
+        return false;
+}
+
+bool proc::process::is_blocked(tid_t tid, proc::process::block_reason reason){
+    auto* thread = proc::process::thread_for_tid(tid);
+    std::lock_guard guard{thread->thread_lock};
+
+    if(thread->state == proc::process::thread_state::BLOCKED && thread->blocking_reason == reason)
+        return true;
+    else
+        return false;
+}
+
+void proc::process::wake_if_blocked(tid_t tid, proc::process::block_reason reason){
+    auto* thread = proc::process::thread_for_tid(tid);
+    if(proc::process::is_blocked(thread, reason))
+        proc::process::wake_thread(thread);
 }
 
 bool proc::process::receive_message(tid_t* origin, size_t* size, uint8_t* data){

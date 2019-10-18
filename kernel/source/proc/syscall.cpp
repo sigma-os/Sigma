@@ -142,6 +142,12 @@ static uint64_t syscall_get_um_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_regis
 	return um_tid;
 }
 
+// ARG0: Reason
+static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
+    proc::process::block_thread(proc::process::get_current_thread(), static_cast<proc::process::block_reason>(SYSCALL_GET_ARG0()), regs);
+    return 0;
+}
+
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
@@ -160,7 +166,8 @@ kernel_syscall syscalls[] = {
     {.func = syscall_send_message, .name = "ipc_send"},
     {.func = syscall_receive_message, .name = "ipc_receive"},
     {.func = syscall_get_message_size, .name = "ipc_get_message_size"},
-    {.func = syscall_get_um_tid, .name = "get_user_manager_tid"}
+    {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
+    {.func = syscall_block_thread, .name = "block_thread"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

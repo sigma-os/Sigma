@@ -1,4 +1,5 @@
 #include <Sigma/proc/ipc.h>
+#include <Sigma/proc/process.h>
 
 using namespace proc::ipc;
 
@@ -54,6 +55,9 @@ bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_
 	footer_ptr->header = header_ptr;
 
 	this->current_unread_messages_count++;
+	
+	proc::process::wake_if_blocked(tid, proc::process::block_reason::WAITING_FOR_IPC);
+
 	return true;
 }
 

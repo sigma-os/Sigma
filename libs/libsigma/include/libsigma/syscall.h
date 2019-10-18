@@ -21,6 +21,7 @@ extern "C" {
 #define SIGMA_SYSCALL_IPC_RECEIVE  8
 #define SIGMA_SYSCALL_IPC_GET_SIZE 9
 #define SIGMA_SYSCALL_GET_UM_TID   10
+#define SIGMA_SYSCALL_BLOCK_THREAD 11
 
 uint64_t libsigma_syscall0(uint64_t number);
 uint64_t libsigma_syscall1(uint64_t number, uint64_t arg1);

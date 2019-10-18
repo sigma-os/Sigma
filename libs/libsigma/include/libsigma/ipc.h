@@ -44,6 +44,16 @@ struct libsigma_ret_message {
     uint64_t msg_id;
 
     int ret;
+    
+    #if defined(__cplusplus)
+    libsigma_message_t* msg(){
+        return reinterpret_cast<libsigma_message_t*>(this);
+    }
+
+    uint8_t* data(){
+        return reinterpret_cast<uint8_t*>(this);
+    }
+    #endif
 };
 
 
@@ -55,7 +65,19 @@ struct libsigma_open_message {
     int flags;
     size_t path_len;
     char path[];
+
+    #if defined(__cplusplus)
+    libsigma_message_t* msg(){
+        return reinterpret_cast<libsigma_message_t*>(this);
+    }
+
+    uint8_t* data(){
+        return reinterpret_cast<uint8_t*>(this);
+    }
+    #endif
 };
+
+
 
 struct libsigma_write_message {
     uint64_t command;
@@ -65,6 +87,16 @@ struct libsigma_write_message {
     int fd;
     size_t count;
     char buf[];
+
+    #if defined(__cplusplus)
+    libsigma_message_t* msg(){
+        return reinterpret_cast<libsigma_message_t*>(this);
+    }
+
+    uint8_t* data(){
+        return reinterpret_cast<uint8_t*>(this);
+    }
+    #endif
 };
 
 struct libsigma_dup2_message {
@@ -74,6 +106,16 @@ struct libsigma_dup2_message {
 
     int oldfd;
     int newfd;
+
+    #if defined(__cplusplus)
+    libsigma_message_t* msg(){
+        return reinterpret_cast<libsigma_message_t*>(this);
+    }
+
+    uint8_t* data(){
+        return reinterpret_cast<uint8_t*>(this);
+    }
+    #endif
 };
 
 #if defined(__cplusplus)
