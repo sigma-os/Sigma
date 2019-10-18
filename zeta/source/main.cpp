@@ -6,19 +6,52 @@
 #include <Zeta/devfs.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 
 template<typename Ret>
-void send_return(uint64_t dest, uint64_t msg_id, Ret ret){
-    auto* ret_msg = new libsigma_ret_message;
+void send_return_int([[maybe_unused]] uint64_t dest, [[maybe_unused]] uint64_t msg_id, [[maybe_unused]] Ret ret){
+    libsigma_klog("[ZETA]: Unsupported return type");
+    return;
+}
+
+template<>
+void send_return_int<uint64_t>(uint64_t dest, uint64_t msg_id, uint64_t ret){
+    auto ret_msg = std::make_unique<libsigma_ret_message>();
 
     ret_msg->command = RET;
     ret_msg->msg_id = msg_id;
     ret_msg->ret = ret; // TODO support other things than int
-    libsigma_ipc_set_message_checksum((libsigma_message*)ret_msg, sizeof(libsigma_ret_message));
 
-    libsigma_ipc_send(dest, sizeof(libsigma_ret_message), reinterpret_cast<uint8_t*>(ret_msg));
+    libsigma_ipc_set_message_checksum(ret_msg->msg(), sizeof(libsigma_ret_message));
 
-    delete ret_msg;
+    libsigma_ipc_send(dest, sizeof(libsigma_ret_message), ret_msg->data());
+}
+
+template<>
+void send_return_int<int>(uint64_t dest, uint64_t msg_id, int ret){
+    auto ret_msg = std::make_unique<libsigma_ret_message>();
+
+    ret_msg->command = RET;
+    ret_msg->msg_id = msg_id;
+    ret_msg->ret = ret; // TODO support other things than int
+
+    libsigma_ipc_set_message_checksum(ret_msg->msg(), sizeof(libsigma_ret_message));
+
+    libsigma_ipc_send(dest, sizeof(libsigma_ret_message), ret_msg->data());
+}
+
+template<>
+void send_return_int<std::vector<char>>(uint64_t dest, uint64_t msg_id, std::vector<char> ret){
+    auto* ret_msg = reinterpret_cast<libsigma_ret_message*>(new uint8_t[sizeof(libsigma_ret_message) + ret.size()]);
+
+    ret_msg->command = RET;
+    ret_msg->msg_id = msg_id;
+    ret_msg->ret = ret.size();
+    memcpy(ret_msg->buf, ret.data(), ret.size());
+
+    libsigma_ipc_set_message_checksum(ret_msg->msg(), sizeof(libsigma_ret_message));
+
+    libsigma_ipc_send(dest, sizeof(libsigma_ret_message), ret_msg->data());
 }
 
 void handle_request(){
@@ -26,7 +59,7 @@ void handle_request(){
         libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
     auto msg_size = libsigma_ipc_get_msg_size();
-    auto msg = std::make_unique<uint8_t>(msg_size);
+    auto msg = std::make_unique<uint8_t[]>(msg_size);
     uint64_t origin;
     size_t useless_msg_size;
     if(libsigma_ipc_receive(&origin, &useless_msg_size, msg.get()) == 1){
@@ -41,34 +74,67 @@ void handle_request(){
         return;
     }
 
+    auto send_return = [&](auto ret){
+        auto* message = (libsigma_message_t*)msg.get();
+
+        send_return_int(origin, message->msg_id, ret);
+    };
+
     switch (message->command)
     {
     case OPEN:{
             auto* open_info = (libsigma_open_message*)msg.get();
             if(msg_size < open_info->path_len){ // TODO: Incoroperate the other members in this calculation
                 // Wut? No we won't corrupt heap for you
-                send_return<int>(origin, open_info->msg_id, -1);
+                send_return(-1);
             } else {
                 int ret = fs::get_vfs().open(origin, std::string_view{open_info->path, open_info->path_len}, open_info->flags);
-                send_return<int>(origin, open_info->msg_id, ret);
+                send_return(ret);
             }
+        }
+        break;
+    case CLOSE:{
+            auto* close_info = (libsigma_close_message*)msg.get();
+            int ret = fs::get_vfs().close(origin, close_info->fd);
+            send_return(ret);
+        }
+        break;
+    case READ: {
+            auto* read_info = (libsigma_read_message*)msg.get();
+            std::vector<char> buf{};
+            buf.resize(read_info->count);
+            int ret = fs::get_vfs().read(origin, read_info->fd , static_cast<void*>(buf.data()), read_info->count);
+            send_return(buf);
         }
         break;
     case WRITE: {
             auto* write_info = (libsigma_write_message*)msg.get();
             if(msg_size < write_info->count){ // TODO: Incoroperate the other members in this calculation
                 // Wut? No we won't corrupt heap for you
-                send_return<int>(origin, write_info->msg_id, -1);
+                send_return(-1);
             } else {
                 int ret = fs::get_vfs().write(origin, write_info->fd, write_info->buf, write_info->count);
-                send_return<int>(origin, write_info->msg_id, ret);
+                send_return(ret);
             }
         }
         break;
     case DUP2: {
-            auto* dup_info = (libsigma_dup2_message*)msg.get();
+            auto* dup_info = (libsigma_dup2_message*)msg.get();         
             int ret = fs::get_vfs().dup2(origin, dup_info->oldfd, dup_info->newfd);
-            send_return<int>(origin, dup_info->msg_id, ret);
+            send_return(ret);
+        }
+        break;
+    case SEEK: {
+            auto* seek_info = (libsigma_seek_message*)msg.get();
+            uint64_t useless;
+            int ret = fs::get_vfs().seek(origin, seek_info->fd, seek_info->offset, seek_info->whence, useless);
+            send_return(ret);
+        }
+        break;
+    case TELL: {
+            auto* tell_info = (libsigma_tell_message*)msg.get();
+            uint64_t ret = fs::get_vfs().tell(origin, tell_info->fd);
+            send_return(ret);
         }
         break;
     default:
@@ -80,24 +146,10 @@ void handle_request(){
 
 int main(){
     libsigma_klog("[ZETA]: Starting VFS");
-
-    // TODO: VFS and shit
     
     fs::devfs devfs{};
     devfs.init();
-    devfs.add_file("/sysout", fs::devfs::create_sysout_node());
-    // Setupped /dev/sysout
-
-
-
-
-    //int fd = fs::get_vfs().open(1, "/dev/sysout", 0);
-    /*char* yes = "[ZETA]: Hello from /dev/sysout";
-    fs::get_vfs().write(1, fd, static_cast<void*>(yes), 31);*/
-
-    //fs::get_vfs().dup2(1, fd, STDOUT_FILENO);
-
-    //printf("[ZETA]: Hello from printf");
+    devfs.add_file("/sysout", fs::devfs::sysout_node_factory());
 
     auto loop = [&](){
         while(true) handle_request();

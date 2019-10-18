@@ -30,6 +30,8 @@ namespace fs {
 		std::function<int(fs_node*, void*, size_t, size_t)> read;
 		//                Node,     Buf,         Count,  Offset
 		std::function<int(fs_node*, const void*, size_t, size_t)> write;
+		//				  Node
+		std::function<int(fs_node*)> close;
 	};
 
 	// TODO:
@@ -92,9 +94,11 @@ namespace fs {
 		void* mount(fs_node* node, std::string_view path, fs_calls* fs);
 		void* mount(fs_node* node, std::string_view path, std::string_view fs_type);
 		int open(uint64_t tid, std::string_view path, int mode);
+		int close(uint64_t tid, int fd);
 		int read(uint64_t tid, int fd, void* buf, size_t count);
 		int write(uint64_t tid, int fd, const void* buf, size_t count);
 		int seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& new_offset);
+		uint64_t tell(uint64_t tid, int fd);
 		int dup2(uint64_t tid, int oldfd, int newfd);
 
 		std::string make_path_absolute(uint64_t tid, std::string_view path);

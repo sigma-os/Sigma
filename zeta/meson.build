@@ -10,7 +10,7 @@ source_files = files(
 libsigma_dep = dependency('sigma')
 deps = [libsigma_dep]
 
-add_project_arguments('-Wall', '-Wextra', language: 'cpp')
+add_project_arguments('-Wall', '-Wextra', '-Wno-unknown-pragmas', language: 'cpp')
 
 
 executable('zeta', source_files, include_directories: include_dirs, dependencies: deps, install: true)

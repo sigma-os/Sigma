@@ -168,7 +168,7 @@ int vfs::open(uint64_t tid, std::string_view path, int mode) {
 int vfs::read(uint64_t tid, int fd, void* buf, size_t count){
 	auto& thread = this->get_thread_entry(tid);
 	auto& file_descriptor = thread.fd_map[fd];
-	if(file_descriptor.fd == fd){ // Check for initialization
+	if(file_descriptor.open){ // Check for initialization
 		//TODO: Check for permission
 
 		return file_descriptor.node->calls.read(file_descriptor.node, buf, count, file_descriptor.offset);
@@ -192,7 +192,7 @@ int vfs::write(uint64_t tid, int fd, const void* buf, size_t count){
 int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 	auto& thread = this->thread_data[tid];
 	auto& file_descriptor = thread.fd_map[fd];
-	if(file_descriptor.fd == fd){ // Check for initialization
+	if(file_descriptor.open && file_descriptor.node->type == fs_node_types::file){ // Check for initialization
 		//TODO: Check for permission
 		//TODO: Pipes
 		switch (whence)
@@ -216,6 +216,18 @@ int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 		}
 	}
 
+	// TODO: Something something ESPIPE
+	return 0;
+}
+
+uint64_t vfs::tell(uint64_t tid, int fd){
+	auto& thread = this->thread_data[tid];
+	auto& file_descriptor = thread.fd_map[fd];
+	if(file_descriptor.open){ // Check for initialization
+		//TODO: Check for permission
+		//TODO: Pipes
+		return file_descriptor.offset;
+	}
 	return -1;
 }
 
@@ -225,10 +237,24 @@ int vfs::dup2(uint64_t tid, int oldfd, int newfd){
 	if(!thread_entry.fd_map[oldfd].open) return -1;
 	if(oldfd == newfd && thread_entry.fd_map[oldfd].open) return newfd;
 
-	// TODO: Close newfd
+	if(thread_entry.fd_map[newfd].open) // If already open, close
+		vfs::close(tid, newfd);
+	
 	thread_entry.fd_map[newfd] = thread_entry.fd_map[oldfd];
+	thread_entry.fd_map[newfd].fd = newfd; // Copy everything over, except this
 	
 	return newfd;
+}
+
+int vfs::close(uint64_t tid, int fd){
+	auto& thread_entry = this->get_thread_entry(tid);
+	auto& fd_entry = thread_entry.fd_map[fd];
+	if(fd_entry.open){
+		if(fd_entry.node->calls.close)
+			fd_entry.node->calls.close(fd_entry.node);
+		fd_entry.open = false;
+	}
+	return 0;
 }
 
 void vfs::register_fs(std::string_view fs_name, fs_calls calls){
