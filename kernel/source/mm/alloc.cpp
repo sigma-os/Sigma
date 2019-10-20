@@ -31,7 +31,7 @@ static uint64_t morecore(size_t size, uint64_t align = 8){
         void* block = mm::pmm::alloc_block();
         if(block == nullptr) return 0;
         mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(block), current_heap_page_offset, map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute);
-        memset(reinterpret_cast<void*>(current_heap_page_offset), 0, mm::pmm::block_size);
+        memset_aligned_4k(reinterpret_cast<void*>(current_heap_page_offset), 0);
         current_heap_page_offset += mm::pmm::block_size;
     }
 

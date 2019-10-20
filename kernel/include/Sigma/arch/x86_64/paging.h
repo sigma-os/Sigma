@@ -14,18 +14,19 @@ namespace x86_64::paging
     struct PACKED_ATTRIBUTE pml4 {
         uint64_t entries[paging_structures_n_entries];
     };
-
+    static_assert(sizeof(pml4) == mm::pmm::block_size);
     struct PACKED_ATTRIBUTE pdpt {
         uint64_t entries[paging_structures_n_entries];
     };
-
+    static_assert(sizeof(pdpt) == mm::pmm::block_size);
     struct PACKED_ATTRIBUTE pd {
         uint64_t entries[paging_structures_n_entries];
     };
-
+    static_assert(sizeof(pd) == mm::pmm::block_size);
     struct PACKED_ATTRIBUTE pt {
         uint64_t entries[paging_structures_n_entries];
     };
+    static_assert(sizeof(pt) == mm::pmm::block_size);
 
     constexpr uint64_t page_entry_present = 0;
     constexpr uint64_t page_entry_writeable = 1;

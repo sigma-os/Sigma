@@ -17,6 +17,9 @@ int memcmp(const void* s1, const void* s2, size_t n);
 void* memcpy(void* dest, const void* src, size_t n);
 void* memmove(void* dstptr, const void* srcptr, size_t size);
 
+void* memset_aligned_4k(void* dest, int c);
+void* memcpy_aligned_4k(void* dest, void* src);
+
 #ifdef __cplusplus
 }
 #endif

@@ -14,10 +14,12 @@ char *strcpy(char *dest, const char *src) {
 }
 
 void* memset(void* s, int c, size_t n){
-    uint8_t* buf = (uint8_t*)s;
+    /*uint8_t* buf = (uint8_t*)s;
 
     for(size_t i = 0; i < n; i++) buf[i] = (uint8_t)c;
 
+    return s;*/
+    asm("rep stosb" : : "a"(c), "D"((uint64_t)s), "c"(n) : "memory");
     return s;
 }
 
@@ -34,11 +36,13 @@ int memcmp(const void* s1, const void* s2, size_t n){
 }
 
 void* memcpy(void* dest, const void* src, size_t n){
-    uint8_t* destination = (uint8_t*)dest;
+    /*uint8_t* destination = (uint8_t*)dest;
     uint8_t* source = (uint8_t*)src;
 
     for(size_t i = 0; i < n; i++) destination[i] = source[i];
 
+    return dest;*/
+    asm("rep movsb" : : "S"((uint64_t)src), "D"((uint64_t)dest), "c"(n) : "memory");
     return dest;
 }
 
@@ -59,4 +63,14 @@ int strcmp(const char s1[], const char s2[]) {
     for (; *s1 == *s2 && *s1; s1++, s2++)
         ;
     return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
+void* memset_aligned_4k(void* dest, int c){
+    asm("rep stosl" : : "a"(c), "D"((uint64_t)dest), "c"(1024) : "memory");
+    return dest;
+}
+
+void* memcpy_aligned_4k(void* dest, void* src){
+    asm("rep movsd" : : "S"((uint64_t)src), "D"((uint64_t)dest), "c"(1024) : "memory");
+    return dest;
 }

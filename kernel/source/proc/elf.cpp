@@ -58,7 +58,7 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
 
                 uint64_t virt = base + program_section_header.p_vaddr + (j * mm::pmm::block_size);
                 thread->vmm.map_page(frame, virt, flags);
-                memset(reinterpret_cast<void*>(virt & ~(mm::pmm::block_size - 1)), 0, mm::pmm::block_size);
+                memset_aligned_4k(reinterpret_cast<void*>(virt & ~(mm::pmm::block_size - 1)), 0);
             }
 
             if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(base + program_section_header.p_vaddr), program_section_header.p_offset, program_section_header.p_filesz)){

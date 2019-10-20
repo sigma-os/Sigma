@@ -55,7 +55,7 @@ void x86_64::paging::paging::init(){
     if(this->paging_info != nullptr) this->deinit();
 
     this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-    memset(reinterpret_cast<void*>(this->paging_info), 0, sizeof(x86_64::paging::pml4));
+    memset_aligned_4k(reinterpret_cast<void*>(this->paging_info), 0);
 }
 
 void x86_64::paging::paging::invalidate_addr(uint64_t addr)
@@ -140,7 +140,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
 
         uint64_t pdpt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
 
-        memset(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0, sizeof(x86_64::paging::pdpt));
+        memset_aligned_4k(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0);
 
         set_frame(new_pml4_entry, pdpt);
         this->paging_info->entries[pml4_index_number] = new_pml4_entry;
@@ -157,7 +157,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         uint64_t pd = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
 
 
-        memset(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0, sizeof(x86_64::paging::pd));
+        memset_aligned_4k(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0);
 
         set_frame(new_pdpt_entry, pd);
         reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number] = new_pdpt_entry;
@@ -172,7 +172,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         uint64_t new_pd_entry = entry_flags;
         uint64_t pt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
         
-        memset(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0, sizeof(x86_64::paging::pt));
+        memset_aligned_4k(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0);
 
         set_frame(new_pd_entry, pt);
         reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number] = new_pd_entry;
@@ -212,7 +212,7 @@ uint64_t x86_64::paging::paging::get_paging_info(){
 
 static x86_64::paging::pt* clone_pt(x86_64::paging::pt* pt){
     x86_64::paging::pt* new_info_pt = reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-    memset(static_cast<void*>(new_info_pt), 0, sizeof(x86_64::paging::pt));
+    memset_aligned_4k(static_cast<void*>(new_info_pt), 0);
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
         new_info_pt->entries[i] = pt->entries[i]; // Just copy it over
@@ -223,7 +223,7 @@ static x86_64::paging::pt* clone_pt(x86_64::paging::pt* pt){
 
 static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
     x86_64::paging::pd* new_info_pd = reinterpret_cast<x86_64::paging::pd*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-    memset(static_cast<void*>(new_info_pd), 0, sizeof(x86_64::paging::pd));
+    memset_aligned_4k(static_cast<void*>(new_info_pd), 0);
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
         uint64_t old_pd_entry = pd->entries[i];
@@ -252,7 +252,7 @@ static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
 
 static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
     x86_64::paging::pdpt* new_info_pdpt = reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-    memset(static_cast<void*>(new_info_pdpt), 0, sizeof(x86_64::paging::pdpt));
+    memset_aligned_4k(static_cast<void*>(new_info_pdpt), 0);
 
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
