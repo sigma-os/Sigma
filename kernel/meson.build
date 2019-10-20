@@ -17,6 +17,7 @@ main_sources = files(
     'source/arch/x86_64/msr.cpp',
     'source/arch/x86_64/paging.cpp',
     'source/arch/x86_64/vga.cpp',
+    'source/arch/x86_64/cpu.cpp',
     'source/arch/x86_64/misc/misc.cpp',
     'source/klibc/stdio.cpp',
     'source/klibc/stdlib.cpp',

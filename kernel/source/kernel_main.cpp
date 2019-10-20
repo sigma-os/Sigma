@@ -19,6 +19,7 @@
 #include <Sigma/arch/x86_64/drivers/pic.h>
 #include <Sigma/arch/x86_64/drivers/pci.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
+#include <Sigma/arch/x86_64/cpu.h>
 
 #include <Sigma/smp/smp.h>
 #include <Sigma/smp/cpu.h>
@@ -54,6 +55,8 @@ C_LINKAGE void kernel_main(){
 
     auto* boot_protocol = &boot_data;
     printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, boot_protocol->memsize);
+
+    x86_64::misc_features_init();
 
     misc::kernel_args::init(boot_protocol->cmdline);
     
