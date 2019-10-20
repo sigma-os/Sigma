@@ -140,6 +140,8 @@ C_LINKAGE void kernel_main(){
     entry->tss = &tss;
     entry->set_gs();
 
+    x86_64::identify_cpu();
+
 
     x86_64::idt::register_irq_status(33, true);
 
