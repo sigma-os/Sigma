@@ -28,7 +28,7 @@ using std::size_t;
 
 // Things to log debug
 #define DEBUG
-#define LOG_SYSCALLS
+//#define LOG_SYSCALLS
 
 
 // General defines

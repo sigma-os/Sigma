@@ -9,8 +9,9 @@ constexpr uint64_t map_page_flags_present = (1 << 0);
 constexpr uint64_t map_page_flags_writable = (1 << 1);
 constexpr uint64_t map_page_flags_user = (1 << 2);
 constexpr uint64_t map_page_flags_no_execute = (1 << 3);
-constexpr uint64_t map_page_flags_cache_disable = (1 << 4);
-constexpr uint64_t map_page_flags_global = (1 << 5);
+constexpr uint64_t map_page_flags_global = (1 << 4);
+
+enum class map_page_chache_types {normal, uncacheable, write_through, write_back, write_combining};
 
 namespace x86_64::paging
 {
@@ -44,7 +45,8 @@ namespace x86_64::paging
     constexpr uint64_t page_entry_cache_disable = 4;
     constexpr uint64_t page_entry_accessed = 5;
     constexpr uint64_t page_entry_dirty = 6;
-    constexpr uint64_t page_entry_huge = 7;
+    constexpr uint64_t page_entry_huge = 7; // 4MiB and 1GiB pages
+    constexpr uint64_t page_entry_pat = 7; // 4KiB pages
     constexpr uint64_t page_entry_global = 8;
     constexpr uint64_t page_entry_no_execute = 63;
 
@@ -55,7 +57,7 @@ namespace x86_64::paging
             void init();
             void deinit();
 
-            bool map_page(uint64_t phys, uint64_t virt, uint64_t flags);
+            bool map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_chache_types cache = map_page_chache_types::normal);
 
             uint64_t get_phys(uint64_t virt);
 

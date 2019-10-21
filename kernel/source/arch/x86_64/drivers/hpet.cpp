@@ -107,7 +107,7 @@ void x86_64::hpet::init_hpet(){
         PANIC("");
     }
 
-    mm::vmm::kernel_vmm::get_instance().map_page(acpi_table->base_addr_low.address, (acpi_table->base_addr_low.address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_cache_disable | map_page_flags_no_execute);
+    mm::vmm::kernel_vmm::get_instance().map_page(acpi_table->base_addr_low.address, (acpi_table->base_addr_low.address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute, map_page_chache_types::uncacheable);
     
     uint64_t general_cap_and_id = hpet_read(x86_64::hpet::general_capabilities_and_id_reg);
     main_counter_clk = ((general_cap_and_id >> 32) & 0xFFFFFFFF);

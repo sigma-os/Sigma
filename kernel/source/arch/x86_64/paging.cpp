@@ -1,4 +1,5 @@
 #include <Sigma/arch/x86_64/paging.h>
+#include <Sigma/arch/x86_64/cpu.h>
 
 ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t pml4_index(uint64_t address){
@@ -36,6 +37,30 @@ static inline void set_flags(uint64_t& entry, uint64_t flags){
 ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t get_flags(uint64_t entry){
     return (entry & 0xFFF0000000000FFF);
+}
+
+ALWAYSINLINE_ATTRIBUTE
+static inline uint64_t get_pat_flags(map_page_chache_types types){
+    uint64_t ret = 0;
+    switch (types)
+    {
+    case map_page_chache_types::normal: // Default is that so just don't
+        FALLTHROUGH_ATTRIBUTE;
+    case map_page_chache_types::write_back:
+        break;
+    case map_page_chache_types::write_combining:
+        bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_write_through);
+        break;
+    case map_page_chache_types::write_through:
+        bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_cache_disable);
+        break;
+    case map_page_chache_types::uncacheable:
+        bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_write_through);
+        bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_pat);
+        break;
+    }
+
+    return ret;
 }
 
 x86_64::paging::pml4* x86_64::paging::get_current_info(){
@@ -116,7 +141,7 @@ void x86_64::paging::paging::deinit(){
     mm::pmm::free_block(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE));
 }   
 
-bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t flags){
+bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_chache_types cache){
     uint64_t pml4_index_number = pml4_index(virt);
     uint64_t pdpt_index_number = pdpt_index(virt);
     uint64_t pd_index_number = pd_index(virt);
@@ -125,8 +150,6 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     uint64_t entry_flags = 0;
     if(flags & map_page_flags_present) 
         bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_present);
-    if(flags & map_page_flags_cache_disable) 
-        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_cache_disable);
     if(flags & map_page_flags_user) 
         bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_user);
     if(flags & map_page_flags_no_execute) 
@@ -183,6 +206,7 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     set_flags(pt_entry, entry_flags);
     if(flags & map_page_flags_global) 
         bitops<uint64_t>::bit_set(pt_entry, x86_64::paging::page_entry_global);
+    pt_entry |= get_pat_flags(cache);
 
     pt->entries[pt_index_number] = pt_entry;
 

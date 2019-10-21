@@ -23,7 +23,7 @@ void x86_64::apic::lapic::init(){
     bitops<uint64_t>::bit_set(apic_base_msr, 11); // Set Enable bit
     msr::write(msr::apic_base, apic_base_msr);
 
-    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
     this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
 
@@ -119,7 +119,7 @@ static inline uint32_t get_redirection_entry(uint32_t entry){
 void x86_64::apic::ioapic_device::init(uint64_t base){
     this->base = base;
 
-    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_cache_disable | map_page_flags_no_execute);
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
     this->id = ((this->read(x86_64::apic::ioapic_id) >> 24) & 0xF);
     uint32_t ver = this->read(x86_64::apic::ioapic_ver);

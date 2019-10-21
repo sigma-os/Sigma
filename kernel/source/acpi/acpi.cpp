@@ -40,12 +40,11 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 		    dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
 		    mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr,
-			    										 map_page_flags_present | map_page_flags_cache_disable |
-				    										 map_page_flags_no_execute);
+			    										 map_page_flags_present |map_page_flags_no_execute, map_page_chache_types::uncacheable);
 		    for(size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++) {
 			    mm::vmm::kernel_vmm::get_instance().map_page(
 				    (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
-				    map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+				    map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 		    }
 
             debug_printf("Found at: %x\n", dsdt_addr);
@@ -93,12 +92,12 @@ acpi::table* acpi::get_table(const char* signature){
 		    dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
 		    mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr,
-			    										 map_page_flags_present | map_page_flags_cache_disable |
-				    										 map_page_flags_no_execute);
+			    										 map_page_flags_present |
+				    										 map_page_flags_no_execute, map_page_chache_types::uncacheable);
 		    for(size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++) {
 			    mm::vmm::kernel_vmm::get_instance().map_page(
 				    (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
-				    map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+				    map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 		    }
 
             debug_printf("Found at: %x\n", dsdt_addr);
@@ -138,7 +137,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
     acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(boot_protocol->acpi_pointer);
 
-    mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+    mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
     uint8_t rsdp_checksum = 0;
     for(size_t i = 0; i < sizeof(acpi::rsdp); i++) rsdp_checksum += ((uint8_t*)rsdp)[i];
@@ -165,7 +164,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
         debug_printf("[ACPI]: Found XSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", xsdp->oem_id[0], xsdp->oem_id[1], xsdp->oem_id[2], xsdp->oem_id[3], xsdp->oem_id[4], xsdp->oem_id[5], xsdp->revision);
         
 
-        mm::vmm::kernel_vmm::get_instance().map_page(xsdp->xsdt_address, (xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+        mm::vmm::kernel_vmm::get_instance().map_page(xsdp->xsdt_address, (xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
         auto* xsdt = reinterpret_cast<acpi::xsdt*>(xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
@@ -180,14 +179,14 @@ void acpi::init(boot::boot_protocol* boot_protocol){
         for (size_t i = 0; i < entries; i++)
         {
             if(reinterpret_cast<uint64_t*>(xsdt->tables[i]) == nullptr) continue;
-            mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+            mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
             uint64_t n_pages = misc::div_ceil(h->length, mm::pmm::block_size);
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t phys = (xsdt->tables[i] + (j * mm::pmm::block_size));
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
-                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
             }
 
             if(do_checksum(h)){
@@ -203,7 +202,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
         
 
-        mm::vmm::kernel_vmm::get_instance().map_page(rsdp->rsdt_address, (rsdp->rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+        mm::vmm::kernel_vmm::get_instance().map_page(rsdp->rsdt_address, (rsdp->rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
         auto* rsdt = reinterpret_cast<acpi::rsdt*>(rsdp->rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
@@ -217,14 +216,14 @@ void acpi::init(boot::boot_protocol* boot_protocol){
         {
             if(reinterpret_cast<uint64_t*>(rsdt->tables[i]) == nullptr) continue;
             auto* h = reinterpret_cast<acpi::sdt_header*>(rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-            mm::vmm::kernel_vmm::get_instance().map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+            mm::vmm::kernel_vmm::get_instance().map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
             uint64_t addr = rsdt->tables[i] - mm::pmm::block_size;
             auto n_pages = misc::div_ceil(h->length, mm::pmm::block_size) + 2;
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t phys = addr + (j * mm::pmm::block_size);
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
-                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_cache_disable | map_page_flags_no_execute);
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
             }
 
             if(do_checksum(h)){

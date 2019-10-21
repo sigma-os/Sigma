@@ -8,7 +8,17 @@
 namespace x86_64
 {
     void misc_features_init();
-    
+        
+    namespace pat {
+        constexpr uint8_t uncacheable = 0x00;
+        constexpr uint8_t write_combining = 0x01;
+        constexpr uint8_t write_through = 0x04;
+        constexpr uint8_t write_back = 0x06;
+
+        void init();
+        uint64_t get_flags(uint8_t type);
+    }
+
     namespace umip {
         constexpr uint8_t cpuid_bit = 2;
         void init();
