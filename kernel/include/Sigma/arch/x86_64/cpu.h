@@ -1,8 +1,9 @@
-#ifndef SIGMA_ARCH_X86_64_GENERAL
-#define SIGMA_ARCH_X86_64_GENERAL
+#ifndef SIGMA_ARCH_X86_64_CPU
+#define SIGMA_ARCH_X86_64_CPU
 
 #include <Sigma/common.h>
 #include <Sigma/arch/x86_64/msr.h>
+#include <Sigma/misc.h>
 
 namespace x86_64
 {
@@ -30,7 +31,11 @@ namespace x86_64
                 *this = cr4::load();
             }
 
-            struct {
+            void flush(){
+                cr4::store(*this);
+            }
+
+            struct _bits {
                 uint64_t vme : 1;
                 uint64_t pvi : 1;
                 uint64_t tsd : 1;
@@ -47,13 +52,17 @@ namespace x86_64
                 uint64_t vmxe : 1;
                 uint64_t smxe : 1;
                 uint64_t res_1 : 1;
+                uint64_t fsgsbase : 1;
                 uint64_t pcide : 1;
                 uint64_t osxsave : 1;
                 uint64_t res_2 : 1;
                 uint64_t smep : 1;
                 uint64_t smap : 1;
+                uint64_t pke : 1;
                 uint64_t res_3 : 41;
             };
+            static_assert(sizeof(_bits) == 8);
+            _bits bits;
             uint64_t raw;
         };
         static_assert(sizeof(cr4) == 8);

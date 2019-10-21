@@ -56,9 +56,9 @@ C_LINKAGE void kernel_main(){
     auto* boot_protocol = &boot_data;
     printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, boot_protocol->memsize);
 
-    x86_64::misc_features_init();
-
     misc::kernel_args::init(boot_protocol->cmdline);
+
+    x86_64::misc_features_init();
     
     mm::pmm::init(boot_protocol);
 

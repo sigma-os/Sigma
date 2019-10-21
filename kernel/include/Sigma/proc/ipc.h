@@ -85,7 +85,7 @@ namespace proc::ipc {
 		uint16_t magic_high;
 	};
 
-	constexpr size_t thread_ipc_manager_default_msg_buffer_size = 128;
+	constexpr size_t thread_ipc_manager_default_msg_buffer_size = 256;
 
 	class thread_ipc_manager
 	{
