@@ -118,7 +118,44 @@ static void identify_intel(uint16_t family_id, uint8_t model_id, uint8_t steppin
             debug_printf("    Model: P3 (0.18 micrometer) with 256 KB on-die L2\n");
             break;
         case 0xA:
-            debug_printf("    Model: P3 (0.18 micrometer) with 2 MB on-die L2");
+            debug_printf("    Model: P3 (0.18 micrometer) with 2 MB on-die L2\n");
+            break;
+        case 0x7E:
+            debug_printf("    Model: Ice Lake U/Y\n");
+            break;
+        case 0x4E:
+            debug_printf("    Model: Skylake U/Y\n");
+            break;
+        case 0x5E:
+            debug_printf("    Model: Skylake DT/H/S\n");
+            break;
+        case 0x8E:
+            switch (stepping)
+            {
+            case 0x9:
+                debug_printf("    Model: Kaby Lake Y/U/R\n");
+                break;
+            case 0xA:
+                debug_printf("    Model: Coffee Lake U\n");
+                break;
+            default:
+                debug_printf("    Model: Unknown [Model: %x] [Stepping: %x]\n", model_id, stepping);
+                break;
+            }
+            break;
+        case 0x9E:
+            switch (stepping)
+            {
+            case 0x9:
+                debug_printf("    Model: Kaby Lake DT/H/S/X\n");
+                break;
+            case 0xA:
+                debug_printf("    Model: Coffee Lake S/H\n");
+                break;
+            default:
+                debug_printf("    Model: Unknown [Model: %x] [Stepping: %x]\n", model_id, stepping);
+                break;
+            }
             break;
         default:
             debug_printf("    Model: Unknown [%x]\n", model_id);
@@ -219,5 +256,12 @@ void x86_64::identify_cpu(){
         x86_64::cpuid(0x80000004, a, b, c, d);
         print_regs(a, b, c, d);
         debug_printf("\n");
+    }
+
+    x86_64::cpuid(0x80000000, a, b, c, d);
+    if(a >= 0x80000008){
+        x86_64::cpuid(0x80000008, a, b, c, d);
+        debug_printf("    Physical address space bits: %d\n", a & 0xFF);
+        debug_printf("    Virtual address space bits: %d\n", (a >> 8) & 0xFF);
     }
 }
