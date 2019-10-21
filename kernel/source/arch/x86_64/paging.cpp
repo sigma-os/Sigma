@@ -1,23 +1,22 @@
 #include <Sigma/arch/x86_64/paging.h>
 
-
+ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t pml4_index(uint64_t address){
-    //return (address >> 27) & 0x1FF;
     return (address >> 39) & 0x1FF;
 }
 
+ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t pdpt_index(uint64_t address){
-   /// return (address >> 18) & 0x1FF;
    return (address >> 30) & 0x1FF;
 }
 
+ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t pd_index(uint64_t address){
-    //return (address >> 9) & 0x1FF;
     return (address >> 21) & 0x1FF;
 }
 
+ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t pt_index(uint64_t address){
-    //return (address >> 0) & 0x1FF;
     return (address >> 12) & 0x1FF;
 }
 
@@ -25,6 +24,7 @@ static inline void set_frame(uint64_t& entry, uint64_t phys){
     entry |= (phys & 0x000FFFFFFFFFF000);
 }
 
+ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t get_frame(uint64_t entry){
     return entry & 0x000FFFFFFFFFF000;
 }
@@ -33,6 +33,7 @@ static inline void set_flags(uint64_t& entry, uint64_t flags){
     entry |= (flags & 0xFFF0000000000FFF);
 }
 
+ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t get_flags(uint64_t entry){
     return (entry & 0xFFF0000000000FFF);
 }
@@ -44,11 +45,17 @@ x86_64::paging::pml4* x86_64::paging::get_current_info(){
 }
 
 void x86_64::paging::set_current_info(x86_64::paging::pml4* info){
-        uint64_t pointer = reinterpret_cast<uint64_t>(info);
-
-        asm volatile("mov %0, %%cr3" : : "r"(pointer) : "memory"); // This ASM block has very imporant side effects
+        asm volatile("mov %0, %%cr3" : : "r"(reinterpret_cast<uint64_t>(info)) : "memory"); // This ASM block has very imporant side effects
                                                                    // Namely the full trashing of the TLB and setting
                                                                    // of new page info
+}
+
+void x86_64::paging::invalidate_addr(uint64_t addr)
+{
+    asm volatile("invlpg (%0)" ::"r" (addr) : "memory"); // This ASM block has the important side effects of
+                                                         // Trashing a part of the TLB, thus it is set to be
+                                                         // volatile and a memory border so it is exactly where
+                                                         // we need it
 }
 
 void x86_64::paging::paging::init(){
@@ -58,13 +65,7 @@ void x86_64::paging::paging::init(){
     memset_aligned_4k(reinterpret_cast<void*>(this->paging_info), 0);
 }
 
-void x86_64::paging::paging::invalidate_addr(uint64_t addr)
-{
-    asm volatile("invlpg (%0)" ::"r" (addr) : "memory"); // This ASM block has the important side effects of
-                                                         // Trashing a part of the TLB, thus it is set to be
-                                                         // volatile and a memory border so it is exactly where
-                                                         // we need it
-}
+#pragma region clean
 
 static void clean_pd(x86_64::paging::pd* pd){
     for(uint64_t pd_loop_index = 0; pd_loop_index < x86_64::paging::paging_structures_n_entries; pd_loop_index++){
@@ -94,11 +95,12 @@ static void clean_pdpt(x86_64::paging::pdpt* pdpt){
     }
 }
 
+#pragma endregion
+
 void x86_64::paging::paging::deinit(){
     if(this->paging_info == nullptr) return;
 
-
-    for(uint64_t pml4_loop_index = 0; pml4_loop_index < x86_64::paging::paging_structures_n_entries; pml4_loop_index++){
+    for(uint64_t pml4_loop_index = 0; pml4_loop_index < x86_64::paging::paging_structures_n_entries / 2; pml4_loop_index++){
         uint64_t pdpt_entry = this->paging_info->entries[pml4_loop_index];
 
         if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
@@ -121,94 +123,74 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     uint64_t pt_index_number = pt_index(virt);
 
     uint64_t entry_flags = 0;
-    if(flags & map_page_flags_present){
+    if(flags & map_page_flags_present) 
         bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_present);
-        if(flags & map_page_flags_cache_disable) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_cache_disable);
-        if(flags & map_page_flags_user) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_user);
-        if(flags & map_page_flags_no_execute) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_no_execute);
-        if(flags & map_page_flags_writable) bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_writeable);
-    } else {
-        return true; // Not present so no reason to map
-    }
+    if(flags & map_page_flags_cache_disable) 
+        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_cache_disable);
+    if(flags & map_page_flags_user) 
+        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_user);
+    if(flags & map_page_flags_no_execute) 
+        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_no_execute);
+    if(flags & map_page_flags_writable)
+        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_writeable);
 
-    uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
-
+    pml4* pml4_addr = this->paging_info;
+    uint64_t pml4_entry = pml4_addr->entries[pml4_index_number];
     if(!bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
         // PML4 entry not present create one
-
-        uint64_t new_pml4_entry = entry_flags;
-
+        uint64_t new_pml4_entry = 0;
         uint64_t pdpt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-
         memset_aligned_4k(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0);
-
         set_frame(new_pml4_entry, pdpt);
-        this->paging_info->entries[pml4_index_number] = new_pml4_entry;
-    }
-    pml4_entry = this->paging_info->entries[pml4_index_number];
-    auto pdpt_addr = (get_frame(pml4_entry) + KERNEL_VBASE);
+        set_flags(new_pml4_entry, entry_flags);
 
-    uint64_t pdpt_entry = reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number];
+        pml4_addr->entries[pml4_index_number] = new_pml4_entry;
+        pml4_entry = new_pml4_entry;
+    }
+    
+    auto* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(pml4_entry) + KERNEL_VBASE);
+    uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
     if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
         // PDPT entry not present create one
-
-        uint64_t new_pdpt_entry = entry_flags;
-
+        uint64_t new_pdpt_entry = 0;
         uint64_t pd = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-
-
         memset_aligned_4k(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0);
-
         set_frame(new_pdpt_entry, pd);
-        reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number] = new_pdpt_entry;
-    }
-    pdpt_entry = reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr)->entries[pdpt_index_number];
-    auto pd_addr = (get_frame(pdpt_entry) + KERNEL_VBASE);
+        set_flags(new_pdpt_entry, entry_flags);
 
-    uint64_t pd_entry = reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number];
+        pdpt->entries[pdpt_index_number] = new_pdpt_entry;
+        pdpt_entry = new_pdpt_entry;
+    }
+
+    auto* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt_entry) + KERNEL_VBASE);
+    uint64_t pd_entry = pd->entries[pd_index_number];
     if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
         // PD entry not present create one
-
-        uint64_t new_pd_entry = entry_flags;
+        uint64_t new_pd_entry = 0;
         uint64_t pt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-        
         memset_aligned_4k(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0);
-
         set_frame(new_pd_entry, pt);
-        reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number] = new_pd_entry;
+        set_flags(new_pd_entry, entry_flags);
+
+        pd->entries[pd_index_number] = new_pd_entry;
+        pd_entry = new_pd_entry;
     }
-    pd_entry = reinterpret_cast<x86_64::paging::pd*>(pd_addr)->entries[pd_index_number];
-    auto pt_addr = (get_frame(pd_entry) + KERNEL_VBASE);
 
-    uint64_t pt_entry = entry_flags;
-    if(flags & map_page_flags_global) bitops<uint64_t>::bit_set(pt_entry, x86_64::paging::page_entry_global);
+    auto* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd_entry) + KERNEL_VBASE);
 
+    uint64_t pt_entry = 0;
     set_frame(pt_entry, phys);
+    set_flags(pt_entry, entry_flags);
+    if(flags & map_page_flags_global) 
+        bitops<uint64_t>::bit_set(pt_entry, x86_64::paging::page_entry_global);
 
-    (reinterpret_cast<x86_64::paging::pt*>(pt_addr)->entries[pt_index_number]) = pt_entry;
+    pt->entries[pt_index_number] = pt_entry;
 
-    this->invalidate_addr(virt);
-
+    x86_64::paging::invalidate_addr(virt);
     return true;
 }
 
-void x86_64::paging::paging::set_paging_info(){
-    uint64_t phys = (reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE);
-
-    asm volatile ("mov %0, %%cr3" : : "r"(phys) : "memory"); // This ASM block has very imporant side effects
-                                                             // Namely the full trashing of the TLB and setting
-                                                             // of new page info
-}   
-
-
-
-uint64_t x86_64::paging::paging::get_page_size(){
-    return mm::pmm::block_size;
-}
-
-uint64_t x86_64::paging::paging::get_paging_info(){
-    return reinterpret_cast<uint64_t>(this->paging_info);
-}
+#pragma region clone
 
 static x86_64::paging::pt* clone_pt(x86_64::paging::pt* pt){
     x86_64::paging::pt* new_info_pt = reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
@@ -278,7 +260,7 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
     return reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(new_info_pdpt) - KERNEL_VBASE);
 }
 
-void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
+void x86_64::paging::paging::clone_paging_info(x86_64::paging::paging& new_info){
     new_info.deinit();
 
     new_info.init();
@@ -304,7 +286,6 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
                 new_info_pml4->entries[i] = old_pml4_entry; // Just copy the huge flags and page over
             }
         } // Don't do anything with non-present entries, swapping is not implemented yet
-
     }
 
     for(uint64_t i = x86_64::paging::paging_structures_n_entries / 2; i < x86_64::paging::paging_structures_n_entries; i++){
@@ -312,6 +293,22 @@ void x86_64::paging::paging::clone_paging_info(IPaging& new_info){
 
         new_info_pml4->entries[i] = old_pml4_entry; // Just the page over
     }
+}
+
+#pragma endregion
+
+#pragma region misc
+
+void x86_64::paging::paging::set(){
+    uint64_t phys = (reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE);
+
+    asm volatile ("mov %0, %%cr3" : : "r"(phys) : "memory"); // This ASM block has very imporant side effects
+                                                             // Namely the full trashing of the TLB and setting
+                                                             // of new page info
+}
+
+uint64_t x86_64::paging::paging::get_paging_info(){
+    return reinterpret_cast<uint64_t>(this->paging_info);
 }
 
 uint64_t x86_64::paging::paging::get_phys(uint64_t virt){
@@ -438,3 +435,5 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
 
     return 0;
 }
+
+#pragma endregion

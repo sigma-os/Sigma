@@ -4,15 +4,10 @@
 #include <Sigma/common.h>
 #include <klibc/stdio.h>
 #include <klibc/string.h>
-
-#include <Sigma/interfaces/paging_manager.h>
-
 #include <Sigma/mm/pmm.h>
-
+#include <Sigma/arch/x86_64/paging.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
-
 #include <Sigma/types/linked_list.h>
-
 #include <Sigma/smp/ipi.h>
 
 namespace smp

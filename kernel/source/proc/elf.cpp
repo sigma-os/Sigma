@@ -139,9 +139,9 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
             proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, proc::process::thread_privilege_level::APPLICATION);
             new_thread->vmm = x86_64::paging::paging();
 
-            mm::vmm::kernel_vmm::get_instance().clone_info(new_thread->vmm);
+            mm::vmm::kernel_vmm::get_instance().clone_paging_info(new_thread->vmm);
 
-            new_thread->vmm.set_paging_info();
+            new_thread->vmm.set();
 
             char* ld_path = nullptr;
             auxvals aux{};

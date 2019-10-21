@@ -2,9 +2,15 @@
 #define SIGMA_KERNEL_ARCH_X86_64_PAGING
 
 #include <Sigma/common.h>
-#include <Sigma/interfaces/paging_manager.h>
 #include <klibc/stdio.h>
 #include <Sigma/mm/pmm.h>
+
+constexpr uint64_t map_page_flags_present = (1 << 0);
+constexpr uint64_t map_page_flags_writable = (1 << 1);
+constexpr uint64_t map_page_flags_user = (1 << 2);
+constexpr uint64_t map_page_flags_no_execute = (1 << 3);
+constexpr uint64_t map_page_flags_cache_disable = (1 << 4);
+constexpr uint64_t map_page_flags_global = (1 << 5);
 
 namespace x86_64::paging
 {
@@ -15,14 +21,17 @@ namespace x86_64::paging
         uint64_t entries[paging_structures_n_entries];
     };
     static_assert(sizeof(pml4) == mm::pmm::block_size);
+
     struct PACKED_ATTRIBUTE pdpt {
         uint64_t entries[paging_structures_n_entries];
     };
     static_assert(sizeof(pdpt) == mm::pmm::block_size);
+
     struct PACKED_ATTRIBUTE pd {
         uint64_t entries[paging_structures_n_entries];
     };
     static_assert(sizeof(pd) == mm::pmm::block_size);
+
     struct PACKED_ATTRIBUTE pt {
         uint64_t entries[paging_structures_n_entries];
     };
@@ -39,7 +48,7 @@ namespace x86_64::paging
     constexpr uint64_t page_entry_global = 8;
     constexpr uint64_t page_entry_no_execute = 63;
 
-    class paging : public virtual IPaging {
+    class paging  {
         public:
             paging(): paging_info(nullptr) {}
             ~paging() {}
@@ -50,17 +59,13 @@ namespace x86_64::paging
 
             uint64_t get_phys(uint64_t virt);
 
-            void set_paging_info();
+            void set();
 
-            void clone_paging_info(IPaging& new_info);
-
-            uint64_t get_page_size();
+            void clone_paging_info(x86_64::paging::paging& new_info);
 
             uint64_t get_paging_info();
-            void invalidate_addr(uint64_t addr);
 
             uint64_t get_free_range(uint64_t base, uint64_t end, size_t size);
-
         private:
             // Virtual address!
             pml4* paging_info; 
@@ -68,6 +73,7 @@ namespace x86_64::paging
 
     x86_64::paging::pml4* get_current_info();
     void set_current_info(x86_64::paging::pml4* info);
+    void invalidate_addr(uint64_t addr);
 
 
 } // x86_64::paging
