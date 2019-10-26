@@ -49,6 +49,7 @@ nasm_sources = files(
     'source/arch/x86_64/misc/spinlock.asm',
     'source/arch/x86_64/misc/misc_low.asm',
     'source/arch/x86_64/interrupts.asm',
+    'source/arch/x86_64/cpu_low.asm',
     'source/proc/process_low.asm',
     'source/smp/gs.asm',
     'source/kernel_early.asm',)

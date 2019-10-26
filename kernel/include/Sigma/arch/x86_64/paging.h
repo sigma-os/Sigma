@@ -4,6 +4,7 @@
 #include <Sigma/common.h>
 #include <klibc/stdio.h>
 #include <Sigma/mm/pmm.h>
+#include <atomic>
 
 constexpr uint64_t map_page_flags_present = (1 << 0);
 constexpr uint64_t map_page_flags_writable = (1 << 1);
@@ -16,7 +17,6 @@ enum class map_page_chache_types {normal, uncacheable, write_through, write_back
 namespace x86_64::paging
 {
     constexpr uint64_t paging_structures_n_entries = 512;
-
 
     struct PACKED_ATTRIBUTE pml4 {
         uint64_t entries[paging_structures_n_entries];
@@ -74,9 +74,52 @@ namespace x86_64::paging
     };
 
     x86_64::paging::pml4* get_current_info();
-    void set_current_info(x86_64::paging::pml4* info);
+    void set_current_info(x86_64::paging::paging* info);
     void invalidate_addr(uint64_t addr);
 
+    class pcid_cpu_context;
+
+    class pcid_context {
+        public:
+
+        uint16_t get_pcid();
+
+        void set_context();
+
+        void set_context(x86_64::paging::paging* context);
+        bool is_active();
+
+        uint64_t get_timestamp();
+
+        x86_64::paging::paging* get_context();
+
+        private:
+        uint16_t pcid;
+        x86_64::paging::paging* context;
+
+        uint64_t timestamp;
+
+        friend class pcid_cpu_context;
+    };
+
+    constexpr uint16_t n_pcids = 8; // test value, set via config.h or something
+    
+    class pcid_cpu_context {
+        public:
+        pcid_cpu_context(){
+            for(uint16_t i = 0; i < n_pcids; i++){
+                contexts[i].pcid = i;
+            }
+        }
+        pcid_context contexts[n_pcids];
+        
+        private:
+        uint16_t active_context;
+
+        uint64_t next_timestamp;
+
+        friend class pcid_context;
+    };
 
 } // x86_64::paging
 

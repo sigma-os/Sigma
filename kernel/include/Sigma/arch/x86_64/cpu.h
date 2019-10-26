@@ -15,12 +15,21 @@ namespace x86_64
         constexpr uint8_t write_through = 0x04;
         constexpr uint8_t write_back = 0x06;
 
+        constexpr uint8_t cpuid_bit = 16;
+
         void init();
         uint64_t get_flags(uint8_t type);
     }
 
     namespace umip {
         constexpr uint8_t cpuid_bit = 2;
+        void init();
+    }
+
+    namespace pcid {
+        constexpr uint8_t pcid_cpuid_bit = 17;
+        constexpr uint8_t invpcid_cpuid_bit = 10;
+
         void init();
     }
 
@@ -77,6 +86,8 @@ namespace x86_64
         };
         static_assert(sizeof(cr4) == 8);
     }
+
+    C_LINKAGE void emulate_invpcid(uint64_t kernel_pml4, int pcid);
 } // namespace x86_64
 
 

@@ -120,11 +120,11 @@ static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thre
     x86_64::msr::write(x86_64::msr::fs_base, new_thread->context.fs);
 
     if(old_thread == nullptr){
-        x86_64::paging::set_current_info(reinterpret_cast<x86_64::paging::pml4*>(new_thread->context.cr3));
+        x86_64::paging::set_current_info(&new_thread->vmm);
         proc::simd::restore_state(new_thread);
     } else {
         if(old_thread->context.cr3 != new_thread->context.cr3){
-            x86_64::paging::set_current_info(reinterpret_cast<x86_64::paging::pml4*>(new_thread->context.cr3));
+            x86_64::paging::set_current_info(&new_thread->vmm);
             proc::simd::restore_state(new_thread);
         }
     }

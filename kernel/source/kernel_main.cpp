@@ -33,10 +33,11 @@
 #include <Sigma/proc/elf.h>
 
 #include <Sigma/types/linked_list.h>
+#include <Sigma/types/minimal_array.h>
 #include <Sigma/boot_protocol.h>
 #include <config.h>
 
-auto cpu_list = misc::lazy_initializer<types::vector<smp::cpu::entry>>();
+auto cpu_list = types::minimal_array<1, smp::cpu::entry>{};
 C_LINKAGE boot::boot_protocol boot_data;
 
 static void enable_cpu_tasking(){
@@ -57,9 +58,13 @@ C_LINKAGE void kernel_main(){
     printf("Booting Sigma %s, Copyright Thomas Woertman 2019\nMemory Size: %imb\n", VERSION_STR, boot_protocol->memsize);
 
     misc::kernel_args::init(boot_protocol->cmdline);
+    
+    auto& entry = cpu_list.empty_entry();
+    entry.pcid_context = x86_64::paging::pcid_cpu_context{};
+    entry.set_gs();
 
     x86_64::misc_features_init();
-    
+
     mm::pmm::init(boot_protocol);
 
     x86_64::tss::table tss = x86_64::tss::table();
@@ -67,6 +72,8 @@ C_LINKAGE void kernel_main(){
     gdt.init();
     uint16_t tss_offset = gdt.add_tss(&tss);
     tss.load(tss_offset);
+
+    entry.tss = &tss;
 
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
@@ -103,9 +110,11 @@ C_LINKAGE void kernel_main(){
     }
 
     mm::vmm::kernel_vmm::get_instance().set();
+    
 
     mm::hmm::init(); 
 
+    
 
     // Initialize initrd as early as possible so it can be used for reading files for command line args
     for(uint64_t i = 0; i < boot_data.kernel_initrd_size; i += mm::pmm::block_size){
@@ -135,13 +144,9 @@ C_LINKAGE void kernel_main(){
     x86_64::apic::lapic lapic = x86_64::apic::lapic();
     lapic.init(); 
 
-    cpu_list.init();
+    entry.lapic = lapic;
+    entry.lapic_id = entry.lapic.get_id();
 
-    auto* entry = cpu_list->empty_entry();;
-    entry->lapic = lapic;
-    entry->lapic_id = entry->lapic.get_id();
-    entry->tss = &tss;
-    entry->set_gs();
 
     x86_64::identify_cpu();
 
@@ -200,15 +205,20 @@ C_LINKAGE void smp_kernel_main(){
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
 
-    auto* entry = cpu_list->empty_entry();
+    auto& entry = cpu_list.empty_entry();
 
-    entry->lapic = x86_64::apic::lapic();
-    entry->lapic.init();
-    entry->lapic_id = entry->lapic.get_id();
-    entry->tss = &tss;
-    entry->set_gs();
+    entry.lapic = x86_64::apic::lapic();
+    entry.lapic.init();
+    entry.lapic_id = entry.lapic.get_id();
+    entry.tss = &tss;
+    entry.pcid_context = x86_64::paging::pcid_cpu_context{};
+    entry.set_gs();
 
-    printf("Booted CPU with lapic_id: %d\n", entry->lapic_id);
+    x86_64::misc_features_init();
+
+    mm::vmm::kernel_vmm::get_instance().set();
+
+    printf("Booted CPU with lapic_id: %d\n", entry.lapic_id);
 
     ap_mutex.unlock();
 

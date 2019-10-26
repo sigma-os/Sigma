@@ -1,5 +1,6 @@
 #include <Sigma/arch/x86_64/paging.h>
 #include <Sigma/arch/x86_64/cpu.h>
+#include <Sigma/smp/cpu.h>
 
 ALWAYSINLINE_ATTRIBUTE
 static inline uint64_t pml4_index(uint64_t address){
@@ -69,10 +70,36 @@ x86_64::paging::pml4* x86_64::paging::get_current_info(){
         return reinterpret_cast<x86_64::paging::pml4*>(pointer);
 }
 
-void x86_64::paging::set_current_info(x86_64::paging::pml4* info){
-        asm volatile("mov %0, %%cr3" : : "r"(reinterpret_cast<uint64_t>(info)) : "memory"); // This ASM block has very imporant side effects
-                                                                   // Namely the full trashing of the TLB and setting
-                                                                   // of new page info
+void x86_64::paging::set_current_info(x86_64::paging::paging* info){
+    auto* cpu = smp::cpu::entry::get_cpu();
+    auto& cpu_context = cpu->pcid_context;
+
+    if(cpu->features.pcid){ 
+
+        uint16_t pcid = 0;
+        for(uint16_t i = 0; i < n_pcids; i++){
+            auto& pcid_context = cpu_context.contexts[i];
+            
+            auto* page_context = pcid_context.get_context();
+
+            if(page_context && page_context == info){
+                if(!pcid_context.is_active())
+                    pcid_context.set_context();
+
+                return;
+            }
+
+            // Take older PCID
+            if(pcid_context.get_timestamp() < cpu_context.contexts[pcid].get_timestamp())
+                pcid = i;
+        }
+
+        cpu_context.contexts[pcid].set_context(info);
+
+    } else {
+        // No PCID, so just use the first one
+        cpu_context.contexts[0].set_context(info);
+    }
 }
 
 void x86_64::paging::invalidate_addr(uint64_t addr)
@@ -83,14 +110,76 @@ void x86_64::paging::invalidate_addr(uint64_t addr)
                                                          // we need it
 }
 
+void invalidate_pcid(uint16_t pcid){
+    if(smp::cpu::entry::get_cpu()->features.invpcid){
+        struct {
+		    uint64_t pcid;
+		    const void *address;
+	    } pcid_descriptor;
+
+	    pcid_descriptor.pcid = pcid;
+	    pcid_descriptor.address = nullptr;
+
+	    uint64_t type = 1;
+        asm("invpcid %1, %0" : : "r"(type), "m"(pcid_descriptor) : "memory");
+    } else {
+        uint64_t kernel_phys = reinterpret_cast<uint64_t>(mm::vmm::kernel_vmm::get_instance().get_paging_info()) - KERNEL_VBASE;
+        x86_64::emulate_invpcid(kernel_phys, pcid);
+    }
+}
+
+#pragma region paging::pcid_context
+uint16_t x86_64::paging::pcid_context::get_pcid(){
+    return pcid;
+}
+
+uint64_t x86_64::paging::pcid_context::get_timestamp(){
+    return timestamp;
+}
+
+void x86_64::paging::pcid_context::set_context(){
+    uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_VBASE;
+    uint64_t cr3 = table_phys | this->pcid;
+    if(smp::cpu::entry::get_cpu()->features.pcid)
+        bitops<uint64_t>::bit_set(cr3, 63); // Do not invalidate the PCID
+
+    asm volatile ("mov %0, %%cr3" : : "r"(cr3) : "memory");
+
+    this->timestamp = smp::cpu::entry::get_cpu()->pcid_context.next_timestamp++;
+
+    smp::cpu::entry::get_cpu()->pcid_context.active_context = this->pcid;
+}
+
+void x86_64::paging::pcid_context::set_context(x86_64::paging::paging* context){
+    this->context = context;
+    // TODO: TLB shootdown
+
+    uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_VBASE;
+    uint64_t cr3 = table_phys | this->pcid; // Invalidate PCID
+    asm volatile ("mov %0, %%cr3" : : "r"(cr3) : "memory");
+
+    this->timestamp = smp::cpu::entry::get_cpu()->pcid_context.next_timestamp++;
+
+    smp::cpu::entry::get_cpu()->pcid_context.active_context = this->pcid;
+}
+
+bool x86_64::paging::pcid_context::is_active(){
+    return this->pcid == smp::cpu::entry::get_cpu()->pcid_context.active_context;
+}
+
+x86_64::paging::paging* x86_64::paging::pcid_context::get_context(){
+    return context;
+}
+#pragma endregion
+
+#pragma region paging::paging
+
 void x86_64::paging::paging::init(){
     if(this->paging_info != nullptr) this->deinit();
 
     this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
     memset_aligned_4k(reinterpret_cast<void*>(this->paging_info), 0);
 }
-
-#pragma region clean
 
 static void clean_pd(x86_64::paging::pd* pd){
     for(uint64_t pd_loop_index = 0; pd_loop_index < x86_64::paging::paging_structures_n_entries; pd_loop_index++){
@@ -119,8 +208,6 @@ static void clean_pdpt(x86_64::paging::pdpt* pdpt){
         }
     }
 }
-
-#pragma endregion
 
 void x86_64::paging::paging::deinit(){
     if(this->paging_info == nullptr) return;
@@ -213,8 +300,6 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
     x86_64::paging::invalidate_addr(virt);
     return true;
 }
-
-#pragma region clone
 
 static x86_64::paging::pt* clone_pt(x86_64::paging::pt* pt){
     x86_64::paging::pt* new_info_pt = reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
@@ -319,16 +404,8 @@ void x86_64::paging::paging::clone_paging_info(x86_64::paging::paging& new_info)
     }
 }
 
-#pragma endregion
-
-#pragma region misc
-
 void x86_64::paging::paging::set(){
-    uint64_t phys = (reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE);
-
-    asm volatile ("mov %0, %%cr3" : : "r"(phys) : "memory"); // This ASM block has very imporant side effects
-                                                             // Namely the full trashing of the TLB and setting
-                                                             // of new page info
+    x86_64::paging::set_current_info(this);
 }
 
 uint64_t x86_64::paging::paging::get_paging_info(){

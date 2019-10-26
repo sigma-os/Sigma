@@ -2,10 +2,10 @@
 #include <Sigma/misc.h>
 #include <klibc/string.h>
 #include <klibc/stdio.h>
+#include <atomic>
 
 char* str_int;
 uint64_t n_pairs;
-
 
 void misc::kernel_args::init(char* str){
     n_pairs = 0;
