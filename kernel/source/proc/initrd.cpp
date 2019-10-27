@@ -2,10 +2,11 @@
 #include <klibc/stdio.h>
 #include <Sigma/misc.h>
 #include <Sigma/types/vector.h>
+#include <klibcxx/algorithm.hpp>
 
-misc::lazy_initializer<types::vector<proc::initrd::tar_header*>> headers;
+static misc::lazy_initializer<types::vector<proc::initrd::tar_header*>> headers;
 
-static uint64_t get_header_number(char* in){
+static uint64_t get_header_number(const char* in){
     size_t size = 0;
     uint64_t count = 1;
 
@@ -32,10 +33,14 @@ void proc::initrd::init(uint64_t address, uint64_t size){
 }
 
 bool proc::initrd::read_file(const char* file_name, uint8_t* buf, uint64_t offset, uint64_t size){
+    if((size + offset) > proc::initrd::get_size(file_name) + 1)
+        return false; // Yeah lol no, that would be a bit *too* easy wouldn't it
+
     for(auto* header : *headers){
-        if(memcmp(header->filename, file_name, strlen(file_name)) == 0){
+        if(strcmp(header->filename, file_name) == 0){
             // Found it
             void* data = static_cast<void*>(static_cast<uint8_t*>(static_cast<void*>(header)) + 512 + offset);
+            
             memcpy(static_cast<void*>(buf), data, size);
 
             return true;
@@ -46,7 +51,7 @@ bool proc::initrd::read_file(const char* file_name, uint8_t* buf, uint64_t offse
 
 size_t proc::initrd::get_size(const char* file_name){
     for(auto* header : *headers){
-        if(memcmp(header->filename, file_name, strlen(file_name)) == 0){
+        if(strcmp(header->filename, file_name) == 0){
             return get_header_number(header->size);
         }
     }

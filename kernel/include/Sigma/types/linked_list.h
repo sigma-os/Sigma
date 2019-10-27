@@ -29,7 +29,7 @@ namespace types
                     void operator++(){
                         if(this->entry) this->entry = this->entry->next;
                     }
-                    bool operator!=(linked_list_iterator& it){
+                    bool operator!=(linked_list_iterator it){
                         if(this->entry == it.entry) return false;
                         return true;
                     }
