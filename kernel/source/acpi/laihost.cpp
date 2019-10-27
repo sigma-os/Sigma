@@ -6,8 +6,9 @@
 #include <Sigma/arch/x86_64/drivers/hpet.h>
 #include <Sigma/mm/vmm.h>
 
-extern "C" {
 #include <lai/host.h>
+
+extern "C" {
 
 void *laihost_malloc(size_t sz){
     if(sz == 0) sz = 1; // Just in case
@@ -46,7 +47,7 @@ void laihost_panic(const char * msg){
     while(true);
 }
 
-void *laihost_scan(char * signature, size_t index){
+void *laihost_scan(const char * signature, size_t index){
     return static_cast<void*>(acpi::get_table(signature, index));
 }
 

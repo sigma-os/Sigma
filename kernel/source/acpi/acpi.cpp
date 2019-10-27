@@ -1,12 +1,10 @@
 #include <Sigma/acpi/acpi.h>
 #include <Sigma/proc/initrd.h>
 
-extern "C" {
 #include <lai/core.h>
 #include <lai/helpers/sci.h>
 #include <lai/helpers/pm.h>
 #include <lai/drivers/ec.h>
-}
 
 static uint64_t revision = 0;
 static auto acpi_tables = types::linked_list<uint64_t>();
@@ -293,8 +291,7 @@ void acpi::init_ec(){
     lai_init_state(&state);
  
     LAI_CLEANUP_VAR lai_variable_t pnp_id = {};
-    constexpr const char* ec_pnp_id = ACPI_EC_PNP_ID;
-    lai_eisaid(&pnp_id, const_cast<char*>(ec_pnp_id));
+    lai_eisaid(&pnp_id, ACPI_EC_PNP_ID);
  
     struct lai_ns_iterator it = {};
     lai_nsnode_t* node = nullptr;

@@ -1,8 +1,6 @@
 #include <Sigma/arch/x86_64/drivers/pci.h>
 
-extern "C" {
-    #include <lai/core.h>
-}
+#include <lai/core.h>
 
 static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
 static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
@@ -286,8 +284,8 @@ void x86_64::pci::parse_pci(){
 
         lai_variable_t pci_pnp_id = {};
         lai_variable_t pcie_pnp_id = {};
-        lai_eisaid(&pci_pnp_id, const_cast<char*>(x86_64::pci::pci_root_bus_pnp_id));
-        lai_eisaid(&pcie_pnp_id, const_cast<char*>(x86_64::pci::pcie_root_bus_pnp_id));
+        lai_eisaid(&pci_pnp_id, x86_64::pci::pci_root_bus_pnp_id);
+        lai_eisaid(&pcie_pnp_id, x86_64::pci::pcie_root_bus_pnp_id);
 
         struct lai_ns_iterator iter = LAI_NS_ITERATOR_INITIALIZER;
         lai_nsnode_t *node;

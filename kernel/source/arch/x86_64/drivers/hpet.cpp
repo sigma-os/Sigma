@@ -1,8 +1,6 @@
 #include <Sigma/arch/x86_64/drivers/hpet.h>
 
-extern "C" {
-    #include <lai/core.h>
-}
+#include <lai/core.h>
 
 static x86_64::hpet::table* acpi_table = nullptr;
 static uint64_t main_counter_clk = 0;
@@ -46,7 +44,7 @@ static void hpet_write(uint64_t reg, uint64_t value){
 void x86_64::hpet::init_hpet(){
     // Attempt to find the AML object for the timer
     lai_variable_t pnp_id = {};
-    lai_eisaid(&pnp_id, const_cast<char*>(x86_64::hpet::hpet_pnp_id));
+    lai_eisaid(&pnp_id, x86_64::hpet::hpet_pnp_id);
     
     LAI_CLEANUP_STATE lai_state_t state;
     lai_init_state(&state);
