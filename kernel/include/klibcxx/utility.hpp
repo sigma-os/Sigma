@@ -94,11 +94,21 @@ namespace KLIBCXX_NAMESPACE_NAME
         T2 second;
     };
 
+    template<typename T1, typename T2>
+    constexpr std::pair<std::decay_t<T1>, std::decay_t<T2>> make_pair(T1&& t, T2&& u){
+        return std::pair<std::decay_t<T1>, std::decay_t<T2>>{KLIBCXX_NAMESPACE_NAME::forward(t), KLIBCXX_NAMESPACE_NAME::forward(u)};
+    }
 
     template<typename T1, typename T2>
     constexpr void swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y))) {
         x.swap(y);
     }
+
+    template<typename T>
+    struct tuple_size; // Forward declaration
+
+    template<typename T1, typename T2>
+    struct tuple_size<pair<T1, T2>> : std::integral_constant<std::size_t, 2> {};
 } // namespace types
 
 
