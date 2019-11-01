@@ -22,6 +22,13 @@ namespace KLIBCXX_NAMESPACE_NAME
         return static_cast<T&&>(t);
     }
 
+    template<typename T>
+    constexpr void swap(T& a, T&b) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>) {
+        T tmp = std::move(a);
+        a = std::move(b);
+        b = std::move(tmp);
+    }
+
     template<typename T1, typename T2>
     struct pair {
         using first_type = T1;
@@ -72,10 +79,13 @@ namespace KLIBCXX_NAMESPACE_NAME
             return *this;
         }
 
-        constexpr void swap(pair& other) noexcept {
-            auto tmp = *this;
-            *this = other;
-            other = tmp;
+        constexpr void swap(pair& other) noexcept(
+                                            std::is_nothrow_swappable_v<first_type> &&
+                                            std::is_nothrow_swappable_v<second_type>
+                                        ) {
+            using KLIBCXX_NAMESPACE_NAME::swap;
+            swap(first, other.first);
+            swap(second, other.second);
         }
 
         //TODO: Comparison functions
@@ -83,6 +93,12 @@ namespace KLIBCXX_NAMESPACE_NAME
         T1 first;
         T2 second;
     };
+
+
+    template<typename T1, typename T2>
+    constexpr void swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y))) {
+        x.swap(y);
+    }
 } // namespace types
 
 
