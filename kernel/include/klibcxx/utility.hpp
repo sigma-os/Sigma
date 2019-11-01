@@ -24,10 +24,25 @@ namespace KLIBCXX_NAMESPACE_NAME
 
     template<typename T>
     constexpr void swap(T& a, T&b) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>) {
-        T tmp = std::move(a);
-        a = std::move(b);
-        b = std::move(tmp);
+        T tmp = move(a);
+        a = move(b);
+        b = move(tmp);
     }
+
+    template<typename T, typename U = T>
+    constexpr T exchange(T& obj, U&& new_value){
+        T ret = move(obj);
+        obj = forward<U>(new_value);
+        return ret;
+    }
+
+    template<typename T>
+    constexpr std::add_const_t<T>& as_const(T& t) noexcept {
+        return t;
+    }
+
+    template<typename T>
+    void as_const(const T&&) = delete;
 
     template<typename T1, typename T2>
     struct pair {
