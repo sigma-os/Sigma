@@ -3,4 +3,7 @@
 
 #define KLIBCXX_NAMESPACE_NAME std
 
+#define KLIBCXX_NATIVE_MUTEX_INCLUDE <Sigma/arch/x86_64/misc/spinlock.h>
+#define KLIBCXX_NATIVE_MUTEX_TYPE x86_64::spinlock::mutex
+
 #endif // !SIGMA_KLIBCXX_COMMON

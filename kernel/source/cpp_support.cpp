@@ -18,12 +18,12 @@ extern "C" int __cxa_atexit(void (*func) (void *), void * arg, void * dso_handle
 }
 
 extern "C" int __cxxabiv1::__cxa_guard_acquire(__guard *g){
-    x86_64::spinlock::acquire(reinterpret_cast<x86_64::spinlock::mutex*>(g));
+    x86_64::spinlock::acquire(reinterpret_cast<uint16_t*>(g));
     return *reinterpret_cast<int*>(g);
 }
 
 extern "C" void __cxxabiv1::__cxa_guard_release(__guard *g){
-    x86_64::spinlock::release(reinterpret_cast<x86_64::spinlock::mutex*>(g));
+    x86_64::spinlock::release(reinterpret_cast<uint16_t*>(g));
 }
 
 extern "C" void __cxxabiv1::__cxa_guard_abort(__guard *g){

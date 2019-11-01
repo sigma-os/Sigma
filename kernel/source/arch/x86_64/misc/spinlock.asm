@@ -34,3 +34,19 @@ release:
     mov rsp, rbp
     pop rbp
     ret
+
+global try_acquire
+try_acquire:
+    push rbp
+    mov rbp, rsp
+
+    mov rax, 0
+
+    lock bts word [rdi], 0
+    jnc .success
+
+    mov rax, 1
+.success:
+    mov rsp, rbp
+    pop rbp
+    ret

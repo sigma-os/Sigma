@@ -3,7 +3,40 @@
 
 #include <klibcxx/common.hpp>
 
+#include KLIBCXX_NATIVE_MUTEX_INCLUDE
+
 namespace KLIBCXX_NAMESPACE_NAME {
+    class mutex {
+        public:
+        constexpr mutex() noexcept : handle({}) {}
+
+        ~mutex(){}
+
+        mutex(const mutex&) = delete;
+        mutex& operator =(const mutex&) = delete;
+
+        void lock(){
+            handle.lock();
+        }
+
+        bool try_lock(){
+            return handle.try_lock();
+        }
+
+        void unlock(){
+            handle.unlock();
+        }
+
+        using native_handle_type = KLIBCXX_NATIVE_MUTEX_TYPE;
+        native_handle_type& native_handle(){
+            return handle;
+        }
+
+        private:
+        native_handle_type handle;
+    };
+
+
     template<typename Mutex>
     class lock_guard {
         public:
