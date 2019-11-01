@@ -21,7 +21,7 @@ void debug::trace_stack(MAYBE_UNUSED_ATTRIBUTE uint8_t levels){
 	#endif
 }
 
-#if defined(DEBUG)
+#if defined(SIGMA_UBSAN)
 using namespace __ubsan;
 
 C_LINKAGE void __ubsan_handle_add_overflow(overflow_data* data, uintptr_t lhs, uintptr_t rhs) {

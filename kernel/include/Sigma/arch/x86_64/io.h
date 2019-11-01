@@ -13,6 +13,6 @@ namespace x86_64::io
 
     uint32_t ind(uint16_t port);
     void outd(uint16_t port, uint32_t value);
-} // io
+} // x86_64::io
 
 #endif

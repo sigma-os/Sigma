@@ -1,0 +1,1 @@
+option('sigma_compile_ubsan', type: 'boolean', value: false)

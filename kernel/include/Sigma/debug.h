@@ -9,7 +9,7 @@ namespace debug
     void trace_stack(uint8_t levels);
 } // namespace debug
 
-#if defined(DEBUG)
+#if defined(SIGMA_UBSAN)
 
 namespace __ubsan {
 	enum class type_kinds : uint16_t {TK_INTEGER = 0x0, TK_FLOAT = 0x1, TK_UNKNOWN = 0xFFFF};

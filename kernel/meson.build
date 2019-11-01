@@ -79,21 +79,26 @@ extra_warning_flags = ['-Wreorder', '-Wno-unknown-pragmas', '-Wduplicated-cond',
 flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding', '-mno-red-zone',
                   '-nostdlib', '-mcmodel=kernel', '-fno-stack-protector', '-fno-omit-frame-pointer', '-g', '-O2',
                   '-mno-mmx', '-mno-sse', '-mno-sse2', '-mno-sse3', '-mno-sse4', '-mno-sse4.1', '-mno-sse4.2', '-mno-sse4a']
+if get_option('sigma_compile_ubsan')
+    flags_c_common +=  ['-fsanitize=undefined', '-DSIGMA_UBSAN']
+endif
+
 
 cpp_flags = []
 cpp_flags += flags_c_common
 cpp_flags += extra_warning_flags
-cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit']#, '-fsanitize=undefined']#, '-flto']
+
+
+cpp_flags += ['-std=c++17', '-fno-exceptions', '-fno-rtti', '-fuse-cxa-atexit']
 
 c_flags = []
 c_flags += flags_c_common
-c_flags += ['-std=c18']#, '-flto']
+c_flags += ['-std=c18']
 
 ld_script = meson.current_source_dir() + '/build/linker.ld'
 
 ld_flags = ['-T', ld_script, '-nostdlib', '-mcmodel=kernel', '-fno-PIC', '-no-pie', '-Wl,--build-id=none', 
-            '-Wl,-z,max-page-size=0x1000,-n', '-lgcc']#, '-flto']
-#ld_flags += cpp_flags
+            '-Wl,-z,max-page-size=0x1000,-n', '-lgcc']
 
 
 add_global_arguments(c_flags, language: 'c')
