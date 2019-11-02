@@ -36,6 +36,7 @@
 #include <Sigma/types/minimal_array.h>
 #include <Sigma/boot_protocol.h>
 #include <config.h>
+#include <cxxabi.h>
 
 auto cpu_list = types::minimal_array<1, smp::cpu::entry>{};
 C_LINKAGE boot::boot_protocol boot_data;
@@ -90,30 +91,14 @@ C_LINKAGE void kernel_main(){
     }
 
 
-    uint64_t* elf_sections_start = reinterpret_cast<uint64_t*>(boot_protocol->kernel_elf_sections);
-    uint64_t n_elf_sections = boot_protocol->kernel_n_elf_sections;
-
-    for(uint64_t i = 0; i < n_elf_sections; i++){
-        proc::elf::Elf64_Shdr* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
-        if(shdr->sh_flags & proc::elf::shf_alloc){
-           uint32_t flags = map_page_flags_present | map_page_flags_global;
-           if(shdr->sh_flags & proc::elf::shf_write) flags |= map_page_flags_writable;
-           if(!(shdr->sh_flags & proc::elf::shf_execinstr)) flags |= map_page_flags_no_execute;
-
-           for(uint64_t j = 0; j < shdr->sh_size; j += mm::pmm::block_size){
-                uint64_t virt = (shdr->sh_addr + j);
-                uint64_t phys = (virt - KERNEL_VBASE);
-
-                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, flags);
-           }
-        }
-    }
+    proc::elf::map_kernel(*boot_protocol);
 
     mm::vmm::kernel_vmm::get_instance().set();
     
 
     mm::hmm::init(); 
 
+    proc::elf::init_symbol_list(*boot_protocol);
     
 
     // Initialize initrd as early as possible so it can be used for reading files for command line args

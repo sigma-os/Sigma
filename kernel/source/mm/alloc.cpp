@@ -62,7 +62,7 @@ void* alloc::alloc(size_t size){
         if(!header->check_magic()){
             debug_printf("[ALLOC]: Invalid header magic: allocation size: %x, header ptr: %x\n", size, header);
             alloc::print_list();
-            debug::trace_stack(10);
+            debug::trace_stack();
             return nullptr;
         }
 
@@ -156,7 +156,7 @@ void alloc::free(void* ptr){
     if(!header->check_magic()){
         printf("[ALLOC]: Invalid header magic: header ptr: %x\n", header);
         alloc::print_list();
-        debug::trace_stack(10);
+        debug::trace_stack();
         return;
     }
 

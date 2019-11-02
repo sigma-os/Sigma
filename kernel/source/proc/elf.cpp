@@ -207,3 +207,77 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
 
     return true;
 }
+
+void proc::elf::map_kernel(boot::boot_protocol& protocol){
+    uint64_t* elf_sections_start = reinterpret_cast<uint64_t*>(protocol.kernel_elf_sections);
+    uint64_t n_elf_sections = protocol.kernel_n_elf_sections;
+
+    for(uint64_t i = 0; i < n_elf_sections; i++){
+        proc::elf::Elf64_Shdr* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
+        if(shdr->sh_flags & proc::elf::shf_alloc){
+           uint32_t flags = map_page_flags_present | map_page_flags_global;
+           if(shdr->sh_flags & proc::elf::shf_write) flags |= map_page_flags_writable;
+           if(!(shdr->sh_flags & proc::elf::shf_execinstr)) flags |= map_page_flags_no_execute;
+
+           for(uint64_t j = 0; j < shdr->sh_size; j += mm::pmm::block_size){
+                uint64_t virt = (shdr->sh_addr + j);
+                uint64_t phys = (virt - KERNEL_VBASE);
+
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, flags);
+           }
+        }
+    }
+}
+
+
+static proc::elf::Elf64_Shdr* symtab = nullptr;
+static proc::elf::Elf64_Shdr* strtab = nullptr;
+static size_t n_symbols = 0;
+
+static bool initialized = false;
+
+void proc::elf::init_symbol_list(boot::boot_protocol& protocol){
+    uint64_t* elf_sections_start = reinterpret_cast<uint64_t*>(protocol.kernel_elf_sections);
+    uint64_t n_elf_sections = protocol.kernel_n_elf_sections;
+
+    for(uint64_t i = 0; i < n_elf_sections; i++){
+        proc::elf::Elf64_Shdr* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
+        
+        if(symtab == nullptr && shdr->sh_type == sht_symtab)
+            symtab = shdr;
+
+        if(strtab == nullptr && shdr->sh_type == sht_strtab)
+            strtab = shdr;
+
+        if(symtab != nullptr && strtab != nullptr)
+            break;
+    }
+
+    if(symtab == nullptr || strtab == nullptr){
+        debug_printf("[SYMBOLS]: Couldn't initialize\n");
+        return;
+    }
+
+    n_symbols = symtab->sh_size / symtab->sh_entsize;
+
+    initialized = true;
+}
+
+std::pair<const char*, size_t> proc::elf::get_symbol(uint64_t address){
+    if(initialized){
+        for (size_t i = 0; i < n_symbols; i++) {
+		    Elf64_Sym sym = ((Elf64_Sym *)(symtab->sh_addr + KERNEL_VBASE))[i];
+		    const char *name = (const char *)(strtab->sh_addr + KERNEL_VBASE + sym.st_name);
+
+		    if ((sym.st_info & 0xf) != stt_func)
+			    continue;
+
+		    if (address >= sym.st_value && address <= (sym.st_value + sym.st_size)) {
+                size_t addr = sym.st_value;
+		        return {name, addr};
+	        }
+        }
+    }
+    
+    return {"Unknown", 0};
+}

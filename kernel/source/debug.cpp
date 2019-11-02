@@ -1,19 +1,25 @@
 #include <Sigma/debug.h>
+#include <Sigma/proc/elf.h>
 
 struct frame {
     frame* rbp;
-    uint64_t* rip;
+    uint64_t rip;
 };
 
-void debug::trace_stack(MAYBE_UNUSED_ATTRIBUTE uint8_t levels){
+void debug::trace_stack(){
     #if defined(DEBUG)
     frame* current = static_cast<frame*>(__builtin_frame_address(0));
 
 	debug_printf("Starting Stack Trace\n");
-	for(size_t i = 0; i < levels; i++) {
-		debug_printf("  Level %d: RIP [%x]\n", i, current->rip);
-		if(!misc::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr)
+	for(size_t i = 0; i < UINT64_MAX; i++) {
+		if(!misc::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr || !misc::is_canonical(current->rip) || current->rip == 0)
 			break;
+		const auto [name, addr] = proc::elf::get_symbol(current->rip);
+		if(addr != 0)
+			debug_printf("  %d: RIP [%x] -> %s+%x\n", i, current->rip, name, current->rip - addr);
+		else
+			debug_printf("  %d: RIP [%x]\n", i, current->rip);
+		
 		current = current->rbp;
 	}
 

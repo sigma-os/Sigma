@@ -6,7 +6,7 @@
 
 namespace debug
 {
-    void trace_stack(uint8_t levels);
+    void trace_stack();
 } // namespace debug
 
 #if defined(SIGMA_UBSAN)

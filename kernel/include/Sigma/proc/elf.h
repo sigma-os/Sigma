@@ -3,6 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/proc/process.h>
+#include <klibcxx/utility.hpp>
 
 namespace proc::elf
 {
@@ -68,9 +69,31 @@ namespace proc::elf
         Elf64_Xword sh_entsize;
     };
 
+    constexpr uint64_t sht_symtab = 2;
+    constexpr uint64_t sht_strtab = 3;
+
     constexpr uint64_t shf_write = 0x1;
     constexpr uint64_t shf_alloc = 0x2;
     constexpr uint64_t shf_execinstr = 0x4;
+
+    struct PACKED_ATTRIBUTE Elf64_Sym {
+        Elf64_Word st_name;
+        uint8_t st_info;
+        uint8_t st_other;
+        Elf64_Half st_shndx;
+        Elf64_Addr st_value;
+        Elf64_Xword st_size;
+    };
+
+    constexpr uint8_t stb_local = 0;
+    constexpr uint8_t stb_global = 1;
+    constexpr uint8_t stb_weak = 2;
+
+    constexpr uint8_t stt_notype = 0;
+    constexpr uint8_t stt_object = 1;
+    constexpr uint8_t stt_func = 2;
+    constexpr uint8_t stt_section = 3;
+    constexpr uint8_t stt_file = 4;
 
     struct PACKED_ATTRIBUTE Elf64_Phdr{
         Elf64_Word p_type;
@@ -121,6 +144,9 @@ namespace proc::elf
     };
 
     bool start_elf_executable(const char* initrd_filename, proc::process::thread** thread);
+    void map_kernel(boot::boot_protocol& protocol);
+    void init_symbol_list(boot::boot_protocol& protocol);
+    std::pair<const char*, size_t> get_symbol(uint64_t address); 
 } // proc::elf
 
 

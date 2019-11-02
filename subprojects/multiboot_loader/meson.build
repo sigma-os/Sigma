@@ -7,7 +7,7 @@ loader_nasm_sources = files(
     'source/multiboot.asm')
 
 loader_nasm = find_program('nasm')
-loader_nasm_gen = generator(loader_nasm, output: '@BASENAME@.o', arguments: ['-f', 'elf64', '@INPUT@', '-o', '@OUTPUT@'])
+loader_nasm_gen = generator(loader_nasm, output: '@BASENAME@.o', arguments: ['-f', 'elf64', '-g', '-F', 'dwarf', '@INPUT@', '-o', '@OUTPUT@'])
 extra_object_files = loader_nasm_gen.process(loader_nasm_sources)
 
 loader_source_files = files(

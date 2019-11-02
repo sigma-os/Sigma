@@ -55,7 +55,7 @@ nasm_sources = files(
     'source/kernel_early.asm',)
 
 nasm = find_program('nasm')
-nasm_gen = generator(nasm, output: '@BASENAME@.o', arguments: ['-f', 'elf64', '@INPUT@', '-o', '@OUTPUT@'])
+nasm_gen = generator(nasm, output: '@BASENAME@.o', arguments: ['-f', 'elf64', '-g', '-F', 'dwarf', '@INPUT@', '-o', '@OUTPUT@'])
 nasm_objects = nasm_gen.process(nasm_sources)
 
 crtbegin_obj_command = run_command(meson.get_compiler('cpp'), '-print-file-name=crtbegin.o')
