@@ -85,7 +85,7 @@ namespace proc::ipc {
 		uint16_t magic_high;
 	};
 
-	constexpr size_t thread_ipc_manager_default_msg_buffer_size = 4096;
+	constexpr size_t thread_ipc_manager_default_msg_buffer_size = 128;
 
 	class thread_ipc_manager
 	{
@@ -107,6 +107,7 @@ namespace proc::ipc {
 		void receive_message_sync(tid_t& origin, size_t& size, uint8_t* data);
 	private:
 		uint8_t* msg_buffer;
+		size_t current_buffer_size;
 		uint64_t current_offset;
 		uint64_t current_unread_messages_count;
 		tid_t tid;

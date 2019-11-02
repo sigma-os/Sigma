@@ -3,25 +3,25 @@
 
 using namespace proc::ipc;
 
-// TODO: Expandable buffers, so start at 128 bytes but expand all the way to 4096bytes
 void thread_ipc_manager::init(tid_t tid)
 {
 	std::lock_guard guard{this->lock};
 	this->current_offset = 0;
+	this->current_buffer_size = thread_ipc_manager_default_msg_buffer_size;
 	this->current_unread_messages_count = 0;
 	this->tid = tid;
-	this->msg_buffer = reinterpret_cast<uint8_t*>(malloc(thread_ipc_manager_default_msg_buffer_size));
+	this->msg_buffer = reinterpret_cast<uint8_t*>(malloc(this->current_buffer_size));
 	if (this->msg_buffer == nullptr) {
 		printf("[IPC]: Couldn't allocate buffer for ipc manager for tid: %d\n", tid);
 		return;
 	}
-	memset(reinterpret_cast<void*>(this->msg_buffer), 0, thread_ipc_manager_default_msg_buffer_size);
+	memset(reinterpret_cast<void*>(this->msg_buffer), 0, this->current_buffer_size);
 }
 
 void thread_ipc_manager::deinit()
 {
 	std::lock_guard guard{this->lock};
-	if (this->current_offset >= thread_ipc_manager_default_msg_buffer_size) {
+	if (this->current_offset >= this->current_buffer_size) {
 		printf("[IPC]: Detected buffer overrun while destructing thread_ipc_manager [%x], leaking memory..\n", this);
 		return;
 	}
@@ -36,8 +36,14 @@ void thread_ipc_manager::deinit()
 bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_t* buffer) {
 	std::lock_guard guard{this->lock};
 	if (this->current_offset + (sizeof(ipc::ipc_message_header) + buffer_length) >= thread_ipc_manager_default_msg_buffer_size) {
-		printf("[IPC]: Not enough space in FIFO buffer to to place message");
-		return false;
+		
+		size_t size = this->current_buffer_size * 2;
+		if(size > (0x1000 * 4)){
+			printf("[IPC]: Not expanding FIFO buffer past 16KiB\n");
+			return false;
+		}
+		this->msg_buffer = static_cast<uint8_t*>(realloc(static_cast<void*>(this->msg_buffer), size));
+		this->current_buffer_size = size;
 	}
 
 	ipc_message_header* header_ptr = reinterpret_cast<ipc_message_header*>(this->msg_buffer + this->current_offset);
