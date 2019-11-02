@@ -6,6 +6,10 @@
 #include <Sigma/mm/pmm.h>
 #include <atomic>
 
+namespace proc::process {
+    struct thread;
+}
+
 constexpr uint64_t map_page_flags_present = (1 << 0);
 constexpr uint64_t map_page_flags_writable = (1 << 1);
 constexpr uint64_t map_page_flags_user = (1 << 2);
@@ -64,6 +68,8 @@ namespace x86_64::paging
             void set();
 
             void clone_paging_info(x86_64::paging::paging& new_info);
+
+            void fork_address_space(proc::process::thread& new_thread);
 
             uint64_t get_paging_info();
 

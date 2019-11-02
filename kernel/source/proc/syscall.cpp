@@ -148,6 +148,10 @@ static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_reg
     return 0;
 }
 
+static uint64_t syscall_fork(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
+    return proc::process::fork(regs);
+}
+
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
@@ -167,7 +171,8 @@ kernel_syscall syscalls[] = {
     {.func = syscall_receive_message, .name = "ipc_receive"},
     {.func = syscall_get_message_size, .name = "ipc_get_message_size"},
     {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
-    {.func = syscall_block_thread, .name = "block_thread"}
+    {.func = syscall_block_thread, .name = "block_thread"},
+    {.func = syscall_fork, .name = "fork"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

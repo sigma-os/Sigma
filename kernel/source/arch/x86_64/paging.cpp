@@ -1,25 +1,33 @@
 #include <Sigma/arch/x86_64/paging.h>
 #include <Sigma/arch/x86_64/cpu.h>
 #include <Sigma/smp/cpu.h>
+#include <Sigma/proc/process.h>
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t pml4_index(uint64_t address){
+constexpr uint64_t pml4_index(uint64_t address){
     return (address >> 39) & 0x1FF;
 }
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t pdpt_index(uint64_t address){
+constexpr uint64_t pdpt_index(uint64_t address){
    return (address >> 30) & 0x1FF;
 }
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t pd_index(uint64_t address){
+constexpr uint64_t pd_index(uint64_t address){
     return (address >> 21) & 0x1FF;
 }
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t pt_index(uint64_t address){
+constexpr uint64_t pt_index(uint64_t address){
     return (address >> 12) & 0x1FF;
+}
+
+constexpr uint64_t indicies_to_addr(uint64_t pml4_index, uint64_t pdpt_index, uint64_t pd_index, uint64_t index) {
+    uint64_t virt_addr = 0;
+
+    virt_addr |= (pml4_index << 39);
+    virt_addr |= (pdpt_index << 30);
+    virt_addr |= (pd_index << 21);
+    virt_addr |= (index << 12);
+
+    return virt_addr;
 }
 
 static inline void set_frame(uint64_t& entry, uint64_t phys){
@@ -538,3 +546,58 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
 }
 
 #pragma endregion
+
+void x86_64::paging::paging::fork_address_space(proc::process::thread& new_thread){
+    mm::vmm::kernel_vmm::get_instance().clone_paging_info(new_thread.vmm);
+
+    for(uint64_t i = 0; i < (x86_64::paging::paging_structures_n_entries / 2); i++){
+        uint64_t pml4_entry = this->paging_info->entries[i];
+
+        if(!bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present))
+            continue;
+
+        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[i]) + KERNEL_VBASE);
+        for(uint64_t j = 0; j < x86_64::paging::paging_structures_n_entries; j++){
+            uint64_t pdpt_entry = pdpt->entries[j];
+            if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present))
+                continue;
+
+            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[j]) + KERNEL_VBASE);
+            for(uint64_t k = 0; k < x86_64::paging::paging_structures_n_entries; k++){
+                uint64_t pd_entry = pd->entries[k];
+                if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present))
+                    continue;
+
+                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[k]) + KERNEL_VBASE);
+
+                for(uint64_t l = 0; l < x86_64::paging::paging_structures_n_entries; l++){
+                    uint64_t pt_entry = pt->entries[l];
+                    if(!bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present))
+                        continue;
+
+                    // Clone Page
+                    uint64_t new_page_phys = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+                    uint64_t new_page_virt = indicies_to_addr(i, j, k, l);
+
+                    uint64_t flags = map_page_flags_present;
+                    if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_writeable))
+                        flags |= map_page_flags_writable;
+                    if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_user))
+                        flags |= map_page_flags_user;
+                    if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_no_execute))
+                        flags |= map_page_flags_no_execute;
+                    if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_global))
+                        flags |= map_page_flags_global;
+
+                    mm::vmm::kernel_vmm::get_instance().map_page(get_frame(pt_entry), (get_frame(pt_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_global | map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
+                    mm::vmm::kernel_vmm::get_instance().map_page(new_page_phys, (new_page_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_global | map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
+
+                    memcpy_aligned_4k(reinterpret_cast<void*>(new_page_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), reinterpret_cast<void*>(get_frame(pt_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE));
+
+                    new_thread.vmm.map_page(new_page_phys, new_page_virt, flags);
+                    new_thread.resources.frames.push_back(new_page_phys);
+                }   
+            }
+        }
+    }
+}

@@ -50,6 +50,12 @@ void proc::simd::restore_state(proc::process::thread* thread){
     global_restore(thread->context.simd_state);
 }
 
+void proc::simd::clone_state(uint8_t** old_thread, uint8_t** new_thread){
+    *new_thread = create_state();
+
+    memcpy(static_cast<void*>(*new_thread), static_cast<void*>(*old_thread), save_size);
+}
+
 void proc::simd::init_simd(){
     uint32_t a1, b1, c1, d1;
     if(!x86_64::cpuid(1, a1, b1, c1, d1)) PANIC("Default CPUID leaf does not exist");

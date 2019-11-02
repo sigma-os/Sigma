@@ -25,6 +25,63 @@ namespace proc::process
         uint16_t ss, ds, cs; // Segment Registers
         uint64_t fs; // Thread Local Base
         uint8_t* simd_state;
+
+        void copy(thread_context& new_ctx){
+            new_ctx.rax = rax;
+            new_ctx.rbx = rbx;
+            new_ctx.rcx = rcx;
+            new_ctx.rdx = rdx;
+            new_ctx.rsi = rsi;
+            new_ctx.rdi = rdi;
+
+            new_ctx.rbp = rbp;
+            new_ctx.rsp = rsp;
+
+            new_ctx.r8 = r8;
+            new_ctx.r9 = r9;
+            new_ctx.r10 = r10;
+            new_ctx.r11 = r11;
+            new_ctx.r12 = r12;
+            new_ctx.r13 = r13;
+            new_ctx.r14 = r14;
+            new_ctx.r15 = r15;
+
+            new_ctx.rip = rip;
+            new_ctx.cr3 = cr3;
+            new_ctx.rflags = rflags;
+            new_ctx.ss = ss;
+            new_ctx.ds = ds;
+            new_ctx.cs = cs;
+            new_ctx.fs = fs;
+
+            proc::simd::clone_state(&simd_state, &new_ctx.simd_state);
+        }
+
+        void import(x86_64::idt::idt_registers* regs){
+            rax = regs->rax;
+            rbx = regs->rbx;
+            rcx = regs->rcx;
+            rdx = regs->rdx;
+            rsi = regs->rsi;
+            rdi = regs->rdi;
+            rbp = regs->rbp;
+            rsp = regs->rsp;
+
+            r8 = regs->r8;
+            r9 = regs->r9;
+            r10 = regs->r10;
+            r11 = regs->r11;
+            r12 = regs->r12;
+            r13 = regs->r13;
+            r14 = regs->r14;
+            r15 = regs->r15;
+
+            rip = regs->rip;
+            rflags = regs->rflags;
+            ss = regs->ss;
+            ds = regs->ds;
+            cs = regs->cs;
+        }
     };
 
     struct thread_resources {
@@ -104,6 +161,8 @@ namespace proc::process
     bool is_blocked(tid_t tid, proc::process::block_reason reason);
 
     void wake_if_blocked(tid_t tid, proc::process::block_reason reason);
+    
+    tid_t fork(x86_64::idt::idt_registers* regs);
 
     // Internal Thread Modifying functions
     void expand_thread_stack(proc::process::thread* thread, size_t pages);

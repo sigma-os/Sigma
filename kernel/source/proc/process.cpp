@@ -252,8 +252,8 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 	thread->state = state;
     thread->blocking_reason = proc::process::block_reason::FOREVER;
 	thread->context.rflags = ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
-													 // Bit 9 is IF, Interrupt flag, Force enable this
-													 // so timer interrupts arrive
+													// Bit 9 is IF, Interrupt flag, Force enable this
+												    // so timer interrupts arrive
 	thread->privilege = privilege;
 
 	switch(thread->privilege) {
@@ -484,4 +484,31 @@ void proc::process::map_anonymous(proc::process::thread* thread, size_t size, vo
 
         thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), virt, map_flags);
     }
+}
+
+tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
+    auto* parent = proc::process::get_current_thread();
+    if(parent == nullptr) return 0;
+    parent->thread_lock.lock();
+    auto* child = proc::process::create_blocked_thread(reinterpret_cast<void*>(regs->rip) \
+                                        , regs->rsp, 0, parent->privilege);
+    child->thread_lock.lock();
+
+    save_context(regs, parent);
+
+    parent->context.copy(child->context);
+    child->image = parent->image;
+    child->ipc_manager.init(child->tid);
+    
+    parent->vmm.fork_address_space(*child);
+
+    child->context.cr3 = child->vmm.get_paging_info() - KERNEL_VBASE;
+
+    // Set return values
+    child->context.rax = 0; // Child should get 0 as return value
+
+    child->thread_lock.unlock();
+    proc::process::wake_thread(child);
+    parent->thread_lock.unlock();
+    return child->tid;
 }

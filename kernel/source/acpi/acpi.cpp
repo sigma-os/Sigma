@@ -135,7 +135,8 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
     acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(boot_protocol->acpi_pointer);
 
-    mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+    //printf("NO: %x: %x\n",reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE));
+    //mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
     uint8_t rsdp_checksum = 0;
     for(size_t i = 0; i < sizeof(acpi::rsdp); i++) rsdp_checksum += ((uint8_t*)rsdp)[i];
