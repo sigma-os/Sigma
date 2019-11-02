@@ -3,6 +3,25 @@
 #include <klibc/stdio.h>
 #include <Sigma/smp/cpu.h>
 
+void x86_64::smep::init(){
+    if(misc::kernel_args::get_bool("nosmep")){
+        debug_printf("[CPU]: Forced SMEP disabling\n");
+        return;
+    }
+    uint32_t a, b, c, d;
+    if(cpuid(0x7, a, b, c, d)){
+        // Nice, the leaf exists
+        if(bitops<uint32_t>::bit_test(b, smep::cpuid_bit)){
+            x86_64::regs::cr4 cr4{};
+            cr4.bits.smep = 1; // Enable SMEP
+            cr4.flush();
+            debug_printf("[CPU]: Enabled SMEP\n");
+        } else {
+            debug_printf("[CPU]: SMEP is not available\n");
+        }
+    }
+}
+
 void x86_64::pat::init(){
     uint32_t a, b, c, d;
     if(cpuid(1, a, b, c, d)){
@@ -18,7 +37,7 @@ void x86_64::pat::init(){
 
 void x86_64::umip::init(){
     if(misc::kernel_args::get_bool("noumip")){
-        debug_printf("[x86_64]: Forced UMIP disabling\n");
+        debug_printf("[CPU]: Forced UMIP disabling\n");
         return;
     }
     uint32_t a, b, c, d;
@@ -70,6 +89,7 @@ void x86_64::pcid::init(){
 }
 
 void x86_64::misc_features_init(){
+    x86_64::smep::init();
     x86_64::umip::init();
     x86_64::pat::init();
     x86_64::pcid::init();

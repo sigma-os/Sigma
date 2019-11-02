@@ -26,6 +26,11 @@ namespace x86_64
         void init();
     }
 
+    namespace smep {
+        constexpr uint8_t cpuid_bit = 7;
+        void init();
+    }
+
     namespace pcid {
         constexpr uint8_t pcid_cpuid_bit = 17;
         constexpr uint8_t invpcid_cpuid_bit = 10;
