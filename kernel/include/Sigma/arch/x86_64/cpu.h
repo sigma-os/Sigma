@@ -2,8 +2,9 @@
 #define SIGMA_ARCH_X86_64_CPU
 
 #include <Sigma/common.h>
-#include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/misc.h>
+#include <Sigma/arch/x86_64/msr.h>
+#include <Sigma/smp/cpu.h>
 
 namespace x86_64
 {
@@ -29,6 +30,23 @@ namespace x86_64
     namespace smep {
         constexpr uint8_t cpuid_bit = 7;
         void init();
+    }
+
+    namespace smap {
+        constexpr uint8_t cpuid_bit = 20;
+        void init();
+
+        class smap_guard {
+            public:
+            smap_guard(){
+                if(smp::cpu::entry::get_cpu()->features.smap)
+                    asm("clac");
+            }
+            ~smap_guard(){
+                if(smp::cpu::entry::get_cpu()->features.smap)
+                    asm("stac");
+            }
+        };
     }
 
     namespace pcid {

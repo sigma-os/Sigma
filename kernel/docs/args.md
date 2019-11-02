@@ -11,3 +11,4 @@ Options
 - `nopcid` will disable pcid, even if it can be enabled
 - `noinvpcid` will disable the `invpcid` instruction, note that this will not stop pcid from working without it
 - `nosmep` will disable SMEP (Supervisor Mode Execution Prevention)
+- `nosmap` will disable SMAP (Supervisor Mode Access Prevention)

@@ -25,6 +25,7 @@ namespace smp::cpu
         struct {
             uint64_t pcid : 1;
             uint64_t invpcid : 1;
+            uint64_t smap : 1;
         } features;
 
         void set_gs(){

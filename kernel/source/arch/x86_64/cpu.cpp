@@ -1,7 +1,6 @@
 #include <Sigma/arch/x86_64/cpu.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
 #include <klibc/stdio.h>
-#include <Sigma/smp/cpu.h>
 
 void x86_64::smep::init(){
     if(misc::kernel_args::get_bool("nosmep")){
@@ -18,6 +17,30 @@ void x86_64::smep::init(){
             debug_printf("[CPU]: Enabled SMEP\n");
         } else {
             debug_printf("[CPU]: SMEP is not available\n");
+        }
+    }
+}
+
+void x86_64::smap::init(){
+    if(misc::kernel_args::get_bool("nosmap")){
+        debug_printf("[CPU]: Forced SMAP disabling\n");
+        return;
+    }
+    uint32_t a, b, c, d;
+    if(cpuid(0x7, a, b, c, d)){
+        // Nice, the leaf exists
+        if(bitops<uint32_t>::bit_test(b, smap::cpuid_bit)){
+            x86_64::regs::cr4 cr4{};
+            cr4.bits.smap = 1; // Enable SMAP
+            cr4.flush();
+
+            smp::cpu::entry::get_cpu()->features.smap = 1;
+
+            asm("stac");
+            printf("WARNING: SMAP support is fully untested, use at your own risk, pass `nosmap` to the kernel to disable it\n");
+            debug_printf("[CPU]: Enabled SMAP\n");
+        } else {
+            debug_printf("[CPU]: SMAP is not available\n");
         }
     }
 }
@@ -84,12 +107,13 @@ void x86_64::pcid::init(){
 
         debug_printf("[CPU]: Enabled PCID\n");        
     } else {
-        debug_printf("[CPU]: PCID is not available");
+        debug_printf("[CPU]: PCID is not available\n");
     }
 }
 
 void x86_64::misc_features_init(){
     x86_64::smep::init();
+    x86_64::smap::init();
     x86_64::umip::init();
     x86_64::pat::init();
     x86_64::pcid::init();

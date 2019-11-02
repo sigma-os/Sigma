@@ -2,6 +2,7 @@
 #include <Sigma/proc/process.h>
 #include <Sigma/proc/initrd.h>
 #include <Sigma/arch/x86_64/idt.h>
+#include <Sigma/arch/x86_64/cpu.h>
 #include <atomic>
 
 #define SYSCALL_GET_FUNC() (regs->rax)
@@ -189,6 +190,7 @@ static void syscall_handler(x86_64::idt::idt_registers* regs){
     debug_printf("[SYSCALL]: Requested syscall %d [%s], from thread %d\n", SYSCALL_GET_FUNC(), syscall.name, proc::process::get_current_tid());
     #endif
 
+    x86_64::smap::smap_guard guard{};
     SYSCALL_SET_RETURN_VALUE(syscall.func(regs));
 }
 

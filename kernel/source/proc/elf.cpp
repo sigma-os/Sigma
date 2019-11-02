@@ -4,6 +4,8 @@
 #include <Sigma/mm/pmm.h>
 #include <Sigma/mm/vmm.h>
 
+#include <Sigma/arch/x86_64/cpu.h>
+
 using namespace proc::elf;
 
 static bool load_executable(const char* initrd_filename, auxvals* aux, proc::process::thread* thread, char** ld_out_path, uint64_t base){
@@ -145,6 +147,8 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
 
             char* ld_path = nullptr;
             auxvals aux{};
+
+            x86_64::smap::smap_guard guard{};
             load_executable(initrd_filename, &aux, new_thread, &ld_path, 0);
 
             proc::process::expand_thread_stack(new_thread, 10); // Create a stack of 10 pages for the process
