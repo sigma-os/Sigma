@@ -40,11 +40,11 @@ namespace x86_64
             public:
             smap_guard(){
                 if(smp::cpu::entry::get_cpu()->features.smap)
-                    asm("clac");
+                    asm("stac");
             }
             ~smap_guard(){
                 if(smp::cpu::entry::get_cpu()->features.smap)
-                    asm("stac");
+                    asm("clac");
             }
         };
     }
