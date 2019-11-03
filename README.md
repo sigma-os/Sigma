@@ -8,10 +8,12 @@ Look in [sigma-os/bootstrap](https://github.com/sigma-os/bootstrap)
  
 ## Features
 - Full x86_64 long mode support
-- ACPI and AML support with [LAI](https://www.github.com/qword-os/lai)
-- APIC interrupt support
-- PCI / PCI-Express Configuration Space enumeration
+- Support for a lot of x86(\_64) minor features (e.g. SMEP, [SMAP](https://en.wikipedia.org/wiki/Supervisor_Mode_Access_Prevention), UMIP and PCID)
+- ACPI and AML support with [lai](https://www.github.com/qword-os/lai)
+- APIC support + LAPIC timer for scheduling IRQs
+- PCI / PCI-Express Configuration space enumeration
 - SMP with scheduler level support
+- Dynamically linked userland backed by [mlibc](https://www.github.com/managarm/mlibc)
  
 ## On the microkernel
 Sigma does try to have as much drivers and things in userspace(PL3) but it doesn't attempt to move the memory manager and process management / scheduler out of the kernel.
