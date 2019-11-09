@@ -3,12 +3,12 @@
 #include <klibcxx/mutex.hpp>
 #include <klibc/stdio.h>
 
-bool x86_64::cpuid(uint32_t leaf, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& edx){
-    return __get_cpuid(leaf, &eax, &ebx, &ecx, &edx);
+bool x86_64::cpuid(uint32_t leaf, uint32_t& eax, uint32_t& ebx, uint32_t& c, uint32_t& d){
+    return __get_cpuid(leaf, &eax, &ebx, &c, &d);
 }
 
-bool x86_64::cpuid(uint32_t leaf, uint32_t subleaf, uint32_t& eax, uint32_t& ebx, uint32_t& ecx, uint32_t& edx){
-    return __get_cpuid_count(leaf, subleaf, &eax, &ebx, &ecx, &edx);
+bool x86_64::cpuid(uint32_t leaf, uint32_t subleaf, uint32_t& eax, uint32_t& ebx, uint32_t& c, uint32_t& d){
+    return __get_cpuid_count(leaf, subleaf, &eax, &ebx, &c, &d);
 }
 
 uint64_t x86_64::read_tsc(){
@@ -264,4 +264,68 @@ void x86_64::identify_cpu(){
         debug_printf("    Physical address space bits: %d\n", a & 0xFF);
         debug_printf("    Virtual address space bits: %d\n", (a >> 8) & 0xFF);
     }
+
+    debug_printf("Features: ");
+    x86_64::cpuid(1, a, b, c, d);
+    using namespace cpuid_bits;
+    if(d & FPU) debug_printf("fpu ");
+    if(d & VME) debug_printf("vme ");
+    if(d & DE) debug_printf("de ");
+    if(d & PSE) debug_printf("pse ");
+    if(d & TSC) debug_printf("tsc ");
+    if(d & MSR) debug_printf("msr ");
+    if(d & PAE) debug_printf("pae ");
+    if(d & MCE) debug_printf("mce ");
+    if(d & CX8) debug_printf("cx8 ");
+    if(d & APIC) debug_printf("apic ");
+    if(d & SEP) debug_printf("sep ");
+    if(d & MTRR) debug_printf("mtrr ");
+    if(d & PGE) debug_printf("pge ");
+    if(d & MCA) debug_printf("mca ");
+    if(d & CMOV) debug_printf("cmovcc ");
+    if(d & PAT) debug_printf("pat ");
+    if(d & PSE36) debug_printf("pse36 ");
+    if(d & PSN) debug_printf("psn ");
+    if(d & CLFSH) debug_printf("clflush ");
+    if(d & DS) debug_printf("ds ");
+    if(d & ACPI) debug_printf("acpi ");
+    if(d & MMX) debug_printf("mmx ");
+    if(d & SSE) debug_printf("sse ");
+    if(d & SSE2) debug_printf("sse2 ");
+    if(d & SS) debug_printf("ss ");
+    if(d & HTT) debug_printf("htt ");
+    if(d & TM) debug_printf("tm ");
+    if(d & IA64) debug_printf("ia64 ");
+    if(d & PBE) debug_printf("#pbe ");
+    if(c & SSE3) debug_printf("sse3 ");
+    if(c & PCLMUL) debug_printf("pclmul ");
+    if(c & DTES64) debug_printf("dtes64 ");
+    if(c & MONITOR) debug_printf("monitor ");
+    if(c & DSCPL) debug_printf("ds-cpl ");
+    if(c & VMX) debug_printf("vmx ");
+    if(c & SMX) debug_printf("smx ");
+    if(c & EIST) debug_printf("est ");
+    if(c & TM2) debug_printf("TM2 ");
+    if(c & SSSE3) debug_printf("ssse3 ");
+    if(c & CNXTID) debug_printf("cid ");
+    if(c & SDBG) debug_printf("sdbg ");
+    if(c & FMA) debug_printf("fma ");
+    if(c & CMPXCHG16B) debug_printf("cx16 ");
+    if(c & xTPR) debug_printf("xtptr ");
+    if(c & PDCM) debug_printf("pdcm ");
+    if(c & PCID) debug_printf("pcid ");
+    if(c & DCA) debug_printf("dca ");
+    if(c & SSE4_1) debug_printf("sse4.1 ");
+    if(c & SSE4_2) debug_printf("sse4.2 ");
+    if(c & x2APIC) debug_printf("x2apic ");
+    if(c & MOVBE) debug_printf("movbe ");
+    if(c & POPCNT) debug_printf("popcnt ");
+    if(c & TSCDeadline) debug_printf("tsc-deadline ");
+    if(c & AES) debug_printf("aes ");
+    if(c & XSAVE) debug_printf("xsave ");
+    if(c & OSXSAVE) debug_printf("osxsave ");
+    if(c & AVX) debug_printf("avx ");
+    if(c & F16C) debug_printf("f16c ");
+    if(c & RDRND) debug_printf("rdrand ");
+    debug_printf("\n");
 }
