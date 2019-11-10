@@ -4,6 +4,8 @@
 #include <Sigma/common.h>
 #include <Sigma/arch/x86_64/io.h>
 #include <Sigma/acpi/acpi.h>
+#include <lai/helpers/pci.h>
+#include <lai/core.h>
 
 namespace acpi
 {
@@ -57,10 +59,18 @@ namespace x86_64::pci
 
     struct device {
         bool exists;
+        bool is_bridge;
         uint16_t seg;
         uint8_t bus, device, function;
         uint16_t vendor_id;
         uint8_t header_type, class_code, subclass_code;
+
+        x86_64::pci::device* parent;
+        lai_nsnode_t* node;
+        lai_variable_t prt;
+
+
+        bool has_irq;
         uint32_t gsi;
         x86_64::pci::bar bars[6];
     };
@@ -72,6 +82,7 @@ namespace x86_64::pci
     constexpr const char* pci_root_bus_pnp_id = "PNP0A03";
     constexpr const char* pcie_root_bus_pnp_id = "PNP0A08";
 
+    void init_pci();
     void parse_pci();
 } // namespace x86_64::pci
 

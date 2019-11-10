@@ -22,7 +22,6 @@ namespace types
 
         void push_back(T value){
             if((offset + 1) >= length){
-                //data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length * 2)));
                 length *= 2;
                 data = new (realloc(data, sizeof(T) * length)) T;
                 
@@ -33,8 +32,6 @@ namespace types
 		NODISCARD_ATTRIBUTE
 		T* empty_entry() {
 			if((offset + 1) >= length) {
-				// data = reinterpret_cast<T*>(realloc(data, sizeof(T) * (length
-				// * 2)));
 				length *= 2;
 				data = new(realloc(data, sizeof(T) * length)) T;
 			}

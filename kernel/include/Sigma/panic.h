@@ -4,7 +4,6 @@
 #include <klibcxx/experimental/source_location.hpp>
 
 namespace misc::panic {
-    // Add ability to override function due to source_location not supporting __PRETTY_FUNCTION__ or any of its equivalents
     void panic_m(const char* message, const char* function_override, std::experimental::source_location loc);
     void panic_m(const char* message, std::experimental::source_location loc);
 }

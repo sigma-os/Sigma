@@ -1,7 +1,5 @@
 #include <Sigma/arch/x86_64/drivers/pci.h>
 
-#include <lai/core.h>
-
 static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
 static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
 
@@ -13,6 +11,7 @@ static write_func internal_write = legacy_write;
 
 auto mcfg_entries = types::linked_list<acpi::mcfg_table_entry>();
 auto pci_devices = types::linked_list<x86_64::pci::device>();
+auto pci_root_busses = types::linked_list<x86_64::pci::device>();
 
 static inline uint32_t make_pci_address(uint32_t bus, uint32_t slot, uint32_t function, uint32_t offset){
     return ((bus << 16) | (slot << 11) | (function << 8) | (offset & 0xFC) | (1u << 31));
@@ -194,80 +193,75 @@ static const char* class_to_str(uint8_t class_code){
     }
 }
 
-static void enumerate_bus(uint16_t seg, uint8_t bus);
+static void enumerate_bus(uint16_t seg, uint8_t bus, x86_64::pci::device* parent);
 
-static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function){
-    auto dev = x86_64::pci::device();
+static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, x86_64::pci::device* parent){
+    x86_64::pci::device* dev = pci_devices.empty_entry();
     uint16_t vendor_id = x86_64::pci::read(seg, bus, device, function, 0, 2);
     if(vendor_id == 0xFFFF) return; // Device doesn't exist
 
-    dev.exists = true;
-    dev.seg = seg;
-    dev.bus = bus;
-    dev.device = device;
-    dev.function = function;
-    dev.vendor_id = vendor_id;
+    dev->exists = true;    
+    dev->parent = parent;
+
+    dev->seg = seg;
+    dev->bus = bus;
+    dev->device = device;
+    dev->function = function;
+
+    dev->vendor_id = vendor_id;
 
     uint8_t class_code = (x86_64::pci::read(seg, bus, device, function, 11, 1) & 0xFF);
     uint8_t subclass_code = (x86_64::pci::read(seg, bus, device, function, 10, 1) & 0xFF);
+    dev->class_code = class_code;
+    dev->subclass_code = subclass_code;
+
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge
         uint8_t secondary_bus = x86_64::pci::read(seg, bus, device, function, 0x19, 1);
-        enumerate_bus(seg, secondary_bus);
+        enumerate_bus(seg, secondary_bus, dev);
+        dev->is_bridge = true;
     }
-
-    dev.class_code = class_code;
-    dev.subclass_code = subclass_code;
 
     uint8_t header_type = (x86_64::pci::read(seg, bus, device, 0, 0xE, 1) & 0xFF);
     header_type &= 0x7F; // Ignore Multifunction bit
-    dev.header_type = header_type;
+    dev->header_type = header_type;
     if(header_type == 0){
         // Normal device has 5 bars
-        for(uint8_t i = 0; i < 6; i++) dev.bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
+        for(uint8_t i = 0; i < 6; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
     } else if(header_type == 1){
         // PCI to PCI bridge has 2 bars
-        for(uint8_t i = 0; i < 3; i++) dev.bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
+        for(uint8_t i = 0; i < 3; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
     }
 
     // TODO: route IRQs
-
-    pci_devices.push_back(dev);
 }
 
-static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device){
+static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device, x86_64::pci::device* parent){
     uint16_t vendor_id = x86_64::pci::read(seg, bus, device, 0, 0, 2);
     if(vendor_id == 0xFFFF) return; // Device doesn't exist
 
     uint8_t header_type = x86_64::pci::read(seg, bus, device, 0, 0xE, 1);
     if(bitops<uint8_t>::bit_test(header_type, 7)){
-        for(uint8_t i = 0; i < 8; i++) enumerate_function(seg, bus, device, i);
+        for(uint8_t i = 0; i < 8; i++) 
+            enumerate_function(seg, bus, device, i, parent);
     } else {
-        enumerate_function(seg, bus, device, 0);
+        enumerate_function(seg, bus, device, 0, parent);
     }
 }
 
-static void enumerate_bus(uint16_t seg, uint8_t bus){
-    for(uint8_t i = 0; i < 32; i++) enumerate_device(seg, bus, i);
+static void enumerate_bus(uint16_t seg, uint8_t bus, x86_64::pci::device* parent){
+    for(uint8_t i = 0; i < 32; i++) 
+        enumerate_device(seg, bus, i, parent);
 }
 
-void x86_64::pci::parse_pci(){
+static void pci_route_all_irqs();
+
+void x86_64::pci::init_pci(){
     auto* mcfg = reinterpret_cast<acpi::mcfg_table*>(acpi::get_table(acpi::mcfg_table_signature));
     if(mcfg == nullptr){
         // No PCI-E use legacy access
         internal_read = legacy_read;
         internal_write = legacy_write;
-
-        uint8_t header_type = x86_64::pci::read(0, 0, 0, 0, 0xE, 1);
-        if(bitops<uint8_t>::bit_test(header_type, 7)){
-            for(uint8_t i = 0; i < 8; i++){
-                uint16_t vendor_id = x86_64::pci::read(0, 0, 0, i, 0, 2);
-                if(vendor_id == 0xFFFF) break; // Device doesn't exist
-                enumerate_bus(0, i);
-            }
-        } else {
-            enumerate_bus(0, 0);
-        }
     } else {
         size_t n_entries = (mcfg->header.length - (sizeof(acpi::sdt_header) + sizeof(uint64_t))) / sizeof(acpi::mcfg_table_entry); 
         for(uint64_t i = 0; i < n_entries; i++){
@@ -275,56 +269,84 @@ void x86_64::pci::parse_pci(){
             mcfg_entries.push_back(entry);
         }
 
-
         internal_read = mcfg_pci_read;
         internal_write = mcfg_pci_write;
+    }
+}
 
-        LAI_CLEANUP_STATE lai_state_t state;
-        lai_init_state(&state);
+void x86_64::pci::parse_pci(){
+    LAI_CLEANUP_STATE lai_state_t state;
+    lai_init_state(&state);
 
-        lai_variable_t pci_pnp_id = {};
-        lai_variable_t pcie_pnp_id = {};
-        lai_eisaid(&pci_pnp_id, x86_64::pci::pci_root_bus_pnp_id);
-        lai_eisaid(&pcie_pnp_id, x86_64::pci::pcie_root_bus_pnp_id);
+    lai_variable_t pci_pnp_id = {};
+    lai_variable_t pcie_pnp_id = {};
+    lai_eisaid(&pci_pnp_id, x86_64::pci::pci_root_bus_pnp_id);
+    lai_eisaid(&pcie_pnp_id, x86_64::pci::pcie_root_bus_pnp_id);
 
-        struct lai_ns_iterator iter = LAI_NS_ITERATOR_INITIALIZER;
-        lai_nsnode_t *node;
-        while ((node = lai_ns_iterate(&iter))) {
-            if (lai_check_device_pnp_id(node, &pci_pnp_id, &state) &&
-                    lai_check_device_pnp_id(node, &pcie_pnp_id, &state)) {
-                continue;
-            }
-
-            lai_variable_t bus_number = {};
-            uint64_t bbn_result = 0;
-            lai_nsnode_t *bbn_handle = lai_resolve_path(node, "_BBN");
-            if (bbn_handle) {
-                if (lai_eval(&bus_number, bbn_handle, &state)) {
-                    debug_printf("[PCI]: Couldn't evaluate Root Bus _BBN, skipping this one\n");
-                    continue;
-                }
-                lai_obj_get_integer(&bus_number, &bbn_result);
-            } else {
-                debug_printf("[PCI]: Root bus doesn't have _BBN, assuming 0\n");
-            }
-
-            lai_variable_t seg_number = {};
-            uint64_t seg_result = 0;
-            lai_nsnode_t *seg_handle = lai_resolve_path(node, "_SEG");
-            if (seg_handle) {
-                if (lai_eval(&seg_number, seg_handle, &state)){
-                    debug_printf("[PCI]: Couldn't evaluate Root Bus _SEG, assuming 0\n");
-                } else {
-                    lai_obj_get_integer(&seg_number, &seg_result);
-                }
-            } else {
-                debug_printf("[PCI]: Root bus doesn't have _SEG, assuming 0\n");
-            }
-            enumerate_bus(seg_result, bbn_result);
+    struct lai_ns_iterator iter = LAI_NS_ITERATOR_INITIALIZER;
+    lai_nsnode_t *node;
+    while ((node = lai_ns_iterate(&iter))) {
+        if (lai_check_device_pnp_id(node, &pci_pnp_id, &state) &&
+            lai_check_device_pnp_id(node, &pcie_pnp_id, &state)) {
+        continue;
         }
+
+        LAI_CLEANUP_VAR lai_variable_t bus_number = {};
+        uint64_t bbn_result = 0;
+        lai_nsnode_t *bbn_handle = lai_resolve_path(node, "_BBN");
+        if (bbn_handle) {
+            if (lai_eval(&bus_number, bbn_handle, &state)) {
+                debug_printf("[PCI]: Couldn't evaluate Root Bus _BBN, assuming 0\n");
+            }
+            lai_obj_get_integer(&bus_number, &bbn_result);
+        } else {
+            debug_printf("[PCI]: Root bus doesn't have _BBN, assuming 0\n");
+        }
+
+        LAI_CLEANUP_VAR lai_variable_t seg_number = {};
+        uint64_t seg_result = 0;
+        lai_nsnode_t *seg_handle = lai_resolve_path(node, "_SEG");
+        if (seg_handle) {
+            if (lai_eval(&seg_number, seg_handle, &state)){
+                debug_printf("[PCI]: Couldn't evaluate Root Bus _SEG, assuming 0\n");
+            } else {
+                lai_obj_get_integer(&seg_number, &seg_result);
+            }
+        } else {
+            debug_printf("[PCI]: Root bus doesn't have _SEG, assuming 0\n");
+        }
+
+        x86_64::pci::device* dev = pci_root_busses.empty_entry();
+        dev->exists = true;
+        dev->seg = seg_result;
+        dev->bus = bbn_result;
+        dev->parent = nullptr;
+        dev->node = node;
+
+        dev->prt = {};
+        lai_nsnode_t *prt_handle = lai_resolve_path(node, "_PRT");
+        if (prt_handle) {
+            if (lai_eval(&dev->prt, prt_handle, &state)){
+                debug_printf("[PCI]: Couldn't evaluate Root Bus _PRT, assuming none\n");
+            }
+        } else {
+            debug_printf("[PCI]: Root bus doesn't have _PRT, assuming none\n");
+        }
+
+
+        enumerate_bus(seg_result, bbn_result, nullptr);
     }
 
-    for(const auto& entry : pci_devices) debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code));
+    pci_route_all_irqs();
+
+    for(const auto& entry : pci_devices){
+        if(entry.exists){
+            if(entry.has_irq)
+                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s, gsi: %d\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.gsi);
+            else
+                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code));
+        }
+    } 
 }
 
 uint32_t x86_64::pci::read(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size){
@@ -412,4 +434,116 @@ x86_64::pci::device x86_64::pci::iterate(x86_64::pci::pci_iterator& iterator){
     }
 
     return x86_64::pci::device();
+}
+
+static x86_64::pci::device* pci_get_root_bus(uint16_t seg, uint8_t bus){
+    for(auto& it : pci_root_busses){
+        if(seg == it.seg && bus == it.bus)
+            return &it;
+    }
+    return nullptr;
+}
+
+static void pci_find_node(x86_64::pci::device* dev, lai_state_t* state){
+    if(dev->node)
+        return;
+
+    if(dev->parent)
+        pci_find_node(dev->parent, state);
+
+    lai_nsnode_t* bus = nullptr;
+    auto* r = pci_get_root_bus(dev->seg, dev->bus);
+    if(!r) {
+        if(!dev->parent)
+            PANIC("PCI Device not on root bus does not have parent node");
+
+        bus = dev->parent->node;
+    } else {
+        bus = r->node;
+    }
+
+    if(bus)
+        dev->node = lai_pci_find_device(bus, dev->device, dev->function, state);
+}
+
+constexpr uint8_t swizzle(uint8_t pin, uint8_t dev){
+    return (((pin - 1) + (dev % 4)) % 4) + 1;
+}
+
+static void pci_route_all_irqs(){
+    LAI_CLEANUP_STATE lai_state_t state;
+    lai_init_state(&state);
+
+    for(auto& dev : pci_devices){
+        if(dev.is_bridge)
+            pci_find_node(&dev, &state);
+
+        if(dev.node){
+            if(!lai_obj_get_type(&dev.prt)){
+                lai_nsnode_t* prt_handle = lai_resolve_path(dev.node, "_PRT");
+                if(prt_handle){
+                    if(lai_eval(&dev.prt, prt_handle, &state)){
+                        printf("Failed to evaluate prt for %d:%d:%d:%d", dev.seg, dev.bus, dev.device, dev.function);
+                    }
+                }
+            }
+        }
+    }
+
+    for(auto& dev : pci_devices){
+        uint8_t irq_pin = x86_64::pci::read(dev.seg, dev.bus, dev.device, dev.function, 0x3D, 1);
+
+        if(irq_pin == 0)
+            continue;
+        
+        x86_64::pci::device* tmp = &dev;
+        lai_variable_t* prt = nullptr;
+
+        while(1){
+            if(tmp->parent){
+                if(!lai_obj_get_type(&tmp->parent->prt)){
+                    // No PRT translate irq
+                    irq_pin = swizzle(irq_pin, tmp->device);
+                } else {
+                    prt = &tmp->parent->prt;
+                    break;
+                }
+                tmp = tmp->parent;
+            } else {
+                // On a root hub
+                x86_64::pci::device* bus = pci_get_root_bus(tmp->seg, tmp->bus);
+                if(!bus)
+                    PANIC("Couldn't find root node for device on it");
+                
+                prt = &bus->prt;
+                break;
+            }
+        }
+
+        if(!prt)
+            PANIC("Failed to find PRT");
+
+        lai_prt_iterator iter = {};
+        iter.prt = prt;
+        lai_api_error_t err;
+
+        bool found = false;
+
+        while(!(err = lai_pci_parse_prt(&iter))){
+            if(iter.slot == tmp->device && (iter.function == tmp->function || iter.function == -1) && iter.pin == (irq_pin - 1)){
+                dev.gsi = iter.gsi;
+                dev.has_irq = true;
+                found = true;
+                break;
+            }
+        }
+
+        if(!found){
+            debug_printf("[PCI]: Routing failed for %d:%d:%d:%d\n", dev.seg, dev.bus, dev.device, dev.function);
+            if(!dev.parent)
+                debug_printf("      Dev is on root bus");
+            else
+                debug_printf("      Dev is not on root bus");
+        }
+    }
 }

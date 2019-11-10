@@ -141,11 +141,13 @@ C_LINKAGE void kernel_main(){
     x86_64::apic::ioapic::init(madt);
 
 
-    x86_64::pci::parse_pci();
+    x86_64::pci::init_pci();
 
     x86_64::hpet::init_hpet();
 
     acpi::init_sci(madt);
+
+    x86_64::pci::parse_pci();
 
     proc::process::init_multitasking(madt);
 

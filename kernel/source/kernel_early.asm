@@ -85,7 +85,7 @@ _kernel_early:
 
 
     cld
-
+    cli
     extern kernel_main
     call kernel_main
 
