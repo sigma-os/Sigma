@@ -265,7 +265,7 @@ void x86_64::identify_cpu(){
         debug_printf("    Virtual address space bits: %d\n", (a >> 8) & 0xFF);
     }
 
-    debug_printf("Features: ");
+    debug_printf("    Features: ");
     x86_64::cpuid(1, a, b, c, d);
     using namespace cpuid_bits;
     if(d & FPU) debug_printf("fpu ");
@@ -327,5 +327,49 @@ void x86_64::identify_cpu(){
     if(c & AVX) debug_printf("avx ");
     if(c & F16C) debug_printf("f16c ");
     if(c & RDRND) debug_printf("rdrand ");
+
+    x86_64::cpuid(7, a, b, c, d);
+    if(b & FSGSBASE) debug_printf("fsgsbase ");
+    if(b & IA32_TSC_ADJUST) debug_printf("IA32_TSC_ADJUST ");
+    if(b & SGX) debug_printf("sgx ");
+    if(b & BMI1) debug_printf("bmi ");
+    if(b & HLE) debug_printf("hle ");
+    if(b & AVX2) debug_printf("avx2 ");
+    if(b & SMEP) debug_printf("smep ");
+    if(b & BMI2) debug_printf("bmi2 ");
+    if(b & ENH_MOVSB) debug_printf("enhanced-movsb ");
+    if(b & INVPCID) debug_printf("invpcid ");
+    if(b & RTM) debug_printf("rtm ");
+    if(b & MPX) debug_printf("mpx ");
+    if(b & AVX512F) debug_printf("avx-512f ");
+    if(b & AVX512DQ) debug_printf("avx-512dq ");
+    if(b & RDSEED) debug_printf("rdseed ");
+    if(b & ADX) debug_printf("adx ");
+    if(b & SMAP) debug_printf("smap ");
+    if(b & AVX512IFMA) debug_printf("avx-512ifma ");
+    if(b & CLFLUSHOPT) debug_printf("clflushopt ");
+    if(b & CLWB) debug_printf("clwb ");
+    if(b & AVX512PF) debug_printf("avx-512pf ");
+    if(b & AVX512ER) debug_printf("avx-512er ");
+    if(b & AVX512CD) debug_printf("avx-512cd ");
+    if(b & SHA) debug_printf("sha ");
+    if(b & AVX512BW) debug_printf("avx-512bw ");
+    if(b & AVX512VL) debug_printf("avx-512vl ");
+
+    if(c & PREFTCHWT1) debug_printf("prefetchwt1 ");
+    if(c & AVX512VBMI) debug_printf("avx-512vbmi ");
+    if(c & UMIP) debug_printf("umip ");
+    if(c & PKU) debug_printf("pku ");
+    if(c & OSPKE) debug_printf("ospke ");
+    if(c & WAITPKG) debug_printf("waitpkg ");
+    if(c & AVX512VBMI2) debug_printf("avx-512vbmi2 ");
+    if(c & GFNI) debug_printf("gfni ");
+    if(c & VAES) debug_printf("vector-avx ");
+    if(c & VPCLMULQDQ) debug_printf("clmul ");
+    if(c & AVX512VNNI) debug_printf("avx-512vnni ");
+    if(c & AVX512BITALG) debug_printf("avx-512bitalg ");
+    if(c & AVX512VPOPCNTDQ) debug_printf("avx-512vpopcntdq ");
+    if(c & RDPID) debug_printf("rdpid ");
+    
     debug_printf("\n");
 }

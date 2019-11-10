@@ -87,8 +87,9 @@ namespace x86_64
 
         /* Features in %ebx for leaf 7 sub-leaf 0 */
         constexpr uint64_t FSGSBASE = 0x00000001;
+        constexpr uint64_t IA32_TSC_ADJUST = 0x2;
         constexpr uint64_t SGX = 0x00000004;
-        constexpr uint64_t BMI = 0x00000008;
+        constexpr uint64_t BMI1 = 0x00000008;
         constexpr uint64_t HLE = 0x00000010;
         constexpr uint64_t AVX2 = 0x00000020;
         constexpr uint64_t SMEP = 0x00000080;
@@ -101,6 +102,7 @@ namespace x86_64
         constexpr uint64_t AVX512DQ = 0x00020000;
         constexpr uint64_t RDSEED = 0x00040000;
         constexpr uint64_t ADX = 0x00080000;
+        constexpr uint64_t SMAP = 0x100000;
         constexpr uint64_t AVX512IFMA = 0x00200000;
         constexpr uint64_t CLFLUSHOPT = 0x00800000;
         constexpr uint64_t CLWB = 0x01000000;
@@ -114,7 +116,8 @@ namespace x86_64
         /* Features in %ecx for leaf 7 sub-leaf 0 */
         constexpr uint64_t PREFTCHWT1 = 0x00000001;
         constexpr uint64_t AVX512VBMI = 0x00000002;
-        constexpr uint64_t PKU = 0x00000004;
+        constexpr uint64_t UMIP = 0x4;
+        constexpr uint64_t PKU = 0x00000008;
         constexpr uint64_t OSPKE = 0x00000010;
         constexpr uint64_t WAITPKG = 0x00000020;
         constexpr uint64_t AVX512VBMI2 = 0x00000040;
