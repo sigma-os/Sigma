@@ -56,6 +56,12 @@ namespace x86_64
         void init();
     }
 
+    namespace tsd
+    {
+        void init();
+    }
+    
+
     namespace regs {
         union cr4 {
             static cr4 load(){

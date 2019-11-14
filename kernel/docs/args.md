@@ -12,3 +12,4 @@ Options
 - `noinvpcid` will disable the `invpcid` instruction, note that this will not stop pcid from working without it
 - `nosmep` will disable SMEP (Supervisor Mode Execution Prevention)
 - `nosmap` will disable SMAP (Supervisor Mode Access Prevention)
+- `enable_tsd` will enable the TSD bit in cr4 which disallows the `rdtsc` instruction in userland, this can make speculative exploits harder to pull off, however many applications use this instruction for valid purposes so it is disabled by default

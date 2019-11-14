@@ -111,7 +111,19 @@ void x86_64::pcid::init(){
     }
 }
 
+void x86_64::tsd::init(){
+    // Assume the TSC is supported since it is *way* older than x86_64
+    if(misc::kernel_args::get_bool("enable_tsd")){
+        regs::cr4 cr4{};
+        cr4.bits.tsd = 1;
+        cr4.flush();
+        
+        debug_printf("[CPU]: Enabled TSD\n");
+    }
+}
+
 void x86_64::misc_features_init(){
+    x86_64::tsd::init();
     x86_64::smep::init();
     x86_64::smap::init();
     x86_64::umip::init();
