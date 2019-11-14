@@ -5,6 +5,7 @@
 #include <lai/helpers/sci.h>
 #include <lai/helpers/pm.h>
 #include <lai/drivers/ec.h>
+#include <lai/helpers/pc-bios.h>
 
 static uint64_t revision = 0;
 static auto acpi_tables = types::linked_list<uint64_t>();
@@ -30,7 +31,7 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
             acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
 		    uint64_t dsdt_phys_addr = 0;
 
-		    if(misc::is_canonical(fadt->x_dsdt) && revision != 0)
+		    if(misc::is_canonical(fadt->x_dsdt) && revision != 1)
 			    dsdt_phys_addr = fadt->x_dsdt;
 		    else
 			    dsdt_phys_addr = fadt->dsdt;
@@ -47,8 +48,6 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 
             debug_printf("Found at: %x\n", dsdt_addr);
         }
-		
-		
 		return reinterpret_cast<acpi::table*>(dsdt_addr);
 	}
 
@@ -130,38 +129,24 @@ uint16_t acpi::get_arch_boot_flags(){
     return flags;
 }
 
-void acpi::init(boot::boot_protocol* boot_protocol){
+void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
     FUNCTION_CALL_ONCE();
-
-    acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(boot_protocol->acpi_pointer);
-
-    //printf("NO: %x: %x\n",reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE));
-    //mm::vmm::kernel_vmm::get_instance().map_page(reinterpret_cast<uint64_t>(rsdp), (reinterpret_cast<uint64_t>(rsdp) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
-
-    uint8_t rsdp_checksum = 0;
-    for(size_t i = 0; i < sizeof(acpi::rsdp); i++) rsdp_checksum += ((uint8_t*)rsdp)[i];
-
-    if(rsdp_checksum != 0){
-        printf("[ACPI]: Failed RSDP checksum\n");
+    
+    lai_rsdp_info info{};
+    if(auto error = lai_bios_detect_rsdp(&info); error != LAI_ERROR_NONE){
+        printf("[ACPI]: Failed finding {R,X}SDP, Error: %s\n", lai_api_error_to_string(error));
         return;
     }
 
-    revision = rsdp->revision;
+    mm::vmm::kernel_vmm::get_instance().map_page(info.rsdp_address, info.rsdp_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::normal);
+    acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(info.rsdp_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    revision = info.acpi_version;
 
-    if(rsdp->revision > 0){
+    if(revision > 1){
         debug_printf("[ACPI]: Detected version 2 or higher\n");
         acpi::xsdp* xsdp = reinterpret_cast<acpi::xsdp*>(rsdp);
 
-        uint8_t xsdp_checksum = 0;
-        for(size_t i = 0; i < sizeof(acpi::xsdp); i++) xsdp_checksum += ((uint8_t*)xsdp)[i];
-
-        if(xsdp_checksum != 0){
-            printf("[ACPI]: Failed XSDP checksum\n");
-            return;
-        }
-
         debug_printf("[ACPI]: Found XSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", xsdp->oem_id[0], xsdp->oem_id[1], xsdp->oem_id[2], xsdp->oem_id[3], xsdp->oem_id[4], xsdp->oem_id[5], xsdp->revision);
-        
 
         mm::vmm::kernel_vmm::get_instance().map_page(xsdp->xsdt_address, (xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
 
@@ -171,7 +156,6 @@ void acpi::init(boot::boot_protocol* boot_protocol){
             printf("[ACPI]: Failed XSDT checksum\n");
             return;
         }
-
 
         size_t entries = (xsdt->header.length - sizeof(xsdt->header)) / 8;
 
@@ -194,17 +178,10 @@ void acpi::init(boot::boot_protocol* boot_protocol){
             }
 
         }
-
-
     } else {
         debug_printf("[ACPI]: Found RSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", rsdp->oem_id[0], rsdp->oem_id[1], rsdp->oem_id[2], rsdp->oem_id[3], rsdp->oem_id[4], rsdp->oem_id[5], rsdp->revision);
-
-        
-
-        mm::vmm::kernel_vmm::get_instance().map_page(rsdp->rsdt_address, (rsdp->rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
-
-        auto* rsdt = reinterpret_cast<acpi::rsdt*>(rsdp->rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-
+        mm::vmm::kernel_vmm::get_instance().map_page(info.rsdt_address, (info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+        auto* rsdt = reinterpret_cast<acpi::rsdt*>(info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         if(!do_checksum(reinterpret_cast<acpi::sdt_header*>(rsdt))){
             printf("[ACPI]: Failed RSDT checksum\n");
             return;
@@ -230,9 +207,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
 
                 acpi_tables.push_back(reinterpret_cast<uint64_t>(h));
             }
-
         }
-
     }
 
     if(auto* override = misc::kernel_args::get_str("dsdt_override"); override != nullptr){
@@ -247,7 +222,7 @@ void acpi::init(boot::boot_protocol* boot_protocol){
     }
 
     if(misc::kernel_args::get_bool("acpi_trace"))
-        lai_enable_tracing(1);
+        lai_enable_tracing(LAI_TRACE_OP);
 
     lai_set_acpi_revision(rsdp->revision);
 

@@ -62,6 +62,10 @@ void *laihost_map(size_t addr, size_t bytes){
     return reinterpret_cast<void*>(addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 }
 
+void laihost_unmap(size_t, size_t){
+    debug_printf("[LAI]: Ignoring laihost_unmap()\n");
+}
+
 void laihost_outb(uint16_t port, uint8_t val){
     x86_64::io::outb(port, val);
 }
