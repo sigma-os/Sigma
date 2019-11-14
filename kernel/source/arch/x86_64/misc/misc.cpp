@@ -237,139 +237,146 @@ void x86_64::identify_cpu(){
     else
         debug_printf("    Unknown vendorID, can't identify further\n"); 
     
-    x86_64::cpuid(0x80000000, a, b, c, d);
-    if(a >= 0x80000004){
-        // Model string supported
-        auto print_regs = +[](uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx){
-            char str[17] = "";
-            *((uint32_t*)str) = eax;
-            *((uint32_t*)str + 1) = ebx;
-            *((uint32_t*)str + 2) = ecx;
-            *((uint32_t*)str + 3) = edx;
-            debug_printf("%s", str);
-        };
-        debug_printf("    Model: ");
-        x86_64::cpuid(0x80000002, a, b, c, d);
-        print_regs(a, b, c, d);
-        x86_64::cpuid(0x80000003, a, b, c, d);
-        print_regs(a, b, c, d);
-        x86_64::cpuid(0x80000004, a, b, c, d);
-        print_regs(a, b, c, d);
-        debug_printf("\n");
+    if(x86_64::cpuid(0x80000000, a, b, c, d)){
+        if(a >= 0x80000004){
+            // Model string supported
+            auto print_regs = +[](uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx){
+                char str[17] = "";
+                *((uint32_t*)str) = eax;
+                *((uint32_t*)str + 1) = ebx;
+                *((uint32_t*)str + 2) = ecx;
+                *((uint32_t*)str + 3) = edx;
+                debug_printf("%s", str);
+            };
+            debug_printf("    Model: ");
+            x86_64::cpuid(0x80000002, a, b, c, d);
+            print_regs(a, b, c, d);
+            x86_64::cpuid(0x80000003, a, b, c, d);
+            print_regs(a, b, c, d);
+            x86_64::cpuid(0x80000004, a, b, c, d);
+            print_regs(a, b, c, d);
+            debug_printf("\n");
+        }
     }
+    
 
-    x86_64::cpuid(0x80000000, a, b, c, d);
-    if(a >= 0x80000008){
-        x86_64::cpuid(0x80000008, a, b, c, d);
-        debug_printf("    Physical address space bits: %d\n", a & 0xFF);
-        debug_printf("    Virtual address space bits: %d\n", (a >> 8) & 0xFF);
+    if(x86_64::cpuid(0x80000000, a, b, c, d)){
+        if(a >= 0x80000008){
+            x86_64::cpuid(0x80000008, a, b, c, d);
+            debug_printf("    Physical address space bits: %d\n", a & 0xFF);
+            debug_printf("    Virtual address space bits: %d\n", (a >> 8) & 0xFF);
+        }
     }
+    
+    using namespace cpuid_bits;
 
     debug_printf("    Features: ");
-    x86_64::cpuid(1, a, b, c, d);
-    using namespace cpuid_bits;
-    if(d & FPU) debug_printf("fpu ");
-    if(d & VME) debug_printf("vme ");
-    if(d & DE) debug_printf("de ");
-    if(d & PSE) debug_printf("pse ");
-    if(d & TSC) debug_printf("tsc ");
-    if(d & MSR) debug_printf("msr ");
-    if(d & PAE) debug_printf("pae ");
-    if(d & MCE) debug_printf("mce ");
-    if(d & CX8) debug_printf("cx8 ");
-    if(d & APIC) debug_printf("apic ");
-    if(d & SEP) debug_printf("sep ");
-    if(d & MTRR) debug_printf("mtrr ");
-    if(d & PGE) debug_printf("pge ");
-    if(d & MCA) debug_printf("mca ");
-    if(d & CMOV) debug_printf("cmovcc ");
-    if(d & PAT) debug_printf("pat ");
-    if(d & PSE36) debug_printf("pse36 ");
-    if(d & PSN) debug_printf("psn ");
-    if(d & CLFSH) debug_printf("clflush ");
-    if(d & DS) debug_printf("ds ");
-    if(d & ACPI) debug_printf("acpi ");
-    if(d & MMX) debug_printf("mmx ");
-    if(d & SSE) debug_printf("sse ");
-    if(d & SSE2) debug_printf("sse2 ");
-    if(d & SS) debug_printf("ss ");
-    if(d & HTT) debug_printf("htt ");
-    if(d & TM) debug_printf("tm ");
-    if(d & IA64) debug_printf("ia64 ");
-    if(d & PBE) debug_printf("#pbe ");
-    if(c & SSE3) debug_printf("sse3 ");
-    if(c & PCLMUL) debug_printf("pclmul ");
-    if(c & DTES64) debug_printf("dtes64 ");
-    if(c & MONITOR) debug_printf("monitor ");
-    if(c & DSCPL) debug_printf("ds-cpl ");
-    if(c & VMX) debug_printf("vmx ");
-    if(c & SMX) debug_printf("smx ");
-    if(c & EIST) debug_printf("est ");
-    if(c & TM2) debug_printf("TM2 ");
-    if(c & SSSE3) debug_printf("ssse3 ");
-    if(c & CNXTID) debug_printf("cid ");
-    if(c & SDBG) debug_printf("sdbg ");
-    if(c & FMA) debug_printf("fma ");
-    if(c & CMPXCHG16B) debug_printf("cx16 ");
-    if(c & xTPR) debug_printf("xtptr ");
-    if(c & PDCM) debug_printf("pdcm ");
-    if(c & PCID) debug_printf("pcid ");
-    if(c & DCA) debug_printf("dca ");
-    if(c & SSE4_1) debug_printf("sse4.1 ");
-    if(c & SSE4_2) debug_printf("sse4.2 ");
-    if(c & x2APIC) debug_printf("x2apic ");
-    if(c & MOVBE) debug_printf("movbe ");
-    if(c & POPCNT) debug_printf("popcnt ");
-    if(c & TSCDeadline) debug_printf("tsc-deadline ");
-    if(c & AES) debug_printf("aes ");
-    if(c & XSAVE) debug_printf("xsave ");
-    if(c & OSXSAVE) debug_printf("osxsave ");
-    if(c & AVX) debug_printf("avx ");
-    if(c & F16C) debug_printf("f16c ");
-    if(c & RDRND) debug_printf("rdrand ");
-
-    x86_64::cpuid(7, a, b, c, d);
-    if(b & FSGSBASE) debug_printf("fsgsbase ");
-    if(b & IA32_TSC_ADJUST) debug_printf("IA32_TSC_ADJUST ");
-    if(b & SGX) debug_printf("sgx ");
-    if(b & BMI1) debug_printf("bmi ");
-    if(b & HLE) debug_printf("hle ");
-    if(b & AVX2) debug_printf("avx2 ");
-    if(b & SMEP) debug_printf("smep ");
-    if(b & BMI2) debug_printf("bmi2 ");
-    if(b & ENH_MOVSB) debug_printf("enhanced-movsb ");
-    if(b & INVPCID) debug_printf("invpcid ");
-    if(b & RTM) debug_printf("rtm ");
-    if(b & MPX) debug_printf("mpx ");
-    if(b & AVX512F) debug_printf("avx-512f ");
-    if(b & AVX512DQ) debug_printf("avx-512dq ");
-    if(b & RDSEED) debug_printf("rdseed ");
-    if(b & ADX) debug_printf("adx ");
-    if(b & SMAP) debug_printf("smap ");
-    if(b & AVX512IFMA) debug_printf("avx-512ifma ");
-    if(b & CLFLUSHOPT) debug_printf("clflushopt ");
-    if(b & CLWB) debug_printf("clwb ");
-    if(b & AVX512PF) debug_printf("avx-512pf ");
-    if(b & AVX512ER) debug_printf("avx-512er ");
-    if(b & AVX512CD) debug_printf("avx-512cd ");
-    if(b & SHA) debug_printf("sha ");
-    if(b & AVX512BW) debug_printf("avx-512bw ");
-    if(b & AVX512VL) debug_printf("avx-512vl ");
-
-    if(c & PREFTCHWT1) debug_printf("prefetchwt1 ");
-    if(c & AVX512VBMI) debug_printf("avx-512vbmi ");
-    if(c & UMIP) debug_printf("umip ");
-    if(c & PKU) debug_printf("pku ");
-    if(c & OSPKE) debug_printf("ospke ");
-    if(c & WAITPKG) debug_printf("waitpkg ");
-    if(c & AVX512VBMI2) debug_printf("avx-512vbmi2 ");
-    if(c & GFNI) debug_printf("gfni ");
-    if(c & VAES) debug_printf("vector-avx ");
-    if(c & VPCLMULQDQ) debug_printf("clmul ");
-    if(c & AVX512VNNI) debug_printf("avx-512vnni ");
-    if(c & AVX512BITALG) debug_printf("avx-512bitalg ");
-    if(c & AVX512VPOPCNTDQ) debug_printf("avx-512vpopcntdq ");
-    if(c & RDPID) debug_printf("rdpid ");
+    if(x86_64::cpuid(1, a, b, c, d)){
+        if(d & FPU) debug_printf("fpu ");
+        if(d & VME) debug_printf("vme ");
+        if(d & DE) debug_printf("de ");
+        if(d & PSE) debug_printf("pse ");
+        if(d & TSC) debug_printf("tsc ");
+        if(d & MSR) debug_printf("msr ");
+        if(d & PAE) debug_printf("pae ");
+        if(d & MCE) debug_printf("mce ");
+        if(d & CX8) debug_printf("cx8 ");
+        if(d & APIC) debug_printf("apic ");
+        if(d & SEP) debug_printf("sep ");
+        if(d & MTRR) debug_printf("mtrr ");
+        if(d & PGE) debug_printf("pge ");
+        if(d & MCA) debug_printf("mca ");
+        if(d & CMOV) debug_printf("cmovcc ");
+        if(d & PAT) debug_printf("pat ");
+        if(d & PSE36) debug_printf("pse36 ");
+        if(d & PSN) debug_printf("psn ");
+        if(d & CLFSH) debug_printf("clflush ");
+        if(d & DS) debug_printf("ds ");
+        if(d & ACPI) debug_printf("acpi ");
+        if(d & MMX) debug_printf("mmx ");
+        if(d & SSE) debug_printf("sse ");
+        if(d & SSE2) debug_printf("sse2 ");
+        if(d & SS) debug_printf("ss ");
+        if(d & HTT) debug_printf("htt ");
+        if(d & TM) debug_printf("tm ");
+        if(d & IA64) debug_printf("ia64 ");
+        if(d & PBE) debug_printf("#pbe ");
+        if(c & SSE3) debug_printf("sse3 ");
+        if(c & PCLMUL) debug_printf("pclmul ");
+        if(c & DTES64) debug_printf("dtes64 ");
+        if(c & MONITOR) debug_printf("monitor ");
+        if(c & DSCPL) debug_printf("ds-cpl ");
+        if(c & VMX) debug_printf("vmx ");
+        if(c & SMX) debug_printf("smx ");
+        if(c & EIST) debug_printf("est ");
+        if(c & TM2) debug_printf("TM2 ");
+        if(c & SSSE3) debug_printf("ssse3 ");
+        if(c & CNXTID) debug_printf("cid ");
+        if(c & SDBG) debug_printf("sdbg ");
+        if(c & FMA) debug_printf("fma ");
+        if(c & CMPXCHG16B) debug_printf("cx16 ");
+        if(c & xTPR) debug_printf("xtptr ");
+        if(c & PDCM) debug_printf("pdcm ");
+        if(c & PCID) debug_printf("pcid ");
+        if(c & DCA) debug_printf("dca ");
+        if(c & SSE4_1) debug_printf("sse4.1 ");
+        if(c & SSE4_2) debug_printf("sse4.2 ");
+        if(c & x2APIC) debug_printf("x2apic ");
+        if(c & MOVBE) debug_printf("movbe ");
+        if(c & POPCNT) debug_printf("popcnt ");
+        if(c & TSCDeadline) debug_printf("tsc-deadline ");
+        if(c & AES) debug_printf("aes ");
+        if(c & XSAVE) debug_printf("xsave ");
+        if(c & OSXSAVE) debug_printf("osxsave ");
+        if(c & AVX) debug_printf("avx ");
+        if(c & F16C) debug_printf("f16c ");
+        if(c & RDRND) debug_printf("rdrand ");
+    }
     
+    
+
+    if(x86_64::cpuid(7, a, b, c, d)){
+        if(b & FSGSBASE) debug_printf("fsgsbase ");
+        if(b & IA32_TSC_ADJUST) debug_printf("IA32_TSC_ADJUST ");
+        if(b & SGX) debug_printf("sgx ");
+        if(b & BMI1) debug_printf("bmi ");
+        if(b & HLE) debug_printf("hle ");
+        if(b & AVX2) debug_printf("avx2 ");
+        if(b & SMEP) debug_printf("smep ");
+        if(b & BMI2) debug_printf("bmi2 ");
+        if(b & ENH_MOVSB) debug_printf("enhanced-movsb ");
+        if(b & INVPCID) debug_printf("invpcid ");
+        if(b & RTM) debug_printf("rtm ");
+        if(b & MPX) debug_printf("mpx ");
+        if(b & AVX512F) debug_printf("avx-512f ");
+        if(b & AVX512DQ) debug_printf("avx-512dq ");
+        if(b & RDSEED) debug_printf("rdseed ");
+        if(b & ADX) debug_printf("adx ");
+        if(b & SMAP) debug_printf("smap ");
+        if(b & AVX512IFMA) debug_printf("avx-512ifma ");
+        if(b & CLFLUSHOPT) debug_printf("clflushopt ");
+        if(b & CLWB) debug_printf("clwb ");
+        if(b & AVX512PF) debug_printf("avx-512pf ");
+        if(b & AVX512ER) debug_printf("avx-512er ");
+        if(b & AVX512CD) debug_printf("avx-512cd ");
+        if(b & SHA) debug_printf("sha ");
+        if(b & AVX512BW) debug_printf("avx-512bw ");
+        if(b & AVX512VL) debug_printf("avx-512vl ");
+
+        if(c & PREFTCHWT1) debug_printf("prefetchwt1 ");
+        if(c & AVX512VBMI) debug_printf("avx-512vbmi ");
+        if(c & UMIP) debug_printf("umip ");
+        if(c & PKU) debug_printf("pku ");
+        if(c & OSPKE) debug_printf("ospke ");
+        if(c & WAITPKG) debug_printf("waitpkg ");
+        if(c & AVX512VBMI2) debug_printf("avx-512vbmi2 ");
+        if(c & GFNI) debug_printf("gfni ");
+        if(c & VAES) debug_printf("vector-avx ");
+        if(c & VPCLMULQDQ) debug_printf("clmul ");
+        if(c & AVX512VNNI) debug_printf("avx-512vnni ");
+        if(c & AVX512BITALG) debug_printf("avx-512bitalg ");
+        if(c & AVX512VPOPCNTDQ) debug_printf("avx-512vpopcntdq ");
+        if(c & RDPID) debug_printf("rdpid ");
+    }
     debug_printf("\n");
 }
