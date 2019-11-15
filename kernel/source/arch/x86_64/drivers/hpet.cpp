@@ -1,44 +1,22 @@
 #include <Sigma/arch/x86_64/drivers/hpet.h>
 
 #include <lai/core.h>
+#include <lai/helpers/resource.h>
 
 static x86_64::hpet::table* acpi_table = nullptr;
+static uint64_t base = 0;
 static uint64_t main_counter_clk = 0;
 static uint64_t n_counters = 0;
 static bool supports_64bit_counter = false;
 
 static uint64_t hpet_read(uint64_t reg){
-    uint64_t ret = 0;
-    switch (acpi_table->base_addr_low.id)
-    {
-    case acpi::generic_address_structure_id_system_memory:
-        {
-            volatile uint64_t* ptr = reinterpret_cast<volatile uint64_t*>(acpi_table->base_addr_low.address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
-            ret = *ptr;
-        }
-        break;
-    
-    default:
-        PANIC("[HPET]: Unknown Generic Address Structure ID");
-        break;
-    }
-    return ret;
+    volatile uint64_t* ptr = reinterpret_cast<volatile uint64_t*>(base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
+    return *ptr;
 }
 
 static void hpet_write(uint64_t reg, uint64_t value){
-    switch (acpi_table->base_addr_low.id)
-    {
-    case acpi::generic_address_structure_id_system_memory:
-        {
-            volatile uint64_t* ptr = reinterpret_cast<volatile uint64_t*>(acpi_table->base_addr_low.address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
-            *ptr = value;
-        }
-        break;
-    
-    default:
-        PANIC("[HPET]: Unknown Generic Address Structure ID");
-        break;
-    }
+    volatile uint64_t* ptr = reinterpret_cast<volatile uint64_t*>(base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
+    *ptr = value;
 }
 
 void x86_64::hpet::init_hpet(){
@@ -97,16 +75,50 @@ void x86_64::hpet::init_hpet(){
     if(acpi_table == nullptr){
         // Huh thats odd, there is an AML device but no table?
         // TODO: In this case get the HPET base from the AML _CRS object
-        PANIC("TODO, Extract HPET base from _CRS");
+
+        lai_nsnode_t* crs_node = lai_resolve_path(node, "_CRS");
+        if(!crs_node)
+            PANIC("No HPET table and no _CRS, can't initialize HPET");
+
+        LAI_CLEANUP_VAR lai_variable_t crs = {};
+        if(lai_eval(&crs, crs_node, &state))
+            PANIC("Couldn't evaluate HPET _CRS");
+
+        lai_resource_view view = LAI_RESOURCE_VIEW_INITIALIZER(&crs);
+        lai_api_error_t e;
+        while(!(e = lai_resource_iterate(&view))) {
+            enum lai_resource_type type = lai_resource_get_type(&view);
+            switch(type) {
+                case LAI_RESOURCE_MEM:
+                    base = view.base;
+                    debug_printf("[HPET]: Found HPET base in _CRS, base: %x\n", base);
+                default:
+                    break;
+            }
+        }
+    } else {
+        base = acpi_table->base_addr_low.address;
+
+        if(acpi_table->base_addr_low.id != acpi::generic_address_structure_id_system_memory) {
+            printf("[HPET]: Unkown ACPI Generic Address Structure Access ID: %x\n", acpi_table->base_addr_low.id);
+            PANIC("");
+        }
     }
 
-    if(acpi_table->base_addr_low.id != acpi::generic_address_structure_id_system_memory) {
-        printf("[HPET]: Unkown ACPI Generic Address Structure Access ID: %x\n", acpi_table->base_addr_low.id);
-        PANIC("");
-    }
+    if(!base)
+        PANIC("[HPET]: Wasn't able to find HPET base");
 
-    mm::vmm::kernel_vmm::get_instance().map_page(acpi_table->base_addr_low.address, (acpi_table->base_addr_low.address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute, map_page_chache_types::uncacheable);
     
+    if(((hpet_read(general_capabilities_and_id_reg) >> 16) & 0xFFFF) == 0xFFFF)
+        PANIC("[HPET]: No HPET detected, need HPET to further boot");
+
+    #ifdef DEBUG
+    debug_printf("[HPET]: Initializing HPET device: base: %x, PCI Vendor ID: %x, Revision: %x, Counter clk: %x, N counters: %x", base, ((hpet_read(general_capabilities_and_id_reg) >> 16) & 0xFFFF), (hpet_read(general_capabilities_and_id_reg) & 0xFF), main_counter_clk, n_counters);
+    if(supports_64bit_counter) debug_printf(", Supports 64bit counter\n");
+    else debug_printf("\n");
+    #endif
+
     uint64_t general_cap_and_id = hpet_read(x86_64::hpet::general_capabilities_and_id_reg);
     main_counter_clk = ((general_cap_and_id >> 32) & 0xFFFFFFFF);
     if(!(main_counter_clk <= 0x05F5E100) || main_counter_clk == 0){
@@ -122,11 +134,7 @@ void x86_64::hpet::init_hpet(){
 
     supports_64bit_counter = bitops<uint64_t>::bit_test(general_cap_and_id, 13);
 
-    #ifdef DEBUG
-    debug_printf("[HPET]: Initializing HPET device: base: %x, PCI Vendor ID: %x, Revision: %x, Counter clk: %x, N counters: %x", acpi_table->base_addr_low.address, ((acpi_table->event_timer_block_id >> 16) & 0xFFFF), (acpi_table->event_timer_block_id & 0xFF), main_counter_clk, n_counters);
-    if(supports_64bit_counter) debug_printf(", Supports 64bit counter\n");
-    else debug_printf("\n");
-    #endif
+    
 
 
     hpet_write(x86_64::hpet::general_configuration_reg, 0); // Main counter disabled, legacy routing disabled

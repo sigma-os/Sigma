@@ -15,5 +15,8 @@ Look in [sigma-os/bootstrap](https://github.com/sigma-os/bootstrap)
 - SMP with scheduler level support
 - Dynamically linked userland backed by [mlibc](https://www.github.com/managarm/mlibc)
  
-## On the microkernel
-Sigma does try to have as much drivers and things in userspace(PL3) but it doesn't attempt to move the memory manager and process management / scheduler out of the kernel.
+## Notes
+
+- Sigma does try to have as much drivers and things in userspace(PL3) but it doesn't attempt to move the memory manager and process management / scheduler out of the kernel.
+
+- When running vbox use the `ich9` chipset, if you must use the `piix3` chipset you need to explicitly enable the HPET with this command `VBoxManage modifyvm <your vm name> --hpet on`
