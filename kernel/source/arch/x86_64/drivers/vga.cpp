@@ -1,4 +1,4 @@
-#include <Sigma/arch/x86_64/vga.h>
+#include <Sigma/arch/x86_64/drivers/vga.h>
 #include <klibcxx/mutex.hpp>
 #include <klibc/stdio.h>
 

@@ -1,30 +1,65 @@
 #include <Sigma/arch/x86_64/idt.h>
 x86_64::idt::handler handlers[x86_64::idt::idt_max_entries] = {};
 
+const char* exception_mnemonics[] = {
+    "DE",
+    "DB",
+    "NMI",
+    "BP",
+    "OF",
+    "BR",
+    "UD",
+    "NM",
+    "DF",
+    "-",
+    "TS",
+    "NP",
+    "SS",
+    "GP",
+    "PF",
+    "-",
+    "MF",
+    "AC",
+    "MC",
+    "XM/XF",
+    "VE",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "SX",
+    "-"
+};
+
 const char* exeception_msg[] = {
     "Division By Zero",
     "Debug",
     "Non Maskable Interrupt",
     "Breakpoint",
-    "Into Detected Overflow",
+    "Overflow",
     "Out of Bounds",
     "Invalid Opcode",
     "No Coprocessor",
 
     "Double Fault",
     "Coprocessor Segment Overrun",
-    "Bad TSS",
+    "Invalid TSS",
     "Segment Not Present",
     "Stack Fault",
     "General Protection Fault",
     "Page Fault",
-    "Unknown Interrupt",
+    "Reserved",
 
-    "Coprocessor Fault",
+    "x87 Floating-Point Exception",
     "Alignment Check",
     "Machine Check",
-    "Reserved",
-    "Reserved",
+    "SIMD Floating-Point Exception",
+    "Virtualization Exception",
     "Reserved",
     "Reserved",
     "Reserved",
@@ -35,7 +70,7 @@ const char* exeception_msg[] = {
     "Reserved",
     "Reserved",
     "Reserved",
-    "Reserved",
+    "Security Exception",
     "Reserved"
 };
 
@@ -43,10 +78,9 @@ static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers){
     uint64_t cr2;
     asm("mov %%cr2, %0" : "=r"(cr2));
 
-    printf("PAGE FAULT: At linear address: %x, RIP: %x\n Errors: ", cr2, registers->rip);
+    printf("    Linear Address: %x\n    Conditions: ", cr2);
 
     uint64_t error_code = registers->error_code;
-
     if(bitops<uint64_t>::bit_test(error_code, 0)) printf("Protection violation ");
     if(bitops<uint64_t>::bit_test(error_code, 1)) printf("Write ");
     if(bitops<uint64_t>::bit_test(error_code, 2)) printf("User ");
@@ -61,20 +95,13 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
 
     smp::cpu::entry* cpu = smp::cpu::get_current_cpu();
 
-    if (handlers[n].callback != nullptr){
-        x86_64::idt::idt_function f = handlers[n].callback;
-        f(registers);
-    } else {
-        if (n < 32){
-            printf("[IDT]: Received interrupt %i, %s\n Error Code: %x\n", n, exeception_msg[n], registers->error_code);
-        } else {
-            printf("[IDT]: Received interrupt %i\n", n);
-        } 
-
-        
-
-        printf("RIP: %x, CPU: %d\n", registers->rip, cpu->lapic_id);
+    if (n < 32){
+        printf("[IDT]: Received interrupt %d, #%s: %s\n    Error Code: %x\n", n, exception_mnemonics[n], exeception_msg[n], registers->error_code);
+        printf("    RIP: %x, RSP: %x, CPU: %d\n", registers->rip, registers->rsp, cpu->lapic_id);
     }
+    
+    if(handlers[n].callback)
+            handlers[n].callback(registers);
 
     // It is an IRQ so send an EOI
     if(handlers[n].is_irq) cpu->lapic.send_eoi();

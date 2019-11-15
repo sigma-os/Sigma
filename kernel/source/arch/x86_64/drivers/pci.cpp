@@ -541,9 +541,9 @@ static void pci_route_all_irqs(){
         if(!found){
             debug_printf("[PCI]: Routing failed for %d:%d:%d:%d\n", dev.seg, dev.bus, dev.device, dev.function);
             if(!dev.parent)
-                debug_printf("      Dev is on root bus");
+                debug_printf("      Dev is on root bus\n");
             else
-                debug_printf("      Dev is not on root bus");
+                debug_printf("      Dev is not on root bus\n");
         }
     }
 }

@@ -2,8 +2,8 @@
 #define SIGMA_KLIBC_STDIO
 
 #include <Sigma/common.h>
-#include <Sigma/arch/x86_64/vga.h>
-#include <Sigma/arch/x86_64/serial.h>
+#include <Sigma/arch/x86_64/drivers/vga.h>
+#include <Sigma/arch/x86_64/drivers/serial.h>
 
 #define EOF (-1)
 
