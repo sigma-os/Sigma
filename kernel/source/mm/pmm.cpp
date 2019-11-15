@@ -30,16 +30,22 @@ struct rle_stack_entry {
 
 static rle_stack_entry* stack_base;
 static rle_stack_entry* stack_pointer;
+static rle_stack_entry* stack_top;
 
 
 //TODO: Check for stack undeflow and overflow
 static rle_stack_entry pop(){
     stack_pointer--;
+    if(stack_pointer == (stack_base - 1))
+        PANIC("[PMM]: RLE Stack underflow");
+
     rle_stack_entry ent = *stack_pointer;
     return ent;
 }
 
 static void push(rle_stack_entry entry){
+    if((stack_pointer + 2) == stack_top)
+        PANIC("[PMM]: RLE Stack overflow");
     *stack_pointer++ = entry;
 }
 
@@ -58,9 +64,21 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     stack_base = reinterpret_cast<rle_stack_entry*>(kernel_end);
     stack_pointer = stack_base;
 
-    uint64_t n_blocks = (boot_protocol->memsize * 0x100);
+    // TODO: Count the mmap
+    uint64_t n_blocks = 0;
+    {
+        multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
+        for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++)
+            if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
+                n_blocks += (entry->len / mm::pmm::block_size);
+
+        printf("Detected Memory: %dmb\n", (n_blocks * 4) / 1024);
+    }
+
     uint64_t worst_case_size = (n_blocks * sizeof(rle_stack_entry));
     kernel_end += worst_case_size;
+
+    stack_top = reinterpret_cast<rle_stack_entry*>(kernel_end);
 
     mbd_start = boot_protocol->reserve_start;
     mbd_end = (boot_protocol->reserve_start + boot_protocol->reserve_length);
@@ -68,10 +86,40 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     initrd_end = boot_protocol->kernel_initrd_size + initrd_start;
 
     multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
-    for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){// += ent->entry_size){
+    for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){
+        debug_printf("[e820]: Base: %x, Len: %x, Type: ", entry->addr, entry->len);
+        switch (entry->type)
+        {
+        case MULTIBOOT_MEMORY_AVAILABLE:
+            debug_printf("Available\n");
+            break;
+        case MULTIBOOT_MEMORY_RESERVED:
+            debug_printf("Reserved\n");
+            break;
+        case MULTIBOOT_MEMORY_ACPI_RECLAIMABLE:
+            debug_printf("ACPI Reclaimable\n");
+            break;
+        case MULTIBOOT_MEMORY_NVS:
+            debug_printf("NVS\n");
+            break;
+        case MULTIBOOT_MEMORY_BADRAM:
+            debug_printf("Badram\n");
+            break;
+        default:
+            debug_printf("Unknown\n");
+            break;
+        }
+
         if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
-            push({.base = entry->addr, .n_pages = (entry->len / mm::pmm::block_size)});
+            // TODO: Make this work on real hw
+            // If it is below 1MiB just skip it
+            /*if(entry->addr + entry->len < (1024 * 1024))
+                continue;
+            else if(entry->addr < (1024 * 1024))
+                push({.base = (1024 * 1024), .n_pages = ((entry->len - ((1024 * 1024) - entry->addr)) / mm::pmm::block_size)});
+            else*/
+                push({.base = entry->addr, .n_pages = (entry->len / mm::pmm::block_size)});
         }
     }
 
@@ -79,10 +127,9 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     pmm_global_mutex.unlock();
 
-    // TODO: Remove this hack and just ignore any memory under 1mb
-    for(uint8_t i = 0; i < 10; i++){ // Reserve first 10 blocks for BIOS stuff and Trampoline code
+    // TODO: Remove this hack and just ignore any mem under 1MiB
+    for(int i = 0; i < 10; i++)
         mm::pmm::alloc_block();
-    }
 }
 
 NODISCARD_ATTRIBUTE
