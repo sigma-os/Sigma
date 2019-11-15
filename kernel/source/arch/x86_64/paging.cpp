@@ -260,7 +260,9 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         uint64_t pdpt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
         memset_aligned_4k(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0);
         set_frame(new_pml4_entry, pdpt);
-        set_flags(new_pml4_entry, entry_flags);
+        bitops<uint64_t>::bit_set(new_pml4_entry, page_entry_present);
+        bitops<uint64_t>::bit_set(new_pml4_entry, page_entry_writeable);
+        bitops<uint64_t>::bit_set(new_pml4_entry, page_entry_user);
 
         pml4_addr->entries[pml4_index_number] = new_pml4_entry;
         pml4_entry = new_pml4_entry;
@@ -274,7 +276,9 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         uint64_t pd = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
         memset_aligned_4k(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0);
         set_frame(new_pdpt_entry, pd);
-        set_flags(new_pdpt_entry, entry_flags);
+        bitops<uint64_t>::bit_set(new_pdpt_entry, page_entry_present);
+        bitops<uint64_t>::bit_set(new_pdpt_entry, page_entry_writeable);
+        bitops<uint64_t>::bit_set(new_pdpt_entry, page_entry_user);
 
         pdpt->entries[pdpt_index_number] = new_pdpt_entry;
         pdpt_entry = new_pdpt_entry;
@@ -288,7 +292,9 @@ bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t fla
         uint64_t pt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
         memset_aligned_4k(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0);
         set_frame(new_pd_entry, pt);
-        set_flags(new_pd_entry, entry_flags);
+        bitops<uint64_t>::bit_set(new_pd_entry, page_entry_present);
+        bitops<uint64_t>::bit_set(new_pd_entry, page_entry_writeable);
+        bitops<uint64_t>::bit_set(new_pd_entry, page_entry_user);
 
         pd->entries[pd_index_number] = new_pd_entry;
         pd_entry = new_pd_entry;

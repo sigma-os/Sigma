@@ -48,13 +48,13 @@ initialize_efer:
 
     ret
 
-;initialize_cr0:
-;    mov rax, cr0
-;    bts rax, 16 ; Set Write Protect bit so the CPU will enfore the Writable paging bit in kernel mode
-;    mov cr0, rax
+initialize_cr0:
+    mov rax, cr0
+    bts rax, 16 ; Set Write Protect bit so the CPU will enfore the Writable paging bit in kernel mode
+    mov cr0, rax
 
-;    ret
- 
+    ret
+
 initialize_cr4:
     xor rax, rax
     mov eax, 1
@@ -77,7 +77,7 @@ _kernel_early:
     call initialize_sse
     call initialize_osxsave
     call initialize_efer
-    ;call initialize_cr0
+    call initialize_cr0
     call initialize_cr4
 
     extern _init
@@ -109,16 +109,20 @@ _smp_kernel_early:
     call initialize_sse
     call initialize_osxsave
     call initialize_efer
-    ;call initialize_cr0
+    call initialize_cr0
     call initialize_cr4
     
+    cli
     cld
+    
     extern smp_kernel_main
     call smp_kernel_main
 
     cli
     hlt
 
+
+section .data
 
 global trampoline_stack
 trampoline_stack: dq 0

@@ -44,6 +44,7 @@ trampoline_enter_32:
     movl %cr4, %eax
     bts $4, %eax // Set PSE (Page Size Extension)
     bts $5, %eax // Set PAE (Physical Address Extension
+    bts $7, %eax // Set PGE
     mov %eax, %cr4
 
     lgdt (SMP_START + (trampoline_gdt64_pointer - trampoline_start)) 
@@ -54,6 +55,7 @@ trampoline_enter_32:
     movl $0xc0000080, %ecx
     rdmsr
     bts $8, %eax // Set Long Mode Enable Bit
+    bts $11, %eax // Set NXE
     wrmsr
 
     movl %cr0, %eax
@@ -135,7 +137,11 @@ pdpt_table:
 pd_table:
 	.quad 0x0000000000000083
 	.quad 0x0000000000200083
-	.fill 510,8,0
+	.quad 0x0000000000400083
+	.quad 0x0000000000600083
+	.quad 0x0000000000800083
+	.quad 0x0000000000A00083
+	.fill 506,8,0
 
 .globl trampoline_end
 trampoline_end:

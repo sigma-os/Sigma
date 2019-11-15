@@ -18,7 +18,7 @@ void x86_64::apic::lapic::write(uint32_t reg, uint32_t data){
 void x86_64::apic::lapic::init(){
     uint64_t apic_base_msr = msr::read(msr::apic_base);
 
-    base = (apic_base_msr & 0xFFFFFFFFFFFFF000);
+    this->base = (apic_base_msr & 0xFFFFFFFFFFFFF000);
 
     bitops<uint64_t>::bit_set(apic_base_msr, 11); // Set Enable bit
     msr::write(msr::apic_base, apic_base_msr);
