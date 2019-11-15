@@ -13,7 +13,6 @@ namespace proc::process
 namespace proc::simd
 {
     void init_simd();
-    void init_ap_simd();
     void save_state(proc::process::thread* thread);
     void restore_state(proc::process::thread* thread);
     void clone_state(uint8_t** old_thread, uint8_t** new_thread);

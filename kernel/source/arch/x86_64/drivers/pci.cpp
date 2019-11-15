@@ -232,8 +232,6 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
         // PCI to PCI bridge has 2 bars
         for(uint8_t i = 0; i < 3; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
     }
-
-    // TODO: route IRQs
 }
 
 static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device, x86_64::pci::device* parent){

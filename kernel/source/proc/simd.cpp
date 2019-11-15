@@ -1,6 +1,7 @@
 #include <Sigma/proc/simd.h>
 #include <Sigma/proc/process.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
+#include <Sigma/arch/x86_64/cpu.h>
 #include <Sigma/mm/hmm.h>
 
 C_LINKAGE void xsave_int(uint8_t* state);
@@ -60,7 +61,7 @@ void proc::simd::init_simd(){
     uint32_t a1, b1, c1, d1;
     if(!x86_64::cpuid(1, a1, b1, c1, d1)) PANIC("Default CPUID leaf does not exist");
 
-    if(c1 & bit_XSAVE){
+    if(c1 & x86_64::cpuid_bits::XSAVE){
         uint32_t a2, b2, c2, d2;
         if(!x86_64::cpuid(0xD, 0, a2, b2, c2, d2)) PANIC("XSAVE exists but CPUID leaf 0xD doesnt exist");
         
@@ -76,7 +77,7 @@ void proc::simd::init_simd(){
         global_restore = +[](uint8_t* state){
             xrstor_int(state);
         };
-    } else if(d1 & bit_FXSAVE){
+    } else if(d1 & x86_64::cpuid_bits::FXSAVE){
         save_size = 512;
         save_align = 16;
         
@@ -94,20 +95,4 @@ void proc::simd::init_simd(){
     default_state = static_cast<uint8_t*>(mm::hmm::kmalloc_a(save_size, save_align));
     memset(static_cast<void*>(default_state), 0, save_size);
     global_save(default_state);
-}
-
-// TODO: This is ugly, move this somewhere better or make it clearer
-void proc::simd::init_ap_simd(){
-    uint32_t a1, b1, c1, d1;
-    if(!x86_64::cpuid(1, a1, b1, c1, d1)) PANIC("Default CPUID leaf does not exist");
-
-    if(c1 & bit_XSAVE){
-        // TODO, move this to an x86_64::regs::xcr0 class
-        uint64_t xcr0 = 0;
-        bitops<uint64_t>::bit_set(xcr0, 0); // Set FPU bit, since it is *always* required to be set
-        if(d1 & bit_SSE) bitops<uint64_t>::bit_set(xcr0, 1); // Enable SSE, is always done becuase this is long mode but check because why not
-        if(c1 & bit_AVX) bitops<uint64_t>::bit_set(xcr0, 2); // Enable AVX-256
-
-        x86_64::write_xcr(0, xcr0);
-    }
 }

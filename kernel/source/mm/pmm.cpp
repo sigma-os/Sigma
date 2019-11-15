@@ -33,7 +33,6 @@ static rle_stack_entry* stack_pointer;
 static rle_stack_entry* stack_top;
 
 
-//TODO: Check for stack undeflow and overflow
 static rle_stack_entry pop(){
     stack_pointer--;
     if(stack_pointer == (stack_base - 1))
@@ -64,7 +63,6 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     stack_base = reinterpret_cast<rle_stack_entry*>(kernel_end);
     stack_pointer = stack_base;
 
-    // TODO: Count the mmap
     uint64_t n_blocks = 0;
     {
         multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);

@@ -4,6 +4,7 @@
 #include <Sigma/common.h>
 #include <Sigma/misc.h>
 #include <Sigma/arch/x86_64/msr.h>
+#include <Sigma/arch/x86_64/misc/misc.h>
 #include <Sigma/smp/cpu.h>
 
 namespace x86_64
@@ -106,7 +107,44 @@ namespace x86_64
             uint64_t raw;
         };
         static_assert(sizeof(cr4) == 8);
+
+        union xcr0 {
+            static xcr0 load(){
+                return {x86_64::read_xcr(0)};
+            }
+
+            static void store(xcr0 reg){
+                x86_64::write_xcr(0, reg.raw);
+            }
+
+            xcr0(uint64_t raw): raw(raw) {}
+            xcr0(){
+                *this = xcr0::load();
+            }
+
+            void flush(){
+                xcr0::store(*this);
+            }
+
+            struct _bits {
+                uint64_t fpu_mmx : 1;
+                uint64_t sse : 1;
+                uint64_t avx : 1;
+                uint64_t bndreg : 1;
+                uint64_t bndcsr : 1;
+                uint64_t opmask : 1;
+                uint64_t zmm_hi256 : 1;
+                uint64_t zmm_hi16 : 1;
+                uint64_t pkru : 1;
+            };
+            static_assert(sizeof(_bits) == 8);
+            _bits bits;
+            uint64_t raw;
+        };
+        static_assert(sizeof(xcr0) == 8);
     }
+
+
 
     #pragma region cpuid bits
     namespace cpuid_bits {

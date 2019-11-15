@@ -233,7 +233,6 @@ void proc::process::init_cpu(){
             smp::cpu::get_current_cpu()->lapic.enable_timer(proc::process::cpu_quantum_interrupt_vector, proc::process::cpu_quantum, x86_64::apic::lapic_timer_modes::PERIODIC);
             entry.enabled = true;
             entry.current_thread = kernel_thread;
-            proc::simd::init_ap_simd();
             return;
         }
     }

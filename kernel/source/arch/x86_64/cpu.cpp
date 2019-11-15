@@ -130,6 +130,18 @@ void x86_64::misc_features_init(){
     x86_64::umip::init();
     x86_64::pat::init();
     x86_64::pcid::init();
+
+    uint32_t a1, b1, c1, d1;
+    x86_64::cpuid(1, a1, b1, c1, d1);
+
+    if(c1 & cpuid_bits::XSAVE){
+        // xcr0 specifies what the `xsave` instruction should save, however it is also used for enabling instruction sets, e.g. AVX
+        x86_64::regs::xcr0 xcr{};
+        xcr.bits.fpu_mmx = 1; // Set FPU bit, since it is *always* required to be set
+        if(d1 & cpuid_bits::SSE) xcr.bits.sse = 1; // Enable SSE, is always done becuase this is long mode but check because why not
+        if(c1 & cpuid_bits::AVX) xcr.bits.avx = 1; // Enable AVX
+        xcr.flush();
+    }
 }
 
 #pragma region CPU Model Identification
@@ -405,6 +417,7 @@ void x86_64::identify_cpu(){
         if(d & DS) debug_printf("ds ");
         if(d & ACPI) debug_printf("acpi ");
         if(d & MMX) debug_printf("mmx ");
+        if(d & FXSAVE) debug_printf("fxsave ");
         if(d & SSE) debug_printf("sse ");
         if(d & SSE2) debug_printf("sse2 ");
         if(d & SS) debug_printf("ss ");

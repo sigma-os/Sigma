@@ -74,8 +74,6 @@ void x86_64::hpet::init_hpet(){
     acpi_table = reinterpret_cast<x86_64::hpet::table*>(acpi::get_table("HPET"));
     if(acpi_table == nullptr){
         // Huh thats odd, there is an AML device but no table?
-        // TODO: In this case get the HPET base from the AML _CRS object
-
         lai_nsnode_t* crs_node = lai_resolve_path(node, "_CRS");
         if(!crs_node)
             PANIC("No HPET table and no _CRS, can't initialize HPET");
