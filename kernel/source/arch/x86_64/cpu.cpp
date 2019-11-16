@@ -372,6 +372,46 @@ static void identify_intel(uint16_t family_id, uint8_t model_id, uint8_t steppin
     }
 }
 
+static void identify_amd(uint16_t family_id, uint8_t model_id, uint8_t stepping){
+    auto identify_family_8 = [&](){
+        debug_printf("    Family: AMD Zen\n");
+        switch (model_id)
+        {
+        case 1:
+            debug_printf("    Model: Naples, Whitehaven, Summit Ridge, Snowy Owl\n");
+            break;
+        case 0x11:
+            debug_printf("    Model: Raven Ridge\n");
+            break;
+        case 0x8:
+            debug_printf("    Model: Pinnacle Ridge\n");
+            break;
+        case 0x18:
+            debug_printf("    Model: Picasso\n");
+            break;
+        case 0x71:
+            debug_printf("    Model: Matisse\n");
+            break;
+        default:
+            debug_printf("    Model: Unknown [%x]\n", model_id);
+            break;
+        }
+
+        debug_printf("    Stepping: %x\n", stepping);
+    };
+
+
+    switch (family_id)
+    {
+    case 8: 
+        identify_family_8();
+        break;
+    default:
+        debug_printf("    Family: Unknown [%x]\n", family_id);
+        break;
+    }
+}
+
 void x86_64::identify_cpu(){
     debug_printf("[CPU]: Detecting CPU with id: %d\n", smp::cpu::get_current_cpu()->lapic_id);
 
@@ -421,6 +461,8 @@ void x86_64::identify_cpu(){
     x86_64::cpuid(0, a, b, c, d);
     if(b == signature_INTEL_ebx && c == signature_INTEL_ecx && d == signature_INTEL_edx)
         identify_intel(family_id, model_id, stepping);
+    else if(b == signature_AMD_ebx && c == signature_AMD_ecx && d == signature_AMD_edx)
+        identify_amd(family_id, model_id, stepping);
     else
         debug_printf("    Unknown vendorID, can't identify further\n"); 
     
