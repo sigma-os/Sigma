@@ -9,7 +9,8 @@
 
 namespace x86_64
 {
-    void misc_features_init();
+    void misc_early_features_init();
+    void misc_bsp_late_features_init();
     void identify_cpu();
         
     namespace pat {
@@ -53,6 +54,11 @@ namespace x86_64
     namespace tsd
     {
         void init();
+    }
+
+    namespace tme {
+        void init();
+        void restore_key();
     }
     
     namespace regs {
@@ -260,6 +266,7 @@ namespace x86_64
         constexpr uint64_t VPCLMULQDQ = 0x00000400;
         constexpr uint64_t AVX512VNNI = 0x00000800;
         constexpr uint64_t AVX512BITALG = 0x00001000;
+        constexpr uint64_t TME = 0x2000;
         constexpr uint64_t AVX512VPOPCNTDQ = 0x00004000;
         constexpr uint64_t RDPID = 0x00400000;
         constexpr uint64_t CLDEMOTE = 0x02000000;

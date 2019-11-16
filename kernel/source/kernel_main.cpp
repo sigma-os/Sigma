@@ -64,7 +64,7 @@ C_LINKAGE void kernel_main(){
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
     entry.set_gs();
 
-    x86_64::misc_features_init();
+    x86_64::misc_early_features_init();
 
     mm::pmm::init(boot_protocol);
 
@@ -154,6 +154,8 @@ C_LINKAGE void kernel_main(){
     smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
     (void)(smp);
 
+    x86_64::misc_bsp_late_features_init();
+
     proc::syscall::init_syscall();
 
     // TODO: Start this in modular way
@@ -201,7 +203,7 @@ C_LINKAGE void smp_kernel_main(){
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
     entry.set_gs();
 
-    x86_64::misc_features_init();
+    x86_64::misc_early_features_init();
 
     mm::vmm::kernel_vmm::get_instance().set();
 

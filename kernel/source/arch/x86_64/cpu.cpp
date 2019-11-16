@@ -123,7 +123,70 @@ void x86_64::tsd::init(){
     }
 }
 
-void x86_64::misc_features_init(){
+// Intel paper on TME: http://kib.kiev.ua/x86docs/SDMs/336907-001.pdf
+void x86_64::tme::init(){
+    if(!misc::kernel_args::get_bool("notme")){
+        uint32_t a, b, c, d;
+        if(cpuid(7, a, b, c, d)){
+            if(c & cpuid_bits::TME){
+                // TME exists, woooo
+
+                uint32_t activate = x86_64::msr::read(x86_64::msr::ia32_tme_activate);
+                if(bitops<uint32_t>::bit_test(activate, 0)){
+                    debug_printf("[CPU]: TME was already enabled by BIOS or FW\n");
+                } else {
+                    uint32_t capability = x86_64::msr::read(x86_64::msr::ia32_tme_capability);
+                    if(bitops<uint32_t>::bit_test(capability, 0)){
+                        // AES-XTS 128bit encrytion supported, try to enable
+                        
+                        // Enable, Generate new key, Save key to storage for use when out of standby, AES-XTS 128bit encryption
+                        x86_64::msr::write(x86_64::msr::ia32_tme_activate, (1 << 1) | (1 << 3));
+                        printf("WARNING: TME support is fully untested, use at your own risk, pass `notme` to the kernel to disable it\n");
+                        debug_printf("[CPU]: Enabled TME\n");
+                    } else {
+                        debug_printf("[CPU]: No available TME encryption algorithm\n");
+                    }
+                }
+            } else {
+                debug_printf("[CPU]: TME is not available\n");
+            }
+        }
+    }
+}
+
+void x86_64::tme::restore_key(){
+    if(!misc::kernel_args::get_bool("notme")){
+        uint32_t a, b, c, d;
+        if(cpuid(7, a, b, c, d)){
+            if(c & cpuid_bits::TME){
+                // TME exists, woooo
+                uint32_t activate = x86_64::msr::read(x86_64::msr::ia32_tme_activate);
+                if(bitops<uint32_t>::bit_test(activate, 0)){
+                    debug_printf("[CPU]: TME was already enabled by BIOS or FW\n");
+                } else {
+                    uint32_t capability = x86_64::msr::read(x86_64::msr::ia32_tme_capability);
+                    if(bitops<uint32_t>::bit_test(capability, 0)){
+                        // AES-XTS 128bit encrytion supported, try to enable
+                        
+                        // Enable, Retrieve key from storage, AES-XTS 128bit encryption
+                        x86_64::msr::write(x86_64::msr::ia32_tme_activate, (1 << 1) | (1 << 2));
+                        debug_printf("[CPU]: Reenabled TME with stored key\n");
+                    } else {
+                        debug_printf("[CPU]: No available TME encryption algorithm");
+                    }
+                }
+            } else {
+                debug_printf("[CPU]: TME is not available\n");
+            }
+        }
+    }
+}
+
+void x86_64::misc_bsp_late_features_init(){
+    x86_64::tme::init();
+}
+
+void x86_64::misc_early_features_init(){
     x86_64::tsd::init();
     x86_64::smep::init();
     x86_64::smap::init();
@@ -497,6 +560,7 @@ void x86_64::identify_cpu(){
         if(c & VAES) debug_printf("vector-avx ");
         if(c & VPCLMULQDQ) debug_printf("clmul ");
         if(c & AVX512VNNI) debug_printf("avx-512vnni ");
+        if(c & TME) debug_printf("TME ");
         if(c & AVX512BITALG) debug_printf("avx-512bitalg ");
         if(c & AVX512VPOPCNTDQ) debug_printf("avx-512vpopcntdq ");
         if(c & RDPID) debug_printf("rdpid ");
