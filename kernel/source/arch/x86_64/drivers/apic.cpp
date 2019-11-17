@@ -1,18 +1,31 @@
 #include <Sigma/acpi/madt.h>
+#include <Sigma/arch/x86_64/cpu.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/arch/x86_64/drivers/hpet.h>
 
 #pragma region LAPIC
 
+constexpr uint64_t lapic_reg_to_x2apic(uint32_t reg){
+    return reg >> 4;
+}
+
 uint32_t x86_64::apic::lapic::read(uint32_t reg){
-    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
-    return *val;
+    if(!x2apic){
+        volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
+        return *val;
+    } else {
+        return x86_64::msr::read(x2apic_base + lapic_reg_to_x2apic(reg));
+    }
 }
 
 void x86_64::apic::lapic::write(uint32_t reg, uint32_t data){
-    volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
-    *val = data;
+    if(!x2apic){
+        volatile uint32_t* val = reinterpret_cast<uint32_t*>(this->base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + reg);
+        *val = data;
+    } else {
+        x86_64::msr::write(x2apic_base + lapic_reg_to_x2apic(reg), data);
+    }
 }
 
 void x86_64::apic::lapic::init(){
@@ -21,41 +34,72 @@ void x86_64::apic::lapic::init(){
     this->base = (apic_base_msr & 0xFFFFFFFFFFFFF000);
 
     bitops<uint64_t>::bit_set(apic_base_msr, 11); // Set Enable bit
+
+    uint32_t a, b, c, d;
+    if(cpuid(1, a, b, c, d)){
+        if(c & x86_64::cpuid_bits::x2APIC){
+            this->x2apic = true;
+            bitops<uint64_t>::bit_set(apic_base_msr, 10); // Set x2APIC bit
+        } else {
+            mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+        }
+    }
+
     msr::write(msr::apic_base, apic_base_msr);
 
-    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+    if(x2apic)
+        this->id = this->read(x86_64::apic::lapic_id);
+    else
+        this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
 
-    this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
 
     uint32_t version_reg = this->read(x86_64::apic::lapic_version);
-
     this->version = (version_reg & 0xFF);
     this->max_lvt_entries = (((version_reg >> 16) & 0xFF) + 1);
 
     this->write(x86_64::apic::lapic_tpr, 0); // Enable all interrupts
-    this->write(x86_64::apic::lapic_ldr, (this->get_id() << 16));
-    this->write(x86_64::apic::lapic_dfr, 0xFFFFFFFF);
+    
+    if(!x2apic){
+        this->write(x86_64::apic::lapic_dfr, 0xFFFFFFFF);
+        this->write(x86_64::apic::lapic_ldr, (this->get_id() << 16));
+    } 
 
     uint32_t spurious_reg = 0;
     spurious_reg |= 0xFF; // Hardcoded spurious vector
     bitops<uint32_t>::bit_set(spurious_reg, x86_64::apic::lapic_spurious_software_enable);
     this->write(x86_64::apic::lapic_spurious, spurious_reg);
+    
+    debug_printf("[LAPIC]: Initializing LAPIC in %s mode, id: %x, version: %d, n_lvt_entries: %x\n", x2apic ? "x2APIC" : "xAPIC", id, version, max_lvt_entries);
 }
 
-void x86_64::apic::lapic::send_ipi_raw(uint8_t target_lapic_id, uint32_t flags){
-    this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
-    this->write(x86_64::apic::lapic_icr_low, flags);
+void x86_64::apic::lapic::send_ipi_raw(uint32_t target_lapic_id, uint32_t flags){
+    if(x2apic){
+        // TODO: 32bit id
+        x86_64::msr::write(x2apic_base + 0x30, ((uint64_t)target_lapic_id << 32) | flags);
+
+        while(x86_64::msr::read(x2apic_base + 0x30) & x86_64::apic::lapic_icr_status_pending);
+    } else {
+        this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
+        this->write(x86_64::apic::lapic_icr_low, flags);
         
-    // TODO: Timeout and fail
-    while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
+        // TODO: Timeout and fail
+        while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
+    }
 }
 
-void x86_64::apic::lapic::send_ipi(uint8_t target_lapic_id, uint8_t vector){
-    this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
-    this->write(x86_64::apic::lapic_icr_low, vector);
+void x86_64::apic::lapic::send_ipi(uint32_t target_lapic_id, uint8_t vector){
+    if(x2apic){
+        // TODO: 32bit id
+        x86_64::msr::write(x2apic_base + 0x30, ((uint64_t)target_lapic_id << 32) | vector);
+
+        while(x86_64::msr::read(x2apic_base + 0x30) & x86_64::apic::lapic_icr_status_pending);
+    } else {
+        this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
+        this->write(x86_64::apic::lapic_icr_low, vector);
         
-    // TODO: Timeout and fail
-    while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
+        // TODO: Timeout and fail
+        while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
+    }
 }
 
 void x86_64::apic::lapic::send_eoi(){

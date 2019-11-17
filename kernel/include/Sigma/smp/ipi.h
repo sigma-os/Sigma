@@ -12,7 +12,7 @@ namespace smp
         constexpr uint8_t shootdown_ipi_vector = 251;
 
         void send_shootdown(uint64_t address, uint64_t length);
-        void send_ping(uint8_t apic_id);
+        void send_ping(uint32_t apic_id);
         void send_ping();
 
         void init_ipi();

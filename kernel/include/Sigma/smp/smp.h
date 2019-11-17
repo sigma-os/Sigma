@@ -13,12 +13,8 @@
 namespace smp
 {
     struct cpu_entry {
-        public:
-        cpu_entry(): lapic_id(0), bsp(false) {}
-        cpu_entry(uint8_t lapic_id, bool bsp): lapic_id(lapic_id), bsp(bsp) {}
-
-        uint8_t lapic_id;
-
+        uint32_t lapic_id;
+        bool x2apic;
         bool bsp;
     };
 

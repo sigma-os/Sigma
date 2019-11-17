@@ -17,7 +17,7 @@ namespace smp::cpu
         entry(): lapic(x86_64::apic::lapic()), lapic_id(0), tss(nullptr), pcid_context({}), self_ptr(reinterpret_cast<uint64_t>(this)){}
 
         x86_64::apic::lapic lapic;
-        uint8_t lapic_id;
+        uint32_t lapic_id;
         x86_64::tss::table* tss;
         x86_64::paging::pcid_cpu_context pcid_context;
         uint64_t self_ptr;

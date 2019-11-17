@@ -19,17 +19,39 @@ void acpi::madt::parse_lapic(uint8_t* item){
     debug_printf("[MADT]: Detected CPU: ACPI UID: %x, APIC id: %x", lapic->acpi_uid, lapic->apic_id);
     uint32_t flags = lapic->flags;
     if(bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_enabled) || (!bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_enabled) && bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_online_capable))){
-        auto* entry = this->cpus.empty_entry();
-        entry->lapic_id = lapic->apic_id;
+        bool bsp;
         uint32_t a, b, c, d;
         if(x86_64::cpuid(0x1, a, b, c, d)){
             uint8_t id = ((b >> 24) & 0xFF);
-            if(id == entry->lapic_id) entry->bsp = true;
-            else entry->bsp = false;
+            if(id == lapic->apic_id) bsp = true;
+            else bsp = false;
         } else {
             // Assume not BSP
-            entry->bsp = false;
+            bsp = false;
         }
+        cpus.push_back({.lapic_id = lapic->apic_id, .x2apic = false, .bsp = bsp});
+    } else {
+        debug_printf(", Disabled");
+    }
+    debug_printf("\n");
+}
+
+void acpi::madt::parse_x2apic(uint8_t* item){
+    auto* lapic = reinterpret_cast<acpi::madt_x2apic*>(item);
+
+    debug_printf("[MADT]: Detected CPU: ACPI UID: %x, x2APIC id: %x", lapic->acpi_uid, lapic->x2apic_id);
+    uint32_t flags = lapic->flags;
+    if(bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_enabled) || (!bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_enabled) && bitops<uint32_t>::bit_test(flags, acpi::madt_lapic_flags_online_capable))){
+        bool bsp;
+        uint32_t a, b, c, d;
+        if(x86_64::cpuid(0xB, a, b, c, d)){
+            if(d == lapic->x2apic_id) bsp = true;
+            else bsp = false;
+        } else {
+            // Assume not BSP
+            bsp = false;
+        }
+        cpus.push_back({.lapic_id = lapic->x2apic_id, .x2apic = true, .bsp = bsp});
     } else {
         debug_printf(", Disabled");
     }
@@ -80,6 +102,10 @@ void acpi::madt::parse(){
 
         case acpi::type_interrupt_source_override:
             this->parse_iso(item);
+            break;
+
+        case acpi::type_x2apic:
+            this->parse_x2apic(item);
             break;
         
         case acpi::type_nmi_source:

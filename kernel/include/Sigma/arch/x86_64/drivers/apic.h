@@ -93,6 +93,8 @@ namespace x86_64::apic
 
     constexpr uint64_t lapic_lvt_mask = 16;
 
+    constexpr uint64_t x2apic_base = 0x800;
+
     enum class lapic_timer_modes { 
         ONE_SHOT = 0,
         PERIODIC = 1,
@@ -110,8 +112,8 @@ namespace x86_64::apic
             return this->version;
         }
 
-        void send_ipi_raw(uint8_t target_lapic_id, uint32_t flags);
-        void send_ipi(uint8_t target_lapic_id, uint8_t vector);
+        void send_ipi_raw(uint32_t target_lapic_id, uint32_t flags);
+        void send_ipi(uint32_t target_lapic_id, uint8_t vector);
         void send_eoi();
 
         void enable_timer(uint8_t vector, uint64_t ms, x86_64::apic::lapic_timer_modes mode);
@@ -122,10 +124,11 @@ namespace x86_64::apic
 
         private:
         uint64_t base;
-        uint8_t id;
+        uint32_t id;
         uint8_t version;
         uint8_t max_lvt_entries;
         uint64_t timer_ticks_per_ms;
+        bool x2apic;
 
         uint32_t read(uint32_t reg);
         void write(uint32_t reg, uint32_t val);

@@ -29,7 +29,7 @@ static void shootdown_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* reg
 
 #pragma region ping
 
-void smp::ipi::send_ping(uint8_t apic_id){
+void smp::ipi::send_ping(uint32_t apic_id){
     smp::cpu::get_current_cpu()->lapic.send_ipi(apic_id, smp::ipi::ping_ipi_vector);
 }
 

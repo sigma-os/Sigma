@@ -26,6 +26,7 @@ namespace acpi
     constexpr uint8_t type_ioapic = 1;
     constexpr uint8_t type_interrupt_source_override = 2;
     constexpr uint8_t type_nmi_source = 3;
+    constexpr uint8_t type_x2apic = 9;
 
     struct PACKED_ATTRIBUTE madt_lapic
     {
@@ -70,7 +71,15 @@ namespace acpi
     static_assert(sizeof(madt_nmi_souce) == 8);
     
 
-
+    struct PACKED_ATTRIBUTE madt_x2apic {
+        uint8_t type; // 9
+        uint8_t length; // 16
+        uint16_t reserved;
+        uint32_t x2apic_id;
+        uint32_t flags;
+        uint32_t acpi_uid;
+    };
+    static_assert(sizeof(madt_x2apic) == 16);
 
 
     class madt {
@@ -94,6 +103,7 @@ namespace acpi
         private:
 
         void parse_lapic(uint8_t* item);
+        void parse_x2apic(uint8_t* item);
         void parse_ioapic(uint8_t* item);
         void parse_iso(uint8_t* item);
 
