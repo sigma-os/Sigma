@@ -463,10 +463,17 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     PANIC("idle_cpu returned, how is this happening");
 }
 
-void proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags){
+void* proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags){
     std::lock_guard guard{thread->thread_lock};
 
-    if(!(flags & MAP_ANON)) PANIC("Only MAP_ANONYMOUS is defined");
+    if(!addr)
+        addr = reinterpret_cast<void*>(thread->vmm.get_free_range(mmap_bottom, mmap_top, size));
+
+    // If we couldn't find any just return
+    if(!addr)
+        return nullptr;
+
+    (void)(flags);
 
     uint64_t map_flags = ((prot & PROT_READ) ? (map_page_flags_present) : 0) | \
                      ((prot & PROT_WRITE) ? (map_page_flags_writable) : 0) | \
@@ -483,6 +490,8 @@ void proc::process::map_anonymous(proc::process::thread* thread, size_t size, vo
 
         thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), virt, map_flags);
     }
+
+    return addr;
 }
 
 tid_t proc::process::fork(x86_64::idt::idt_registers* regs){

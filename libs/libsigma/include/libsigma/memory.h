@@ -16,7 +16,7 @@ extern "C" {
 #define LIBSIGMA_VALLOC_TYPE_FREE_BASE 1
 
 uint64_t libsigma_valloc(uint64_t type, uint64_t base, uint64_t n_pages);
-int libsigma_vm_map(size_t size, void *addr, int prot, int flags);
+void* libsigma_vm_map(size_t size, void *addr, int prot, int flags);
 
 #if defined(__cplusplus)
 }

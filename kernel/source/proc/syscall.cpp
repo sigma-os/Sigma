@@ -17,8 +17,10 @@
 #define PTR_IS_USERLAND(ptr) ((ptr) <= 0x8000000000000000)
 
 #define CHECK_PTR(ptr) \
-	if(!misc::is_canonical((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0) \
-	return 1
+	if(!misc::is_canonical((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0){ \
+        debug_printf("[SYSCALL]: Pointer check failed [%x]\n", ptr); \
+	    return 1; \
+    }
 
 // ARG0: Pointer to str
 static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
@@ -72,12 +74,14 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
 // ARG1: size_t length
 // ARG2: int prot
 // ARG3: int flags
+// RET: addr
 static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
-    CHECK_PTR(SYSCALL_GET_ARG0());
+    if(!PTR_IS_USERLAND(SYSCALL_GET_ARG0()))
+        return 1;
+    
+    auto ret = proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3());
 
-    proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3());
-
-    return 0;
+    return reinterpret_cast<uint64_t>(ret);
 }
 
 // ARG0: Char* to filename

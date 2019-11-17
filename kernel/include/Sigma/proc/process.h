@@ -89,6 +89,8 @@ namespace proc::process
         types::vector<uint64_t> frames;
     };
 
+    constexpr uint64_t mmap_top = 0x7FFF'FFFF'FFFF;
+    constexpr uint64_t mmap_bottom = 0x9'0000'0000;
     constexpr uint64_t default_stack_top = 0x800000000;
     constexpr uint64_t default_heap_bottom = 0x400000000;
 
@@ -178,7 +180,7 @@ namespace proc::process
     #define MAP_FIXED 0x04
     #define MAP_ANON 0x08
 
-    void map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags);
+    void* map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags);
 
     // General Thread Modifying functions
     void set_thread_fs(tid_t tid, uint64_t fs);
