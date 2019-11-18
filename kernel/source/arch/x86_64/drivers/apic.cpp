@@ -38,11 +38,12 @@ void x86_64::apic::lapic::init(){
     uint32_t a, b, c, d;
     if(cpuid(1, a, b, c, d)){
         if(c & x86_64::cpuid_bits::x2APIC){
-            this->x2apic = true;
-            bitops<uint64_t>::bit_set(apic_base_msr, 10); // Set x2APIC bit
-        } else {
+            debug_printf("[LAPIC]: Forcing xAPIC mode due to the Interrupt Redirection Table not being implemented, //TODO\n");
+            //this->x2apic = true;
+            //bitops<uint64_t>::bit_set(apic_base_msr, 10); // Set x2APIC bit
+        }// else {
             mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_chache_types::uncacheable);
-        }
+        //}
     }
 
     msr::write(msr::apic_base, apic_base_msr);
@@ -74,10 +75,9 @@ void x86_64::apic::lapic::init(){
 
 void x86_64::apic::lapic::send_ipi_raw(uint32_t target_lapic_id, uint32_t flags){
     if(x2apic){
-        // TODO: 32bit id
         x86_64::msr::write(x2apic_base + 0x30, ((uint64_t)target_lapic_id << 32) | flags);
 
-        while(x86_64::msr::read(x2apic_base + 0x30) & x86_64::apic::lapic_icr_status_pending);
+        // The delivery status bit has been removed so a poll is useless
     } else {
         this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
         this->write(x86_64::apic::lapic_icr_low, flags);
@@ -88,18 +88,7 @@ void x86_64::apic::lapic::send_ipi_raw(uint32_t target_lapic_id, uint32_t flags)
 }
 
 void x86_64::apic::lapic::send_ipi(uint32_t target_lapic_id, uint8_t vector){
-    if(x2apic){
-        // TODO: 32bit id
-        x86_64::msr::write(x2apic_base + 0x30, ((uint64_t)target_lapic_id << 32) | vector);
-
-        while(x86_64::msr::read(x2apic_base + 0x30) & x86_64::apic::lapic_icr_status_pending);
-    } else {
-        this->write(x86_64::apic::lapic_icr_high, (target_lapic_id << 24));
-        this->write(x86_64::apic::lapic_icr_low, vector);
-        
-        // TODO: Timeout and fail
-        while((this->read(x86_64::apic::lapic_icr_low) & x86_64::apic::lapic_icr_status_pending));
-    }
+    this->send_ipi_raw(target_lapic_id, vector);
 }
 
 void x86_64::apic::lapic::send_eoi(){

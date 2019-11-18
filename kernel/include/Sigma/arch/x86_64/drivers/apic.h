@@ -101,7 +101,6 @@ namespace x86_64::apic
         TSC_DEADLINE = 2
     };
 
-    //TODO: x2APIC support
     class lapic {
         public:
         uint8_t get_id(){
