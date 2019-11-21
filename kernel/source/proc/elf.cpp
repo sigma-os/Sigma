@@ -120,7 +120,7 @@ static bool check_elf_executable(proc::elf::Elf64_Ehdr* program_header){
     return true;
 }
 
-bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread){
+bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige){
     proc::elf::Elf64_Ehdr program_header;
     if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(&program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
         printf("[ELF]: Couldn't load file: %s\n", initrd_filename);
@@ -138,7 +138,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
     case proc::elf::et_exec:
         // Executable File
         {
-            proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, proc::process::thread_privilege_level::APPLICATION);
+            proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, privilige);
             new_thread->vmm = x86_64::paging::paging();
 
             mm::vmm::kernel_vmm::get_instance().clone_paging_info(new_thread->vmm);

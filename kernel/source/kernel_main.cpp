@@ -160,11 +160,11 @@ C_LINKAGE void kernel_main(){
 
     // TODO: Start this in modular way
     proc::process::thread* thread = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread)) printf("Failed to load Zeta\n");
+    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load Zeta\n");
     proc::syscall::set_user_manager_tid(thread->tid);
 
     proc::process::thread* threadb = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/ctest", &threadb)) printf("Failed to load ctest\n");
+    if(!proc::elf::start_elf_executable("/usr/bin/ctest", &threadb, proc::process::thread_privilege_level::APPLICATION)) printf("Failed to load ctest\n");
 
     /*proc::process::create_kernel_thread(+[](){
         // TODO: Initialize ACPI kernel thread and PCI kernel thread
