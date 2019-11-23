@@ -343,9 +343,9 @@ void x86_64::pci::parse_pci(){
     for(const auto& entry : pci_devices){
         if(entry.exists){
             if(entry.has_irq)
-                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s, gsi: %d\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.gsi);
+                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d], gsi: %d\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.gsi);
             else
-                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code));
+                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d]\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code);
         }
     } 
 }
