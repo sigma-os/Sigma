@@ -13,8 +13,23 @@ void proc::device::init(){
 
 void proc::device::print_list(){
     debug_printf("[DEVICE]: Printing device list\n");
-    for(auto& entry : *device_list)
+    for(auto& entry : *device_list){
         debug_printf("    %s\n", entry.name ? entry.name : "Unknown");
+        for(auto& res : entry.resources){
+            debug_printf("        Resource: %x -> %x type: %d\n", res.base, res.base + res.len, res.type);
+        }
+    }
+        
+}
+
+void proc::device::add_pci_device(x86_64::pci::device* dev){
+    auto& entry = *proc::device::get_device_list().empty_entry();
+    entry.add_pci_device(dev);
+    entry.name = x86_64::pci::class_to_str(dev->class_code);
+    for(auto& bar : dev->bars){
+        if(bar.type != x86_64::pci::bar_type_invalid)
+            entry.resources.push_back({.type = bar.type, .base = bar.base, .len = bar.len});
+    }
 }
 
 proc::device::device_descriptor proc::device::find_acpi_node(lai_nsnode_t* node){
@@ -33,16 +48,18 @@ proc::device::device_descriptor proc::device::find_pci_node(uint16_t seg, uint8_
     return UINT64_MAX;
 }
 
-bool proc::device::get_pci_bar(proc::device::device_descriptor dev, uint8_t bar_index, pci_bar* data){
-    auto& device = device_list->operator[](dev);
-    if(!device.contact.pci)
+bool proc::device::get_resource_region(proc::device::device_descriptor dev, uint8_t index, proc::device::device::resource_region* data){
+    if(dev >= device_list->size())
         return false;
+    auto& device = device_list->operator[](dev);
 
-    auto& bar = device.pci_contact.device->bars[bar_index];
+    if(index >= device.resources.size())
+        return false;
+    auto& res = device.resources[index];
 
-    data->type = bar.type;
-    data->base = bar.base;
-    data->size = bar.len;
+    data->type = res.type;
+    data->base = res.base;
+    data->len = res.len;
     return true;
 }
 
@@ -51,11 +68,11 @@ uint64_t proc::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64
     switch (cmd)
     {
     case proc::device::devctl_cmd_nop:
-        debug_printf("[DEVICE]: Handled nop\n");
+        debug_printf("[DEVICE]: Handled cmd_nop\n");
         break;
 
     case proc::device::devctl_cmd_claim: {
-        debug_printf("[DEVICE]: Handling claim\n");
+        debug_printf("[DEVICE]: Handling cmd_claim\n");
         auto& device = device_list->operator[](arg1);
         if(device.driver == 0) {
             device.driver = proc::process::get_current_tid();
@@ -71,6 +88,11 @@ uint64_t proc::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64
         ret = find_pci_node(arg1, arg2, arg3, arg4);
         break;
     
+    case proc::device::devctl_cmd_get_resource_region:
+        debug_printf("[DEVICE]: Handling cmd_get_resouse_region\n");
+        ret = get_resource_region(arg1, arg2, reinterpret_cast<device::resource_region*>(arg3));
+        break;
+
     default:
         debug_printf("[DEVICE]: Unknown command: %x\n", cmd);
         break;

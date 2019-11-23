@@ -32,7 +32,7 @@ namespace x86_64::pci
     constexpr uint16_t config_addr = 0xCF8;
     constexpr uint16_t config_data = 0xCFC;
 
-    
+
 
     uint32_t read(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
     uint32_t read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
@@ -84,6 +84,8 @@ namespace x86_64::pci
 
     void init_pci();
     void parse_pci();
+
+    const char* class_to_str(uint8_t class_code);
 } // namespace x86_64::pci
 
 

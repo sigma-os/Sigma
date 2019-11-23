@@ -153,7 +153,7 @@ static void mcfg_pci_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func
     debug_printf("[PCI]: Tried to write to nonexistent device, %x:%x:%x:%x\n", seg, bus, slot, function);
 }
 
-static const char* class_to_str(uint8_t class_code){
+const char* x86_64::pci::class_to_str(uint8_t class_code){
     switch (class_code)
     {
     case 0:
@@ -216,10 +216,6 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
     dev->class_code = class_code;
     dev->subclass_code = subclass_code;
 
-    auto& entry = *proc::device::get_device_list().empty_entry();
-    entry.add_pci_device(dev);
-    entry.name = class_to_str(class_code);
-
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge
         uint8_t secondary_bus = x86_64::pci::read(seg, bus, device, function, 0x19, 1);
@@ -237,6 +233,8 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
         // PCI to PCI bridge has 2 bars
         for(uint8_t i = 0; i < 3; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
     }
+
+    proc::device::add_pci_device(dev);
 }
 
 static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device, x86_64::pci::device* parent){

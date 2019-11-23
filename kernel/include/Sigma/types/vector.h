@@ -35,7 +35,7 @@ namespace types
 				length *= 2;
 				data = new(realloc(data, sizeof(T) * length)) T;
 			}
-			return &data[offset++];
+			return new (&data[offset++]) T();
 		}
 
 		NODISCARD_ATTRIBUTE
@@ -45,6 +45,10 @@ namespace types
 
             return data[index];
         }
+
+		size_t size(){
+			return offset;
+		}
 
 		NODISCARD_ATTRIBUTE
 		iterator begin() {
