@@ -49,7 +49,7 @@ namespace x86_64::pci
     };
 
     constexpr uint8_t bar_type_mem = 0;
-    constexpr uint8_t bar_type_io = 0;
+    constexpr uint8_t bar_type_io = 1;
     constexpr uint8_t bar_type_invalid = 0xFF;
 
     constexpr uint8_t bar_flags_prefetchable = 0;

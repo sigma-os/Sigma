@@ -56,6 +56,11 @@ namespace types
 			return data + offset;
 		}
 
+		NODISCARD_ATTRIBUTE
+		T& back(){
+			return *(data + offset - 1);
+		}
+
         NODISCARD_ATTRIBUTE
 		const_iterator begin() const {
 			return data;
@@ -65,6 +70,12 @@ namespace types
 		const_iterator end() const {
 			return data + offset;
 		}
+
+		NODISCARD_ATTRIBUTE
+		T& back() const {
+			return *(data + offset - 1);
+		}
+
 
         private:
         size_t length;

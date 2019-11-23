@@ -1,4 +1,5 @@
 #include <Sigma/arch/x86_64/drivers/pci.h>
+#include <Sigma/proc/device.h>
 
 static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
 static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
@@ -214,6 +215,10 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
     uint8_t subclass_code = (x86_64::pci::read(seg, bus, device, function, 10, 1) & 0xFF);
     dev->class_code = class_code;
     dev->subclass_code = subclass_code;
+
+    auto& entry = *proc::device::get_device_list().empty_entry();
+    entry.add_pci_device(dev);
+    entry.name = class_to_str(class_code);
 
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge

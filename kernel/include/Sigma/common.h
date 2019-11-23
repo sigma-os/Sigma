@@ -15,6 +15,7 @@ using std::int16_t;
 using std::int32_t;
 using std::int64_t;
 
+using std::uintptr_t;
 using std::size_t;
 
 #include <Sigma/bitops.h>

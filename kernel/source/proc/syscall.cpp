@@ -3,6 +3,7 @@
 #include <Sigma/proc/initrd.h>
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/arch/x86_64/cpu.h>
+#include <Sigma/proc/device.h>
 #include <atomic>
 
 #define SYSCALL_GET_FUNC() (regs->rax)
@@ -157,6 +158,12 @@ static uint64_t syscall_fork(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* 
     return proc::process::fork(regs);
 }
 
+// ARG0: Command
+// ARG1 - N: Optional args to devctl
+static uint64_t syscall_devctl(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
+    return proc::device::devctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
+}
+
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
@@ -177,7 +184,8 @@ kernel_syscall syscalls[] = {
     {.func = syscall_get_message_size, .name = "ipc_get_message_size"},
     {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
     {.func = syscall_block_thread, .name = "block_thread"},
-    {.func = syscall_fork, .name = "fork"}
+    {.func = syscall_fork, .name = "fork"},
+    {.func = syscall_devctl, .name = "devctl"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
