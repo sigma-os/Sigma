@@ -1,77 +1,42 @@
 #include <Sigma/arch/x86_64/idt.h>
 x86_64::idt::handler handlers[x86_64::idt::idt_max_entries] = {};
 
-const char* exception_mnemonics[] = {
-    "DE",
-    "DB",
-    "NMI",
-    "BP",
-    "OF",
-    "BR",
-    "UD",
-    "NM",
-    "DF",
-    "-",
-    "TS",
-    "NP",
-    "SS",
-    "GP",
-    "PF",
-    "-",
-    "MF",
-    "AC",
-    "MC",
-    "XM/XF",
-    "VE",
-    "-",
-    "-",
-    "-",
-    "-",
-    "-",
-    "-",
-    "-",
-    "-",
-    "-",
-    "SX",
-    "-"
-};
-
-const char* exeception_msg[] = {
-    "Division By Zero",
-    "Debug",
-    "Non Maskable Interrupt",
-    "Breakpoint",
-    "Overflow",
-    "Out of Bounds",
-    "Invalid Opcode",
-    "No Coprocessor",
-
-    "Double Fault",
-    "Coprocessor Segment Overrun",
-    "Invalid TSS",
-    "Segment Not Present",
-    "Stack Fault",
-    "General Protection Fault",
-    "Page Fault",
-    "Reserved",
-
-    "x87 Floating-Point Exception",
-    "Alignment Check",
-    "Machine Check",
-    "SIMD Floating-Point Exception",
-    "Virtualization Exception",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Security Exception",
-    "Reserved"
+struct {
+    const char* mnemonic;
+    const char* message;
+} exceptions[] = {
+    {.mnemonic = "DE", .message = "Division By Zero"},
+    {.mnemonic = "DB", .message = "Debug"},
+    {.mnemonic = "NMI", .message = "Non Maskable Interrupt"},
+    {.mnemonic = "BP", .message = "Breakpoint"},
+    {.mnemonic = "OF", .message = "Overflow"},
+    {.mnemonic = "BR", .message = "Out of Bounds"},
+    {.mnemonic = "UD", .message = "Invalid Opcode"},
+    {.mnemonic = "NM", .message = "No Coprocessor"},
+    {.mnemonic = "DF", .message = "Double Fault"},
+    {.mnemonic = "-", .message = "Coprocessor Segment Overrun"},
+    {.mnemonic = "TS", .message = "Invalid TSS"},
+    {.mnemonic = "NP", .message = "Segment Not Present"},
+    {.mnemonic = "SS", .message = "Stack Fault"},
+    {.mnemonic = "GP", .message = "General Protection Fault"},
+    {.mnemonic = "PF", .message = "Page Fault"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "MF", .message = "x87 Floating-Point Exception"},
+    {.mnemonic = "AC", .message = "Alignment Check"},
+    {.mnemonic = "MC", .message = "Machine Check"},
+    {.mnemonic = "XM/XF", .message = "SIMD Floating-Point Exception"},
+    {.mnemonic = "VE", .message = "Virtualization Exception"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "SX", .message = "Security Exception"},
+    {.mnemonic = "-", .message = "Reserved"},
 };
 
 static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers){
@@ -80,12 +45,34 @@ static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers){
 
     printf("    Linear Address: %x\n    Conditions: ", cr2);
 
+    // See Intel x86 SDM Volume 3 Chapter 4.7
     uint64_t error_code = registers->error_code;
-    if(bitops<uint64_t>::bit_test(error_code, 0)) printf("Protection violation ");
-    if(bitops<uint64_t>::bit_test(error_code, 1)) printf("Write ");
-    if(bitops<uint64_t>::bit_test(error_code, 2)) printf("User ");
-    if(bitops<uint64_t>::bit_test(error_code, 3)) printf("Malformed table ");
-    if(bitops<uint64_t>::bit_test(error_code, 4)) printf("Instruction fetch ");
+    if(bitops<uint64_t>::bit_test(error_code, 0))
+        printf("Page level protection violation, ");
+    else
+        printf("Non-present page, ");
+
+    if(bitops<uint64_t>::bit_test(error_code, 1)) 
+        printf("Write, ");
+    else
+        printf("Read, ");
+    
+    if(bitops<uint64_t>::bit_test(error_code, 2)) 
+        printf("User access, ");
+    else
+        printf("Supervisor access, ");
+    
+    if(bitops<uint64_t>::bit_test(error_code, 3)) 
+        printf("Reserved bit set, ");
+
+    if(bitops<uint64_t>::bit_test(error_code, 4)) 
+        printf("Instruction fetch, ");
+    
+    if(bitops<uint64_t>::bit_test(error_code, 5)) 
+        printf("Protection key violation, ");
+
+    if(bitops<uint64_t>::bit_test(error_code, 15))
+        printf("SGX violation, ");
 
     asm("cli; hlt");
 }
@@ -95,18 +82,20 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
 
     smp::cpu::entry* cpu = smp::cpu::get_current_cpu();
 
-    if (n < 32){
-        printf("[IDT]: Received interrupt %d, #%s: %s\n    Error Code: %x\n", n, exception_mnemonics[n], exeception_msg[n], registers->error_code);
+    if(n < 32){
+        printf("[IDT]: Received interrupt %d, #%s: %s\n    Error Code: %x\n", n, exceptions[n].mnemonic, exceptions[n].message, registers->error_code);
         printf("    RIP: %x, RSP: %x, CPU: %d\n", registers->rip, registers->rsp, cpu->lapic_id);
     }
     
     if(handlers[n].callback)
-            handlers[n].callback(registers);
+        handlers[n].callback(registers);
 
     // It is an IRQ so send an EOI
-    if(handlers[n].is_irq) cpu->lapic.send_eoi();
+    if(handlers[n].is_irq) 
+        cpu->lapic.send_eoi();
 
-    if(!handlers[n].should_iret) while(1);
+    if(!handlers[n].should_iret) 
+        while(1);
 }
 
 void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq){
