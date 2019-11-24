@@ -88,3 +88,7 @@ kernel/build/iso/
 bx_enh_dbg.ini
 
 kernel/build_meson/
+
+Sigma.srctrlbm
+Sigma.srctrldb
+Sigma.srctrlprj
