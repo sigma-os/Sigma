@@ -63,7 +63,7 @@ namespace KLIBCXX_NAMESPACE_NAME
         constexpr pair(const pair<U1, U2>& p): first(p.first), second(p.second) {}
 
         template<typename U1, typename U2>
-        constexpr pair(pair<U1, U2>&& p): first(std::forward<U1>(p.first)), first(std::forward<U1>(p.first)) {}
+        constexpr pair(pair<U1, U2>&& p): first(std::forward<U1>(p.first)), second(std::forward<U2>(p.second)) {}
 
         pair(const pair& p) = default;
         pair(pair&& p) = default;

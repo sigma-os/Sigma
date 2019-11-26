@@ -38,8 +38,8 @@ bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_
 	if (this->current_offset + (sizeof(ipc::ipc_message_header) + buffer_length) >= thread_ipc_manager_default_msg_buffer_size) {
 		
 		size_t size = this->current_buffer_size * 2;
-		if(size > (0x1000 * 8)){
-			printf("[IPC]: Not expanding FIFO buffer past 32KiB\n");
+		if(size > (0x1000 * 16)){
+			printf("[IPC]: Not expanding FIFO buffer past 64KiB\n");
 			return false;
 		}
 		this->msg_buffer = static_cast<uint8_t*>(realloc(static_cast<void*>(this->msg_buffer), size));

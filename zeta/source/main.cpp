@@ -10,7 +10,7 @@
 
 template<typename Ret>
 void send_return_int([[maybe_unused]] uint64_t dest, [[maybe_unused]] uint64_t msg_id, [[maybe_unused]] Ret ret){
-    libsigma_klog("[ZETA]: Unsupported return type");
+    libsigma_klog("[ZETA]: Unsupported return type\n");
     return;
 }
 
@@ -63,14 +63,14 @@ void handle_request(){
     uint64_t origin;
     size_t useless_msg_size;
     if(libsigma_ipc_receive(&origin, &useless_msg_size, msg.get()) == 1){
-        libsigma_klog("[ZETA]: Failed to receive IPC message");
+        libsigma_klog("[ZETA]: Failed to receive IPC message\n");
         return;
     }
 
     auto* message = reinterpret_cast<libsigma_message_t*>(msg.get());
 
     if(!libsigma_ipc_check_message(message, msg_size)) {
-        libsigma_klog("[ZETA]: Checksum failed");
+        libsigma_klog("[ZETA]: Checksum failed\n");
         return;
     }
 
@@ -145,7 +145,7 @@ void handle_request(){
 
 
 int main(){
-    libsigma_klog("[ZETA]: Starting VFS");
+    libsigma_klog("[ZETA]: Starting VFS\n");
     
     fs::devfs devfs{};
     devfs.init();

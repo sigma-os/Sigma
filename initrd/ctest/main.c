@@ -12,7 +12,7 @@ int main(int argc, char* argv[]){
     int fd = open("/dev/sysout", O_WRONLY);
     dup2(fd, STDOUT_FILENO);
 
-    printf("Hello from C land :)");
+    printf("Hello from C land :)\n");
 
     return 0;
 }

@@ -27,7 +27,7 @@
 static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG0());
     const char* str = reinterpret_cast<const char*>(SYSCALL_GET_ARG0());
-    printf("[KLOG]: Early: Thread %d says: %s\n", proc::process::get_current_tid(), str);
+    debug_printf("%s", str);
     return 0;
 }
 
