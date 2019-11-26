@@ -37,13 +37,12 @@ void x86_64::apic::lapic::init(){
 
     uint32_t a, b, c, d;
     if(cpuid(1, a, b, c, d)){
-        if(c & x86_64::cpuid_bits::x2APIC){
-            debug_printf("[LAPIC]: Forcing xAPIC mode due to the Interrupt Redirection Table not being implemented, //TODO\n");
-            //this->x2apic = true;
-            //bitops<uint64_t>::bit_set(apic_base_msr, 10); // Set x2APIC bit
-        }// else {
+        if(c & x86_64::cpuid_bits::x2APIC && !misc::kernel_args::get_bool("nox2apic")){
+            this->x2apic = true;
+            bitops<uint64_t>::bit_set(apic_base_msr, 10); // Set x2APIC bit
+        } else {
             mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_chache_types::uncacheable);
-        //}
+        }
     }
 
     msr::write(msr::apic_base, apic_base_msr);
@@ -52,7 +51,6 @@ void x86_64::apic::lapic::init(){
         this->id = this->read(x86_64::apic::lapic_id);
     else
         this->id = (this->read(x86_64::apic::lapic_id) >> 24) & 0xFF;
-
 
     uint32_t version_reg = this->read(x86_64::apic::lapic_version);
     this->version = (version_reg & 0xFF);
@@ -196,7 +194,10 @@ void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint64_t data){
     this->write(offset + 1, ((data >> 32) & 0xFFFFFFFF));
 }
 
-void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination){
+void x86_64::apic::ioapic_device::set_entry(uint8_t index, uint8_t vector, x86_64::apic::ioapic_delivery_modes delivery_mode, x86_64::apic::ioapic_destination_modes destination_mode, uint16_t flags, uint32_t destination){
+    if((destination & ~0xFF) != 0)
+        PANIC("Tried to set I/OAPIC redirection with lAPIC id > 0xFF, this is currently unsupported, pass `nox2apic` to kernel args to disable x2apic");
+
     uint64_t data = 0;
     data |= vector;
     data |= (misc::as_integer(delivery_mode) << 8);
@@ -251,7 +252,7 @@ void x86_64::apic::ioapic::init(acpi::madt& madt){
     }
 }
 
-void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination){
+void x86_64::apic::ioapic::set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint32_t destination){
     for(auto& entry : ioapics){
         if((entry.second <= gsi) && ((entry.first.get_max_redirection_entries() + entry.second) > gsi)){
             // Found correct ioapic

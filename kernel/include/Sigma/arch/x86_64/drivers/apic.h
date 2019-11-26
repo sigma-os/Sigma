@@ -179,7 +179,7 @@ namespace x86_64::apic
         }
         ioapic_device() = default;
         void init(uint64_t base);
-        void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination);
+        void set_entry(uint8_t index, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint32_t destination);
         uint64_t read_entry(uint8_t index);
         void set_entry(uint8_t index, uint64_t data);
         void unmask(uint8_t index);
@@ -194,7 +194,7 @@ namespace x86_64::apic
 
     namespace ioapic {
         void init(acpi::madt& madt);
-        void set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint8_t destination);
+        void set_entry(uint32_t gsi, uint8_t vector, ioapic_delivery_modes delivery_mode, ioapic_destination_modes destination_mode, uint16_t flags, uint32_t destination);
         void set_entry(uint32_t gsi, uint64_t data);
         uint64_t read_entry(uint32_t gsi);
         void mask_gsi(uint32_t gsi);

@@ -14,3 +14,4 @@ Options
 - `nosmap` will disable SMAP (Supervisor Mode Access Prevention)
 - `enable_tsd` will enable the TSD bit in cr4 which disallows the `rdtsc` instruction in userland, this can make speculative exploits harder to pull off, however many applications use this instruction for valid purposes so it is disabled by default
 - `notme` TME like SMAP currently is an untested feature, so people are advised to turn it off with this flag, it won't disable it if it has been enabled by BIOS / FW, however it will stop Sigma from enabling it
+- `nox2apic` Since Sigma doesn't support Intel VT-d, it is currently impossible to route IRQs to cpus with an APIC id above 256, if an error pops up about this, pass this option to disable the x2apic
