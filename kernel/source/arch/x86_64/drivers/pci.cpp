@@ -417,6 +417,11 @@ x86_64::pci::bar x86_64::pci::read_bar(uint16_t seg, uint8_t bus, uint8_t slot, 
         x86_64::pci::write(seg, bus, slot, function, offset, bar, 4);
     }
 
+    if(ret.type == bar_type_mem && ret.base == 0 && ret.len == 0){
+        // Doesn't exist i guess
+        ret.type = bar_type_invalid;
+    }
+
     return ret;
 }
 
