@@ -16,6 +16,7 @@ void proc::device::print_list(){
     for(auto& entry : *device_list){
         debug_printf("    %s\n", entry.name ? entry.name : "Unknown");
         for(auto& res : entry.resources){
+            if(res.type != device::resource_region::type_invalid)
             debug_printf("        Resource: %x -> %x type: %d\n", res.base, res.base + res.len, res.type);
         }
     }
@@ -27,8 +28,7 @@ void proc::device::add_pci_device(x86_64::pci::device* dev){
     entry.add_pci_device(dev);
     entry.name = x86_64::pci::class_to_str(dev->class_code);
     for(auto& bar : dev->bars){
-        if(bar.type != x86_64::pci::bar_type_invalid)
-            entry.resources.push_back({.type = bar.type, .base = bar.base, .len = bar.len});
+        entry.resources.push_back({.type = bar.type, .base = bar.base, .len = bar.len});
     }
 }
 
@@ -82,11 +82,15 @@ uint64_t proc::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64
     switch (cmd)
     {
     case proc::device::devctl_cmd_nop:
+        #ifdef LOG_SYSCALLS
         debug_printf("[DEVICE]: Handled cmd_nop\n");
+        #endif
         break;
 
     case proc::device::devctl_cmd_claim: {
-        debug_printf("[DEVICE]: Handling cmd_claim\n");
+        #ifdef LOG_SYSCALLS
+        debug_printf("[DEVICE]: Handling cmd_claim, descriptor: %d\n", arg1);
+        #endif
         auto& device = device_list->operator[](arg1);
         if(device.driver == 0) {
             device.driver = proc::process::get_current_tid();
@@ -98,17 +102,23 @@ uint64_t proc::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64
     }
 
     case proc::device::devctl_cmd_find_pci:
-        debug_printf("[DEVICE]: Handling cmd_find_pci\n");
+        #ifdef LOG_SYSCALLS
+        debug_printf("[DEVICE]: Handling cmd_find_pci, %x:%x:%x:%x\n", arg1, arg2, arg3, arg4);
+        #endif
         ret = find_pci_node(arg1, arg2, arg3, arg4);
         break;
 
     case proc::device::devctl_cmd_find_pci_class:
-        debug_printf("[DEVICE]: Handling cmd_find_pci_class\n");
+        #ifdef LOG_SYSCALLS
+        debug_printf("[DEVICE]: Handling cmd_find_pci_class, %d:%d, index: %d\n", arg1, arg2, arg3);
+        #endif
         ret = find_pci_class_node(arg1, arg2, arg3);
         break;
     
     case proc::device::devctl_cmd_get_resource_region:
-        debug_printf("[DEVICE]: Handling cmd_get_resouse_region\n");
+        #ifdef LOG_SYSCALLS
+        debug_printf("[DEVICE]: Handling cmd_get_resouse_region, descriptor: %d, index: %d, ptr: %x\n", arg1, arg2, arg3);
+        #endif
         ret = get_resource_region(arg1, arg2, reinterpret_cast<device::resource_region*>(arg3));
         break;
 
