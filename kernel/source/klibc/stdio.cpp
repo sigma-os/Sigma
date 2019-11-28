@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <klibc/string.h>
 #include <klibc/stdlib.h>
-
+#include <Sigma/common.h>
 #include <Sigma/arch/x86_64/misc/spinlock.h>
 
 
@@ -25,11 +25,8 @@ static bool print(const char* data, size_t length){
     return true;
 }
 
-int printf(const char* format, ...){
+int printf_internal(const char* format, va_list parameters){
     std::lock_guard guard{printf_lock};
-
-    va_list parameters;
-    va_start(parameters, format);
 
     uint64_t written = 0;
 
@@ -150,6 +147,12 @@ int printf(const char* format, ...){
     return written;
 }
 
+int printf(const char* format, ...){
+    va_list parameters;
+    va_start(parameters, format);
+    return printf_internal(format, parameters);
+}
+
 int putchar(int c){
     main_writer.print_char(c);
     return c;
@@ -180,7 +183,17 @@ int debug_printf(const char* format, ...){
     std::lock_guard guard{debug_mutex};
     va_list parameters;
     va_start(parameters, format);
-
+    if(auto* log = misc::kernel_args::get_str("debug"); log != nullptr){
+        if(strcmp(log, "vga") == 0){
+            return printf_internal(format, parameters);
+        } else if(strcmp(log, "serial") == 0){
+            goto serial;
+        } else {
+            return printf("[DEBUG]: Unknown debug destination: %s\n", log);
+        }
+    }
+    
+    serial: 
     uint64_t written = 0;
 
     while(*format != '\0'){

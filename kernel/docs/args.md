@@ -5,8 +5,15 @@ There are 2 things you can do
 - Defne a string with the key + '=' + value + space, for example `dsdt_override=/boot/dsdt.bin`
 
 Options
+## OS Features
+- `debug` takes a bool containing the type of way debug info should be sent, current legal values are `serial` to send them over rs232 and `vga` to send them via the normal VGA text mode.
+    - `serial` is default
+## ACPI Features
 - `dsdt_override` which should be a string with the path to the file to read the dsdt from on initrd
 - `acpi_trace` is a bool that enables tracing of AML opcodes
+
+
+#### CPU Feature control
 - `noumip` is a bool which unconditionally disables initialization of UMIP (User Mode Instruction Prevention)
 - `nopcid` will disable pcid, even if it can be enabled
 - `noinvpcid` will disable the `invpcid` instruction, note that this will not stop pcid from working without it
