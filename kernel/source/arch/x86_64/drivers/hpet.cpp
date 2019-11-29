@@ -111,13 +111,8 @@ void x86_64::hpet::init_hpet(){
     if(((hpet_read(general_capabilities_and_id_reg) >> 16) & 0xFFFF) == 0xFFFF)
         PANIC("[HPET]: No HPET detected, need HPET to further boot");
 
-    #ifdef DEBUG
-    debug_printf("[HPET]: Initializing HPET device: base: %x, PCI Vendor ID: %x, Revision: %x, Counter clk: %x, N counters: %x", base, ((hpet_read(general_capabilities_and_id_reg) >> 16) & 0xFFFF), (hpet_read(general_capabilities_and_id_reg) & 0xFF), main_counter_clk, n_counters);
-    if(supports_64bit_counter) debug_printf(", Supports 64bit counter\n");
-    else debug_printf("\n");
-    #endif
-
     uint64_t general_cap_and_id = hpet_read(x86_64::hpet::general_capabilities_and_id_reg);
+
     main_counter_clk = ((general_cap_and_id >> 32) & 0xFFFFFFFF);
     if(!(main_counter_clk <= 0x05F5E100) || main_counter_clk == 0){
         printf("[HPET]: Invalid HPET COUNTER_CLK_PERIOD: %x\n", main_counter_clk);
@@ -132,17 +127,19 @@ void x86_64::hpet::init_hpet(){
 
     supports_64bit_counter = bitops<uint64_t>::bit_test(general_cap_and_id, 13);
 
-    
-
+    #ifdef DEBUG
+    debug_printf("[HPET]: Initializing HPET device: base: %x, PCI Vendor ID: %x, Revision: %x, Counter clk: %x, N counters: %x", base, ((hpet_read(general_capabilities_and_id_reg) >> 16) & 0xFFFF), (hpet_read(general_capabilities_and_id_reg) & 0xFF), main_counter_clk, n_counters);
+    if(supports_64bit_counter) debug_printf(", Supports 64bit counter\n");
+    else debug_printf("\n");
+    #endif
 
     hpet_write(x86_64::hpet::general_configuration_reg, 0); // Main counter disabled, legacy routing disabled
 
     hpet_write(x86_64::hpet::main_counter_reg, 0); // Counter counts up
 
-    // Initialize Timers
+    // TODO: Initialize Timers
 
     hpet_write(x86_64::hpet::general_configuration_reg, 1); // Main counter enabled, legacy routing disabled
-
 }
 
 bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_types type, 
@@ -168,7 +165,7 @@ bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_typ
     hpet_write(hpet_timer_comparator_value_reg(comparator), hpet_read(x86_64::hpet::main_counter_reg) + ticks);
     hpet_write(hpet_timer_comparator_value_reg(comparator), ticks);
 
-	// TODO: Initialize interrupt
+	// TODO: Initialize IRQ
 
     return true;
 }
