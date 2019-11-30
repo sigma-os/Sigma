@@ -4,6 +4,8 @@
 #include <libsigma/device.h>
 #include <iostream>
 
+#include "ahci.hpp"
+
 int main(){
     int fd = open("/dev/sysout", O_WRONLY);
     dup2(fd, STDOUT_FILENO);
