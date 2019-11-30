@@ -2,7 +2,7 @@ project('ahci', 'cpp', version: '0.0.1', default_options : ['cpp_std=c++17'])
 
 #include_dirs = include_directories('include')
 
-source_files = files('main.cpp')        
+source_files = files('main.cpp', 'ahci.cpp')        
 
 libsigma_dep = dependency('sigma')
 deps = [libsigma_dep]

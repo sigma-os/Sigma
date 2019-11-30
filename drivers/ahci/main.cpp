@@ -11,6 +11,9 @@ int main(){
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
 
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     auto device_descriptor = devctl(DEVCTL_CMD_FIND_PCI_CLASS, 0x1, 0x6, 0, 0);
     if(device_descriptor == -1){
         std::cout << "ahci: Couldn't find a compatible controller" << std::endl;
@@ -25,6 +28,6 @@ int main(){
     libsigma_resource_region_t region = {};
     devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 5, (uint64_t)&region, 0);
 
-    std::cout << "ahci: Detected ahci controller at: 0x" << std::hex << region.base << ", len: 0x" << region.len << std::endl;
+    ahci::controller controller{region.base, region.len};
     while(1);
 }

@@ -63,9 +63,9 @@ namespace ahci
             static_assert(sizeof(pi) == 4);
 
             PACKED struct {
-                uint32_t major : 16;
                 uint32_t minor : 8;
                 uint32_t patch : 8;
+                uint32_t major : 16;
             } vs;
             static_assert(sizeof(vs) == 4);
 
@@ -356,4 +356,13 @@ namespace ahci
             prs_t ports[];
         };
     } // namespace regs
+
+    class controller {
+        public:
+        controller(uintptr_t phys_base, size_t size);
+
+
+        private:
+        regs::hba_t* base;
+    };
 } // namespace ahci
