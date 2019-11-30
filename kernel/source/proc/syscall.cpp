@@ -71,16 +71,21 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
-// ARG0: void* to addr
-// ARG1: size_t length
-// ARG2: int prot
-// ARG3: int flags
+// ARG0: void* to virtual addr
+// ARG1: void* to physical addr, only allowed if thread is DRIVER level or KERNEL
+// ARG2: size_t length
+// ARG3: int prot
+// ARG4: int flags
 // RET: addr
 static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
     if(!PTR_IS_USERLAND(SYSCALL_GET_ARG0()))
         return 1;
+
+    if(SYSCALL_GET_ARG1() != 0 && proc::process::get_current_thread()->privilege < proc::process::thread_privilege_level::DRIVER)
+        return 1;
+
     
-    auto ret = proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3());
+    auto ret = proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG2(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG1()), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 
     return reinterpret_cast<uint64_t>(ret);
 }

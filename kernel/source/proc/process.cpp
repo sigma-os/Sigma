@@ -463,14 +463,14 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     PANIC("idle_cpu returned, how is this happening");
 }
 
-void* proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags){
+void* proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *virt_base, void* phys_base, int prot, int flags){
     std::lock_guard guard{thread->thread_lock};
 
-    if(!addr)
-        addr = reinterpret_cast<void*>(thread->vmm.get_free_range(mmap_bottom, mmap_top, size));
+    if(!virt_base)
+        virt_base = reinterpret_cast<void*>(thread->vmm.get_free_range(mmap_bottom, mmap_top, size));
 
     // If we couldn't find any just return
-    if(!addr)
+    if(!virt_base)
         return nullptr;
 
     (void)(flags);
@@ -481,17 +481,23 @@ void* proc::process::map_anonymous(proc::process::thread* thread, size_t size, v
                      map_page_flags_user;
 
     size_t pages = misc::div_ceil(size, mm::pmm::block_size);
-    uint64_t virt = reinterpret_cast<uint64_t>(addr);
+    uint64_t virt = reinterpret_cast<uint64_t>(virt_base);
+    uint64_t phys = reinterpret_cast<uint64_t>(phys_base);
 
-    for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size){
-        void* phys = mm::pmm::alloc_block();
-        if(phys == nullptr) PANIC("Couldn't allocate pages for map_anonymous");
-        thread->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
+    bool allocate_phys = (phys_base == nullptr);
 
-        thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), virt, map_flags);
+    for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size, phys += mm::pmm::block_size){
+        if(allocate_phys){
+            void* block = mm::pmm::alloc_block();
+            if(block == nullptr) PANIC("Couldn't allocate pages for map_anonymous");
+            thread->resources.frames.push_back(reinterpret_cast<uint64_t>(block));
+            thread->vmm.map_page(reinterpret_cast<uint64_t>(block), virt, map_flags);
+        } else {
+            thread->vmm.map_page(phys, virt, map_flags);
+        }
     }
 
-    return addr;
+    return virt_base;
 }
 
 tid_t proc::process::fork(x86_64::idt::idt_registers* regs){

@@ -84,7 +84,7 @@ C_LINKAGE void kernel_main(){
     uint64_t virt_start = KERNEL_VBASE;
     uint64_t phys_start = 0x0;
     
-    for(uint32_t i = 0; i < (1024 * 16); i++){
+    for(uint32_t i = 0; i < (1024 * 20); i++){
         mm::vmm::kernel_vmm::get_instance().map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable | map_page_flags_global);
 
         virt_start += 0x1000;

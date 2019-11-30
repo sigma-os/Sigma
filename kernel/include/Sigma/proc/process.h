@@ -105,7 +105,7 @@ namespace proc::process
 
     enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED};
     enum class block_reason {FOREVER = 0, WAITING_FOR_IPC};
-    enum class thread_privilege_level {KERNEL, DRIVER, APPLICATION};
+    enum class thread_privilege_level {APPLICATION = 0, DRIVER = 1, KERNEL = 2};
 
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
@@ -180,7 +180,7 @@ namespace proc::process
     #define MAP_FIXED 0x04
     #define MAP_ANON 0x08
 
-    void* map_anonymous(proc::process::thread* thread, size_t size, void *addr, int prot, int flags);
+    void* map_anonymous(proc::process::thread* thread, size_t size, void *virt_base, void* phys_base, int prot, int flags);
 
     // General Thread Modifying functions
     void set_thread_fs(tid_t tid, uint64_t fs);

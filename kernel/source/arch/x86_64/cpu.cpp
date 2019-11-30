@@ -417,12 +417,12 @@ void x86_64::identify_cpu(){
     uint32_t a = 0, b = 0, c = 0, d = 0;
     x86_64::cpuid(0, a, b, c, d);
 
-    char vendorID[13] = "";
-    *((uint32_t*)vendorID) = b;
-    *((uint32_t*)vendorID + 1) = d;
-    *((uint32_t*)vendorID + 2) = c;
+    uint32_t vendorID[5] = {};
+    *(vendorID) = b;
+    *(vendorID + 1) = d;
+    *(vendorID + 2) = c;
 
-    debug_printf("    VendorID: %s\n", vendorID);
+    debug_printf("    VendorID: %s\n", (const char*)vendorID);
 
     x86_64::cpuid(1, a, b, c, d);
 
