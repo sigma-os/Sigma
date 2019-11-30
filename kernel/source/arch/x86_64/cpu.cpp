@@ -36,8 +36,7 @@ void x86_64::smap::init(){
 
             smp::cpu::entry::get_cpu()->features.smap = 1;
 
-            asm("clac"); // Yes, intel is absolutely goddamn retarded, if rflags.AC is clear it checks with SMAP, if it is set it doesn't
-            printf("WARNING: SMAP support is fully untested, use at your own risk, pass `nosmap` to the kernel to disable it\n");
+            asm("clac");
             debug_printf("[CPU]: Enabled SMAP\n");
         } else {
             debug_printf("[CPU]: SMAP is not available\n");
