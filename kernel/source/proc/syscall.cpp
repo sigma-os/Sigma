@@ -58,6 +58,8 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
     {
     case 0: { // Do sbrk-like allocation
         void* base = proc::process::expand_thread_heap(proc::process::get_current_thread(), SYSCALL_GET_ARG2());
+        if(!misc::is_canonical(reinterpret_cast<uint64_t>(base)))
+            PANIC("Non-canonical return from sbrk-like syscall_valloc");
         return reinterpret_cast<uint64_t>(base);
     }
     case 1: {
@@ -86,6 +88,9 @@ static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
 
     
     auto ret = proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG2(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG1()), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
+
+    if(!misc::is_canonical(reinterpret_cast<uint64_t>(ret)))
+        PANIC("Non-canonical return from syscall_vm_map");
 
     return reinterpret_cast<uint64_t>(ret);
 }
@@ -201,14 +206,21 @@ static void syscall_handler(x86_64::idt::idt_registers* regs){
         SYSCALL_SET_RETURN_VALUE(1);
         return;
     }
-    
-    kernel_syscall& syscall = syscalls[SYSCALL_GET_FUNC()];
-    #ifdef LOG_SYSCALLS
-    debug_printf("[SYSCALL]: Requested syscall %d [%s], from thread %d\n", SYSCALL_GET_FUNC(), syscall.name, proc::process::get_current_tid());
-    #endif
 
-    x86_64::smap::smap_guard guard{};
-    SYSCALL_SET_RETURN_VALUE(syscall.func(regs));
+    uint64_t func = SYSCALL_GET_FUNC();
+    
+    kernel_syscall& syscall = syscalls[func];
+    
+    
+
+    {
+        x86_64::smap::smap_guard guard{};
+        SYSCALL_SET_RETURN_VALUE(syscall.func(regs));
+    }
+
+    #ifdef LOG_SYSCALLS
+    debug_printf("[SYSCALL]: Requested syscall %d [%s(%x, %x, %x, %x, %x)], from thread %d -> return: %x\n", func, syscall.name, SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4(), proc::process::get_current_tid(), SYSCALL_GET_FUNC());
+    #endif
 }
 
 
