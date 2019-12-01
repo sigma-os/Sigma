@@ -59,11 +59,13 @@ void proc::simd::clone_state(uint8_t** old_thread, uint8_t** new_thread){
 
 void proc::simd::init_simd(){
     uint32_t a1, b1, c1, d1;
-    if(!x86_64::cpuid(1, a1, b1, c1, d1)) PANIC("Default CPUID leaf does not exist");
+    if(!x86_64::cpuid(1, a1, b1, c1, d1)) 
+        PANIC("Default CPUID leaf does not exist");
 
-    if(c1 & x86_64::cpuid_bits::XSAVE){
+    /*if(c1 & x86_64::cpuid_bits::XSAVE){
         uint32_t a2, b2, c2, d2;
-        if(!x86_64::cpuid(0xD, 0, a2, b2, c2, d2)) PANIC("XSAVE exists but CPUID leaf 0xD doesnt exist");
+        if(!x86_64::cpuid(0xD, 0, a2, b2, c2, d2)) 
+            PANIC("XSAVE exists but CPUID leaf 0xD doesnt exist");
         
         save_size = c2;
         save_align = 64;
@@ -77,7 +79,8 @@ void proc::simd::init_simd(){
         global_restore = +[](uint8_t* state){
             xrstor_int(state);
         };
-    } else if(d1 & x86_64::cpuid_bits::FXSAVE){
+    } else */ // TODO: Implement MXCSR thingies for xsave
+    if(d1 & x86_64::cpuid_bits::FXSAVE){
         save_size = 512;
         save_align = 16;
         
@@ -90,9 +93,28 @@ void proc::simd::init_simd(){
         global_restore = +[](uint8_t* state){
             asm("fxrstor (%0)" : : "r"(state) : "memory");
         };
-    } else PANIC("no known SIMD save mechanism available");
+    } else {
+        PANIC("no known SIMD save mechanism available");
+    }
 
     default_state = static_cast<uint8_t*>(mm::hmm::kmalloc_a(save_size, save_align));
     memset(static_cast<void*>(default_state), 0, save_size);
-    global_save(default_state);
+    fxsave_area* tmp = reinterpret_cast<fxsave_area*>(default_state);
+
+    tmp->fcw |= 1 << 0; // Set Invalid Operation Mask
+    tmp->fcw |= 1 << 1; // Set Denormal Operand Mask
+    tmp->fcw |= 1 << 2; // Set Divide by Zero Mask
+    tmp->fcw |= 1 << 3; // Set Overflow Mask
+    tmp->fcw |= 1 << 4; // Set Underflow Mask
+    tmp->fcw |= 1 << 5; // Set Precision Mask
+
+    tmp->fcw |= (1 << 10) | (1 << 11); // Set Double Extended Precision
+
+
+    tmp->mxcsr |= 1 << 7; // Set Invalid Operation Mask
+	tmp->mxcsr |= 1 << 8; // Set Denormal Mask
+	tmp->mxcsr |= 1 << 9; // Set Divide by Zero Mask
+	tmp->mxcsr |= 1 << 10; // Set Overflow Mask
+	tmp->mxcsr |= 1 << 11; // Set Underflow Mask
+	tmp->mxcsr |= 1 << 12; // Set Precision Mask
 }
