@@ -11,232 +11,315 @@ namespace ahci
     {
         struct PACKED ghcr_t 
         {
-            PACKED struct {
-                uint32_t np : 5;
-                uint32_t sxs : 1;
-                uint32_t ems : 1;
-                uint32_t cccs : 1;
-                uint32_t ncs : 1;
-                uint32_t psc : 1;
-                uint32_t ssc : 1;
-                uint32_t pmd : 1;
-                uint32_t fbss : 1;
-                uint32_t spm : 1;
-                uint32_t sam : 1;
-                uint32_t reserved : 1;
-                uint32_t iss : 4;
-                uint32_t sclo : 1;
-                uint32_t sal : 1;
-                uint32_t salp : 1;
-                uint32_t sss : 1;
-                uint32_t smps : 1;
-                uint32_t ssntf : 1;
-                uint32_t sncq : 1;
-                uint32_t s64a : 1;
-            } cap;
-            static_assert(sizeof(cap) == 4);
+            union cap_t {
+                cap_t(uint32_t cap): raw(cap) {}
+                struct {
+                    uint32_t np : 5;
+                    uint32_t sxs : 1;
+                    uint32_t ems : 1;
+                    uint32_t cccs : 1;
+                    uint32_t ncs : 5;
+                    uint32_t psc : 1;
+                    uint32_t ssc : 1;
+                    uint32_t pmd : 1;
+                    uint32_t fbss : 1;
+                    uint32_t spm : 1;
+                    uint32_t sam : 1;
+                    uint32_t reserved : 1;
+                    uint32_t iss : 4;
+                    uint32_t sclo : 1;
+                    uint32_t sal : 1;
+                    uint32_t salp : 1;
+                    uint32_t sss : 1;
+                    uint32_t smps : 1;
+                    uint32_t ssntf : 1;
+                    uint32_t sncq : 1;
+                    uint32_t s64a : 1;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(cap_t) == 4);
+            volatile uint32_t cap;
 
-            PACKED struct
-            {
-                uint32_t hr : 1;
-                uint32_t ie : 1;
-                uint32_t mrsm : 1;
-                uint32_t reserved : 28;
-                uint32_t ea : 1;
-            } ghc;
-            static_assert(sizeof(ghc) == 4);
+            union ghc_t {
+                ghc_t(uint32_t ghc): raw(ghc) {}
+                struct {
+                    uint32_t hr : 1;
+                    uint32_t ie : 1;
+                    uint32_t mrsm : 1;
+                    uint32_t reserved : 28;
+                    uint32_t ea : 1;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(ghc_t) == 4);
+            volatile uint32_t ghc;
 
-            PACKED struct {
+            union is_t {
+                is_t(uint32_t is): irq_pending(is) {}
                 uint32_t irq_pending;
                 bool is_pending(uint32_t port){
                     return ((irq_pending & (uint32_t{1} << port)) == 0) ? false : true;
                 }
-            } is;
-            static_assert(sizeof(is) == 4);
+            };
+            static_assert(sizeof(is_t) == 4);
+            volatile uint32_t is;
 
-            PACKED struct {
+            union pi_t {
+                pi_t(uint32_t pi): implemented(pi) {}
                 uint32_t implemented;
                 bool is_implemented(uint32_t port){
                     return ((implemented & (uint32_t{1} << port)) == 0) ? false : true;
                 }
-            } pi;
-            static_assert(sizeof(pi) == 4);
+            };
+            static_assert(sizeof(pi_t) == 4);
+            volatile uint32_t pi;
 
-            PACKED struct {
-                uint32_t minor : 8;
-                uint32_t patch : 8;
-                uint32_t major : 16;
-            } vs;
-            static_assert(sizeof(vs) == 4);
+            union vs_t {
+                vs_t(uint32_t vs): raw(vs) {}
+                struct {
+                    uint32_t minor : 8;
+                    uint32_t subminor : 8;
+                    uint32_t major : 16;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(vs_t) == 4);
+            volatile uint32_t vs;
 
-            PACKED struct {
-                uint32_t en : 1;
-                uint32_t reserved : 2;
-                uint32_t interrupt : 5;
-                uint32_t cc : 8;
-                uint32_t tv : 16;
-            } ccc_ctl;
-            static_assert(sizeof(ccc_ctl) == 4);
+            union ccc_ctl_t {
+                ccc_ctl_t(uint32_t ccc_ctl): raw(ccc_ctl) {}
+                struct {
+                    uint32_t en : 1;
+                    uint32_t reserved : 2;
+                    uint32_t interrupt : 5;
+                    uint32_t cc : 8;
+                    uint32_t tv : 16;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(ccc_ctl_t) == 4);
+            volatile uint32_t ccc_ctl;
 
-            PACKED struct {
-                uint32_t ports;
-            } ccc_ports;
-            static_assert(sizeof(ccc_ports) == 4);
+            union ccc_ports_t {
+                ccc_ports_t(uint32_t ccc_ports): raw(ccc_ports) {}
+                struct {
+                    uint32_t ports;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(ccc_ports_t) == 4);
+            volatile uint32_t ccc_ports;
 
-            PACKED struct {
-                uint32_t size : 16;
-                uint32_t offset : 16;
-            } em_loc;
-            static_assert(sizeof(em_loc) == 4);
+            union em_loc_t {
+                em_loc_t(uint32_t em_loc): raw(em_loc) {}
+                struct {
+                    uint32_t size : 16;
+                    uint32_t offset : 16;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(em_loc_t) == 4);
+            volatile uint32_t em_loc;
 
-            PACKED struct {
-                uint32_t mr : 1;
-                uint32_t reserved : 7;
-                uint32_t tm : 1;
-                uint32_t reset : 1;
-                uint32_t reserved_0 : 6;
-                uint32_t led : 1;
-                uint32_t safte : 1;
-                uint32_t ses2 : 1;
-                uint32_t sgpio : 1;
-                uint32_t reserved_1 : 4;
-                uint32_t smb : 1;
-                uint32_t xmt : 1;
-                uint32_t alhd : 1;
-                uint32_t pm : 1;
-            } em_ctl;
-            static_assert(sizeof(em_ctl) == 4);
-            
-            PACKED struct {
-                uint32_t boh : 1;
-                uint32_t nvmp : 1;
-                uint32_t apst : 1;
-                uint32_t sds : 1;
-                uint32_t sadm : 1;
-                uint32_t deso : 1;
-                uint32_t reserved : 26;
-            } cap2;
-            static_assert(sizeof(cap2) == 4);
-            
-            PACKED struct {
-                uint32_t bos : 1;
-                uint32_t oos : 1;
-                uint32_t sooe : 1;
-                uint32_t ooc : 1;
-                uint32_t bb : 1;
-                uint32_t reserved : 27;
-            } bohc;
-            static_assert(sizeof(bohc) == 4);
+            union em_ctl_t {
+                em_ctl_t(uint32_t em_ctl): raw(em_ctl) {}
+                struct {
+                    uint32_t mr : 1;
+                    uint32_t reserved : 7;
+                    uint32_t tm : 1;
+                    uint32_t reset : 1;
+                    uint32_t reserved_0 : 6;
+                    uint32_t led : 1;
+                    uint32_t safte : 1;
+                    uint32_t ses2 : 1;
+                    uint32_t sgpio : 1;
+                    uint32_t reserved_1 : 4;
+                    uint32_t smb : 1;
+                    uint32_t xmt : 1;
+                    uint32_t alhd : 1;
+                    uint32_t pm : 1;
+                };
+                uint32_t raw;   
+            };
+            static_assert(sizeof(em_ctl_t) == 4);
+            volatile uint32_t em_ctl;
+
+            union cap2_t {
+                cap2_t(uint32_t cap2): raw(cap2) {}
+                struct {
+                    uint32_t boh : 1;
+                    uint32_t nvmp : 1;
+                    uint32_t apst : 1;
+                    uint32_t sds : 1;
+                    uint32_t sadm : 1;
+                    uint32_t deso : 1;
+                    uint32_t reserved : 26;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(cap2_t) == 4);
+            volatile uint32_t cap2;
+
+            union bohc_t {
+                bohc_t(uint32_t bohc): raw(bohc) {}
+                struct {
+                    uint32_t bos : 1;
+                    uint32_t oos : 1;
+                    uint32_t sooe : 1;
+                    uint32_t ooc : 1;
+                    uint32_t bb : 1;
+                    uint32_t reserved : 27;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(bohc_t) == 4);
+            volatile uint32_t bohc;
         };
         static_assert(sizeof(ghcr_t) == 44);
     
         struct PACKED prs_t {
-            PACKED struct {
-                uint32_t reserved : 10;
-                uint32_t base : 22;
-            } clb;
-            static_assert(sizeof(clb) == 4);
+            union clb_t {
+                struct {
+                    uint32_t reserved : 10;
+                    uint32_t base : 22;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(clb_t) == 4);
+            volatile uint32_t clb;
 
-            PACKED struct {
-                uint32_t base : 32;
-            } clbu;
-            static_assert(sizeof(clbu) == 4);
+            union clbu_t {
+                clbu_t(uint32_t clbu): base_high(clbu) {}
+                uint32_t base_high;
+            };
+            static_assert(sizeof(clbu_t) == 4);
+            volatile uint32_t clbu;
 
-            PACKED struct {
-                uint32_t reserved : 8;
-                uint32_t base : 24;
-            } fb;
-            static_assert(sizeof(fb) == 4);
+            union fb_t {
+                fb_t(uint32_t fb): raw(fb) {}
+                struct {
+                    uint32_t reserved : 8;
+                    uint32_t base : 24;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(fb_t) == 4);
+            volatile uint32_t fb;
 
-            PACKED struct {
-                uint32_t base : 32;
-            } fbu;
-            static_assert(sizeof(fbu) == 4);
 
-            PACKED struct {
-                uint32_t dhrs : 1;
-                uint32_t pss : 1;
-                uint32_t dss : 1;
-                uint32_t sdbs : 1;
-                uint32_t ufs : 1;
-                uint32_t pds : 1;
-                uint32_t pcs : 1; 
-                uint32_t dmps : 1;
-                uint32_t reserved : 14;
-                uint32_t prcs : 1;
-                uint32_t imps : 1;
-                uint32_t ofs : 1;
-                uint32_t reserved_0 : 1;
-                uint32_t infs : 1;
-                uint32_t ifs : 1;
-                uint32_t hbds : 1;
-                uint32_t hbfs : 1;
-                uint32_t tfes : 1;
-                uint32_t cpds : 1;
-            } is;
-            static_assert(sizeof(is) == 4);
+            union fbu_t {
+                fbu_t(uint32_t fbu): base_high(fbu) {}
+                uint32_t base_high;
+            };
+            static_assert(sizeof(fbu_t) == 4);
+            volatile uint32_t fbu;
+
+            union is_t {
+                is_t(uint32_t is): raw(is) {}
+                struct {
+                    uint32_t dhrs : 1;
+                    uint32_t pss : 1;
+                    uint32_t dss : 1;
+                    uint32_t sdbs : 1;
+                    uint32_t ufs : 1;
+                    uint32_t pds : 1;
+                    uint32_t pcs : 1; 
+                    uint32_t dmps : 1;
+                    uint32_t reserved : 14;
+                    uint32_t prcs : 1;
+                    uint32_t imps : 1;
+                    uint32_t ofs : 1;
+                    uint32_t reserved_0 : 1;
+                    uint32_t infs : 1;
+                    uint32_t ifs : 1;
+                    uint32_t hbds : 1;
+                    uint32_t hbfs : 1;
+                    uint32_t tfes : 1;
+                    uint32_t cpds : 1;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(is_t) == 4);
+            volatile uint32_t is;
             
-            PACKED struct {
-                uint32_t dhre : 1;
-                uint32_t pse : 1;
-                uint32_t dse : 1;
-                uint32_t sdbe : 1;
-                uint32_t ufe : 1;
-                uint32_t pde : 1;
-                uint32_t pce : 1; 
-                uint32_t dmpe : 1;
-                uint32_t reserved : 14;
-                uint32_t prce : 1;
-                uint32_t impe : 1;
-                uint32_t ofe : 1;
-                uint32_t reserved_0 : 1;
-                uint32_t infe : 1;
-                uint32_t ife : 1;
-                uint32_t hbde : 1;
-                uint32_t hbfe : 1;
-                uint32_t tfee : 1;
-                uint32_t cpde : 1;
-            } ie;
-            static_assert(sizeof(ie) == 4);
+            union ie_t {
+                ie_t(uint32_t ie): raw(ie) {}
+                struct {
+                    uint32_t dhre : 1;
+                    uint32_t pse : 1;
+                    uint32_t dse : 1;
+                    uint32_t sdbe : 1;
+                    uint32_t ufe : 1;
+                    uint32_t pde : 1;
+                    uint32_t pce : 1; 
+                    uint32_t dmpe : 1;
+                    uint32_t reserved : 14;
+                    uint32_t prce : 1;
+                    uint32_t impe : 1;
+                    uint32_t ofe : 1;
+                    uint32_t reserved_0 : 1;
+                    uint32_t infe : 1;
+                    uint32_t ife : 1;
+                    uint32_t hbde : 1;
+                    uint32_t hbfe : 1;
+                    uint32_t tfee : 1;
+                    uint32_t cpde : 1;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(ie_t) == 4);
+            volatile uint32_t ie;
 
-            PACKED struct {
-                uint32_t st : 1;
-                uint32_t sud : 1;
-                uint32_t pod : 1;
-                uint32_t clo : 1;
-                uint32_t fre : 1;
-                uint32_t reserved : 3;
-                uint32_t ccs : 5;
-                uint32_t mpss : 1;
-                uint32_t fr : 1;
-                uint32_t cr : 1;
-                uint32_t cps : 1;
-                uint32_t pma : 1;
-                uint32_t hpcp : 1;
-                uint32_t mpsp : 1;
-                uint32_t cpd : 1;
-                uint32_t esp : 1;
-                uint32_t fbscp : 1;
-                uint32_t apste : 1;
-                uint32_t atapi : 1;
-                uint32_t dlae : 1;
-                uint32_t alpe : 1;
-                uint32_t asp : 1;
-                uint32_t icc : 4;
-            } cmd;
-            static_assert(sizeof(cmd) == 4);
+            union cmd_t {
+                cmd_t(uint32_t cmd): raw(cmd) {}
+                struct {
+                    uint32_t st : 1;
+                    uint32_t sud : 1;
+                    uint32_t pod : 1;
+                    uint32_t clo : 1;
+                    uint32_t fre : 1;
+                    uint32_t reserved : 3;
+                    uint32_t ccs : 5;
+                    uint32_t mpss : 1;
+                    uint32_t fr : 1;
+                    uint32_t cr : 1;
+                    uint32_t cps : 1;
+                    uint32_t pma : 1;
+                    uint32_t hpcp : 1;
+                    uint32_t mpsp : 1;
+                    uint32_t cpd : 1;
+                    uint32_t esp : 1;
+                    uint32_t fbscp : 1;
+                    uint32_t apste : 1;
+                    uint32_t atapi : 1;
+                    uint32_t dlae : 1;
+                    uint32_t alpe : 1;
+                    uint32_t asp : 1;
+                    uint32_t icc : 4;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(cmd_t) == 4);
+            volatile uint32_t cmd;
 
-            uint32_t reserved;
+            volatile uint32_t reserved;
 
-            PACKED struct {
-                uint32_t sts : 8;
-                uint32_t err : 8;
-                uint32_t  reserved : 16;
-            } tfd;
-            static_assert(sizeof(tfd) == 4);
+            union tfd_t {
+                tfd_t(uint32_t tfd): raw(tfd) {}
+                struct {
+                    uint32_t sts : 8;
+                    uint32_t err : 8;
+                    uint32_t  reserved : 16;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(tfd_t) == 4);
+            volatile uint32_t tfd;
 
-            PACKED union {
-                struct PACKED {
+            union sig_t {
+                sig_t(uint32_t sig): raw(sig) {}
+                struct {
                     uint32_t sector_count : 8;
                     uint32_t lba_low : 8;
                     uint32_t lba_mid : 8;
@@ -277,70 +360,106 @@ namespace ahci
                         return device_types::Nothing;
                     }
                 }
-            } sig;
-            static_assert(sizeof(sig) == 4);
+            };
+            static_assert(sizeof(sig_t) == 4);
+            volatile uint32_t sig;
 
-            PACKED struct {
-                uint32_t det : 4;
-                uint32_t spd : 4;
-                uint32_t ipm : 4;
-                uint32_t reserved : 20;
-            } ssts;
-            static_assert(sizeof(ssts) == 4);
+            union ssts_t {
+                ssts_t(uint32_t ssts): raw(ssts) {}
+                struct {
+                    uint32_t det : 4;
+                    uint32_t spd : 4;
+                    uint32_t ipm : 4;
+                    uint32_t reserved : 20;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(ssts_t) == 4);
+            volatile uint32_t ssts;
 
-            PACKED struct {
-                uint32_t det : 4;
-                uint32_t spd : 4;
-                uint32_t ipm : 4;
-                uint32_t spm : 4;
-                uint32_t pmp : 4;
-                uint32_t reserved : 12;
-            } sctl;
-            static_assert(sizeof(sctl) == 4);
+            union sctl_t {
+                sctl_t(uint32_t sctl): raw(sctl) {}
+                struct {
+                    uint32_t det : 4;
+                    uint32_t spd : 4;
+                    uint32_t ipm : 4;
+                    uint32_t spm : 4;
+                    uint32_t pmp : 4;
+                    uint32_t reserved : 12;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(sctl_t) == 4);
+            volatile uint32_t sctl;
 
-            PACKED struct {
-                uint32_t err : 16;
-                uint32_t diag : 16;
-            } serr;
-            static_assert(sizeof(serr) == 4);
+            union serr_t {
+                serr_t(uint32_t serr): raw(serr) {}
+                struct {
+                    uint32_t err : 16;
+                    uint32_t diag : 16;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(serr_t) == 4);
+            volatile uint32_t serr;
 
-            PACKED struct {
+            union sact_t {
+                sact_t(uint32_t sact): status(sact) {}
                 uint32_t status;
-            } sact;
-            static_assert(sizeof(sact) == 4);
+            };
+            static_assert(sizeof(sact_t) == 4);
+            volatile uint32_t sact;
 
-            PACKED struct {
+            union ci_t {
+                ci_t(uint32_t ci): command_issued(ci) {}
                 uint32_t command_issued;
-            } ci;
-            static_assert(sizeof(ci) == 4);
+            };
+            static_assert(sizeof(ci_t) == 4);
+            volatile uint32_t ci;
 
-            PACKED struct {
-                uint32_t pmn : 16;
-                uint32_t reserved : 16;
-            } sntf;
-            static_assert(sizeof(sntf) == 4);
+            union sntf_t {
+                sntf_t(uint32_t sntf): raw(sntf) {};
+                struct {
+                    uint32_t pmn : 16;
+                    uint32_t reserved : 16;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(sntf_t) == 4);
+            volatile uint32_t sntf;
 
-            PACKED struct {
-                uint32_t en : 1;
-                uint32_t dec : 1;
-                uint32_t sde : 1;
-                uint32_t reserved : 5;
-                uint32_t dev : 4;
-                uint32_t ado : 4;
-                uint32_t dwe : 4;
-                uint32_t reserved_0 : 12;
-            } fbs;
-            static_assert(sizeof(fbs) == 4);
+            union fbs_t {
+                fbs_t(uint32_t fbs): raw(fbs) {}
+                struct {
+                    uint32_t en : 1;
+                    uint32_t dec : 1;
+                    uint32_t sde : 1;
+                    uint32_t reserved : 5;
+                    uint32_t dev : 4;
+                    uint32_t ado : 4;
+                    uint32_t dwe : 4;
+                    uint32_t reserved_0 : 12;    
+                };
+                uint32_t raw;
+                
+            };
+            static_assert(sizeof(fbs_t) == 4);
+            volatile uint32_t fbs;
 
-            PACKED struct {
-                uint32_t adse : 1;
-                uint32_t dsp : 1;
-                uint32_t deto : 8;
-                uint32_t mdat : 5;
-                uint32_t dito : 10;
-                uint32_t reserved : 3;
-            } dev_sleep;
-            static_assert(sizeof(dev_sleep) == 4);
+            union dev_sleep_t {
+                dev_sleep_t(uint32_t dev_sleep): raw(dev_sleep) {}
+                struct {
+                    uint32_t adse : 1;
+                    uint32_t dsp : 1;
+                    uint32_t deto : 8;
+                    uint32_t mdat : 5;
+                    uint32_t dito : 10;
+                    uint32_t reserved : 3;
+                };
+                uint32_t raw;
+            };
+            static_assert(sizeof(dev_sleep_t) == 4);
+            volatile uint32_t dev_sleep;
 
             std::byte reserved_0[40];
             std::byte vendor_specific[16];
@@ -363,6 +482,16 @@ namespace ahci
 
 
         private:
-        regs::hba_t* base;
+        bool bios_gain_ownership();
+
+        volatile regs::hba_t* base;
+        uint8_t major_version, minor_version, subminor_version, n_allocated_ports, n_command_slots;
+
+        struct port {
+            volatile regs::prs_t* regs;
+            regs::prs_t::sig_t::device_types type;
+        };
+
+        port* ports;
     };
 } // namespace ahci

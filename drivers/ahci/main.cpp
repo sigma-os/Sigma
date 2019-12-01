@@ -11,6 +11,7 @@ int main(){
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
 
+    // Disable buffering for stdout and stderr so debug message show up immediately
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
