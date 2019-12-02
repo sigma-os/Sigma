@@ -174,6 +174,26 @@ static uint64_t syscall_devctl(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers
     return proc::device::devctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 }
 
+// ARG0: Size in bytes
+// ARG1: prot
+// ARG2: flags
+// ARG3: pointer to phys_region
+static uint64_t syscall_get_phys_region(x86_64::idt::idt_registers* regs){
+    if(!PTR_IS_USERLAND(SYSCALL_GET_ARG3()))
+        return 1;
+
+    if(proc::process::get_current_thread()->privilege < proc::process::thread_privilege_level::DRIVER)
+        return 1;
+
+    
+    auto ret = proc::process::get_phys_region(proc::process::get_current_thread(), SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), (proc::process::phys_region*)SYSCALL_GET_ARG3());
+        
+    if(ret == false)
+        return 1;
+
+    return 0; // Return success
+}
+
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
@@ -195,7 +215,8 @@ kernel_syscall syscalls[] = {
     {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
     {.func = syscall_block_thread, .name = "block_thread"},
     {.func = syscall_fork, .name = "fork"},
-    {.func = syscall_devctl, .name = "devctl"}
+    {.func = syscall_devctl, .name = "devctl"},
+    {.func = syscall_get_phys_region, .name = "get_phys_region"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
@@ -210,8 +231,6 @@ static void syscall_handler(x86_64::idt::idt_registers* regs){
     uint64_t func = SYSCALL_GET_FUNC();
     
     kernel_syscall& syscall = syscalls[func];
-    
-    
 
     {
         x86_64::smap::smap_guard guard{};

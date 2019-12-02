@@ -18,6 +18,14 @@ extern "C" {
 uint64_t libsigma_valloc(uint64_t type, uint64_t base, uint64_t n_pages);
 void* libsigma_vm_map(size_t size, void *virt_addr, void* phys_addr, int prot, int flags);
 
+typedef struct {
+    uint64_t physical_addr;
+    uint64_t virtual_addr;
+    size_t size;
+} libsigma_phys_region_t;
+
+int libsigma_get_phys_region(size_t size, int prot, int flags, libsigma_phys_region_t* region);
+
 #if defined(__cplusplus)
 }
 #endif

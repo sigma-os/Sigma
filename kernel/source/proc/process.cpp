@@ -500,6 +500,38 @@ void* proc::process::map_anonymous(proc::process::thread* thread, size_t size, v
     return virt_base;
 }
 
+bool proc::process::get_phys_region(proc::process::thread* thread, size_t size, int prot, int flags, phys_region* region){
+    thread->thread_lock.lock();
+    size_t n_pages = misc::div_ceil(size, mm::pmm::block_size);
+    void* phys_addr = mm::pmm::alloc_n_blocks(n_pages);
+    
+    if(phys_addr == nullptr){
+        uintptr_t phys = (uintptr_t)phys_addr;
+        for(size_t i = 0; i < n_pages; i++){
+            uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
+            mm::pmm::free_block((void*)cur_phys);
+        }
+        return false;
+    }
+
+    uintptr_t phys = (uintptr_t)phys_addr;
+    for(size_t i = 0; i < n_pages; i++){
+        uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
+        thread->resources.frames.push_back(cur_phys);
+    } 
+    
+    thread->thread_lock.unlock();
+    void* virt_addr = map_anonymous(thread, size, nullptr, phys_addr, prot, flags);
+    if(virt_addr == nullptr)
+        return false;
+        
+    region->physical_addr = (uint64_t)phys_addr;
+    region->virtual_addr = (uint64_t)virt_addr;
+    region->size = size;
+
+    return true;
+}
+
 tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     auto* parent = proc::process::get_current_thread();
     if(parent == nullptr) return 0;

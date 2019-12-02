@@ -182,6 +182,13 @@ namespace proc::process
 
     void* map_anonymous(proc::process::thread* thread, size_t size, void *virt_base, void* phys_base, int prot, int flags);
 
+    struct phys_region {
+        uint64_t physical_addr;
+        uint64_t virtual_addr;
+        size_t size;
+    };
+    
+    bool get_phys_region(proc::process::thread* thread, size_t size, int prot, int flags, phys_region* region);
     // General Thread Modifying functions
     void set_thread_fs(tid_t tid, uint64_t fs);
 
