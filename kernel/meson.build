@@ -49,12 +49,11 @@ cpp_includes = include_directories('include')
 
 nasm_sources = files(
     'source/arch/x86_64/misc/spinlock.asm',
-    'source/arch/x86_64/misc/misc_low.asm',
     'source/arch/x86_64/interrupts.asm',
     'source/arch/x86_64/cpu_low.asm',
     'source/proc/process_low.asm',
     'source/smp/gs.asm',
-    'source/kernel_early.asm',)
+    'source/kernel_early.asm')
 
 nasm = find_program('nasm')
 nasm_gen = generator(nasm, output: '@BASENAME@.o', arguments: ['-f', 'elf64', '-g', '-F', 'dwarf', '@INPUT@', '-o', '@OUTPUT@'])
