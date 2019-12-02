@@ -62,7 +62,7 @@ void proc::simd::init_simd(){
     if(!x86_64::cpuid(1, a1, b1, c1, d1)) 
         PANIC("Default CPUID leaf does not exist");
 
-    /*if(c1 & x86_64::cpuid_bits::XSAVE){
+    if(c1 & x86_64::cpuid_bits::XSAVE){
         uint32_t a2, b2, c2, d2;
         if(!x86_64::cpuid(0xD, 0, a2, b2, c2, d2)) 
             PANIC("XSAVE exists but CPUID leaf 0xD doesnt exist");
@@ -70,7 +70,7 @@ void proc::simd::init_simd(){
         save_size = c2;
         save_align = 64;
 
-        debug_printf("[PROC]: Initializing saving mechanism with xsave, size: %x\n", save_size);
+        debug_printf("[PROC]: Initializing SIMD saving mechanism with xsave, size: %x\n", save_size);
 
         global_save = +[](uint8_t* state){
             xsave_int(state);
@@ -79,12 +79,11 @@ void proc::simd::init_simd(){
         global_restore = +[](uint8_t* state){
             xrstor_int(state);
         };
-    } else */ // TODO: Implement MXCSR thingies for xsave
-    if(d1 & x86_64::cpuid_bits::FXSAVE){
+    } else if(d1 & x86_64::cpuid_bits::FXSAVE){
         save_size = 512;
         save_align = 16;
         
-        debug_printf("[PROC]: Initializing saving mechanism with fxsave, size: %x\n", save_size);
+        debug_printf("[PROC]: Initializing SIMD saving mechanism with fxsave, size: %x\n", save_size);
 
         global_save = +[](uint8_t* state){
             asm("fxsave (%0)" : : "r"(state) : "memory");
