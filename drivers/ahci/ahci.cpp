@@ -71,6 +71,8 @@ ahci::controller::controller(uintptr_t phys_base, size_t size){
     if(cap.sncq) printf("native_command_qeueing ");
     if(cap.s64a) printf("64bit_addressing ");
 
+    this->addressing_64bit = (cap.s64a != 0);
+
     if(this->major_version >= 1 && this->minor_version >= 2){
         ghcr_t::cap2_t cap2{base->ghcr.cap2};
 
@@ -98,6 +100,27 @@ ahci::controller::controller(uintptr_t phys_base, size_t size){
         if(pi.is_implemented(i)){
             // Initialize port, just print Sig
             ports[i].regs = &base->ports[i];
+
+            prs_t::ssts_t ssts{ports[i].regs->ssts};
+            if(ssts.det != 3) { // Not Device Detected, Comms Active
+                if(ssts.det == 0) { // No device on port
+                    continue;
+                } else if(ssts.det == 1) {
+                    std::cerr << "ahci: //TODO: Implement COMRESET\n";
+                    return;
+                } else if(ssts.det == 4) {
+                    std::cerr << "ahci: No comms\n";
+                    continue;
+                } else {
+                    std::cerr << "ahci: Unknown ssts.det value, 0x" << std::hex << ssts.det;
+                    continue;
+                }
+            }
+
+            if(ssts.ipm != 1) { // Device not in active state
+                std::cerr << "ahci: //TODO: Move device out of sleep, ssts.ipm: 0x" << std::hex << ssts.det;
+                continue;
+            }
 
             prs_t::sig_t sig{ports[i].regs->sig};
             ports[i].type = sig.get_type();
@@ -127,7 +150,44 @@ ahci::controller::controller(uintptr_t phys_base, size_t size){
             }
             printf("\n");
 
+            libsigma_phys_region_t region = {};
+            if(libsigma_get_phys_region(sizeof(port::phys_region), PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+                std::cerr << "ahci: Failed to allocate physical region for port\n";
+                continue;
+            }
 
+            printf("      Region: Phys: %lx, Virt: %lx...", region.physical_addr, region.virtual_addr);
+
+            ports[i].wait_idle();
+
+            ports[i].region = (port::phys_region*)region.virtual_addr;
+
+            ports[i].regs->clb = region.physical_addr & 0xFFFFFFFF;
+            if(addressing_64bit) ports[i].regs->clbu = (region.physical_addr >> 32) & 0xFFFFFFFF;
+
+            ports[i].regs->fb = (region.physical_addr & 0xFFFFFFFF) + (sizeof(cmd_header) * 32);
+            if(addressing_64bit) ports[i].regs->fbu = (region.physical_addr >> 32) & 0xFFFFFFFF;
+            printf("installed\n");
+
+            printf("      Command engine:...");
+
+            prs_t::cmd_t cmd{ports[i].regs->cmd};
+            cmd.fre = 1;
+            cmd.st = 1;
+            ports[i].regs->cmd = cmd.raw;
+
+            ports[i].regs->is = 0xFFFFFFFF;
+
+            for(int i = 0; i < 100000; i++)
+                asm("pause");
+
+            cmd = prs_t::cmd_t{ports[i].regs->cmd};
+            if(!cmd.cr || !cmd.fr){
+                printf("failed\n");
+                continue;
+            }
+
+            printf("started\n");
         }
     }
 }
@@ -161,4 +221,26 @@ bool ahci::controller::bios_gain_ownership(){
         }
     }
     return true;
+}
+
+void ahci::controller::port::wait_idle(){
+    prs_t::cmd_t cmd{this->regs->cmd};
+    cmd.st = 0;
+    this->regs->cmd = cmd.raw;
+
+    while(1){
+        prs_t::cmd_t poll{this->regs->cmd};
+        if(!poll.cr)
+            break;
+    }
+
+    cmd = prs_t::cmd_t{this->regs->cmd};
+    cmd.fre = 0;
+    this->regs->cmd = cmd.raw;
+
+    while(1){
+        prs_t::cmd_t poll{this->regs->cmd};
+        if(!poll.fr)
+            break;
+    }
 }

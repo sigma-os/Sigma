@@ -474,6 +474,62 @@ namespace ahci
             std::byte vendor_specific[96];
             prs_t ports[];
         };
+
+        struct PACKED cmd_header {
+            struct {
+                uint32_t cfl : 5;
+                uint32_t atapi : 1;
+                uint32_t write : 1;
+                uint32_t prefetchable : 1;
+                uint32_t srst_control : 1;
+                uint32_t bist : 1;
+                uint32_t clear : 1;
+                uint32_t reserved : 1;
+                uint32_t pmp : 4;
+                uint32_t prdtl : 16;
+            } flags;
+
+            uint32_t prdbc;
+            uint32_t ctba;
+            uint32_t ctbau;
+            std::byte reserved[16];
+            static_assert(sizeof(flags) == 4);
+        };
+        static_assert(sizeof(cmd_header) == 32);
+
+        struct PACKED h2d_register_fis {
+            uint8_t type = 0x27;
+            uint8_t flags;
+            uint8_t command;
+            uint8_t features;
+            uint8_t lba_0;
+            uint8_t lba_1;
+            uint8_t lba_2;
+            uint8_t dev_head;
+            uint8_t lba_3;
+            uint8_t lba_4;
+            uint8_t lba_5;
+            uint8_t features_exp;
+            uint8_t sector_count_low;
+            uint8_t sector_count_high;
+            uint8_t reserved;
+            uint8_t control;
+            std::byte reserved_0[4];
+        };
+        static_assert(sizeof(h2d_register_fis) == 20);
+
+        struct PACKED prdt {
+            uint32_t low;
+            uint32_t high;
+            uint32_t reserved;
+            struct {
+                uint32_t byte_count : 22;
+                uint32_t reserved : 9;
+                uint32_t irq_on_completion : 1;
+            } flags;
+            static_assert(sizeof(flags) == 4);
+        };
+        static_assert(sizeof(prdt) == 16);
     } // namespace regs
 
     class controller {
@@ -486,10 +542,23 @@ namespace ahci
 
         volatile regs::hba_t* base;
         uint8_t major_version, minor_version, subminor_version, n_allocated_ports, n_command_slots;
+        bool addressing_64bit;
 
         struct port {
             volatile regs::prs_t* regs;
             regs::prs_t::sig_t::device_types type;
+
+            union phys_region {
+                struct {
+                    regs::cmd_header command_headers[32]; // Allocate 32 even if there are less supported, we have to allocate 4KiB anyway
+                    std::byte receive_fis[256]; // TODO: What is this?
+                };
+                std::byte pad[0x1000];
+            };
+
+
+            phys_region* region;
+            void wait_idle();
         };
 
         port* ports;
