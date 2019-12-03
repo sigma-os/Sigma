@@ -8,7 +8,7 @@ void x86_64::smep::init(){
         return;
     }
     uint32_t a, b, c, d;
-    if(cpuid(0x7, a, b, c, d)){
+    if(cpuid(0x7, 0, a, b, c, d)){
         // Nice, the leaf exists
         if(b & cpuid_bits::SMEP){
             x86_64::regs::cr4 cr4{};
@@ -27,7 +27,7 @@ void x86_64::smap::init(){
         return;
     }
     uint32_t a, b, c, d;
-    if(cpuid(0x7, a, b, c, d)){
+    if(cpuid(0x7, 0, a, b, c, d)){
         // Nice, the leaf exists
         if(b & cpuid_bits::SMAP){
             x86_64::regs::cr4 cr4{};
@@ -63,7 +63,7 @@ void x86_64::umip::init(){
         return;
     }
     uint32_t a, b, c, d;
-    if(cpuid(0x7, a, b, c, d)){
+    if(cpuid(0x7, 0, a, b, c, d)){
         // Nice, the leaf exists
         if(c & cpuid_bits::UMIP){
             // Ladies and gentlemen, we have UMIP, i repeat, we have UMIP
@@ -89,7 +89,7 @@ void x86_64::pcid::init(){
         debug_printf("[CPU]: Forced pcid disable\n");
 
     if(!misc::kernel_args::get_bool("noinvpcid")) {
-        if(cpuid(0x7, a, b, c, d))
+        if(cpuid(0x7, 0, a, b, c, d))
             if(b & cpuid_bits::INVPCID)
                 supports_invpcid = true;
                 
@@ -126,7 +126,7 @@ void x86_64::tsd::init(){
 void x86_64::tme::init(){
     if(!misc::kernel_args::get_bool("notme")){
         uint32_t a, b, c, d;
-        if(cpuid(7, a, b, c, d)){
+        if(cpuid(7, 0, a, b, c, d)){
             if(c & cpuid_bits::TME){
                 // TME exists, woooo
 
@@ -156,7 +156,7 @@ void x86_64::tme::init(){
 void x86_64::tme::restore_key(){
     if(!misc::kernel_args::get_bool("notme")){
         uint32_t a, b, c, d;
-        if(cpuid(7, a, b, c, d)){
+        if(cpuid(7, 0, a, b, c, d)){
             if(c & cpuid_bits::TME){
                 // TME exists, woooo
                 uint32_t activate = x86_64::msr::read(x86_64::msr::ia32_tme_activate);
@@ -562,7 +562,7 @@ void x86_64::identify_cpu(){
         if(c & RDRND) debug_printf("rdrand ");
     }
     
-    if(x86_64::cpuid(7, a, b, c, d)){
+    if(x86_64::cpuid(7, 0, a, b, c, d)){
         if(b & FSGSBASE) debug_printf("fsgsbase ");
         if(b & IA32_TSC_ADJUST) debug_printf("IA32_TSC_ADJUST ");
         if(b & SGX) debug_printf("sgx ");
