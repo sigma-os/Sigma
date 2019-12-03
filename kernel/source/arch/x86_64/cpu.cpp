@@ -372,7 +372,7 @@ static void identify_intel(uint16_t family_id, uint8_t model_id, uint8_t steppin
 }
 
 static void identify_amd(uint16_t family_id, uint8_t model_id, uint8_t stepping){
-    auto identify_family_8 = [&](){
+    auto identify_family_23 = [&](){
         debug_printf("    Family: AMD Zen\n");
         switch (model_id)
         {
@@ -402,8 +402,8 @@ static void identify_amd(uint16_t family_id, uint8_t model_id, uint8_t stepping)
 
     switch (family_id)
     {
-    case 8: 
-        identify_family_8();
+    case 23:
+        identify_family_23();
         break;
     default:
         debug_printf("    Family: Unknown [%x]\n", family_id);
