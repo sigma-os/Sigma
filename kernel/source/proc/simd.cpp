@@ -107,7 +107,7 @@ void proc::simd::init_simd(){
     tmp->fcw |= 1 << 4; // Set Underflow Mask
     tmp->fcw |= 1 << 5; // Set Precision Mask
 
-    tmp->fcw |= (1 << 10) | (1 << 11); // Set Double Extended Precision
+    tmp->fcw |= (1 << 8) | (1 << 9); // Set Double Extended Precision
 
 
     tmp->mxcsr |= 1 << 7; // Set Invalid Operation Mask
