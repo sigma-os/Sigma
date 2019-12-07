@@ -14,5 +14,4 @@ ISR 255 is *always* reserved for APIC Spurious interrupts, *even* if for some re
 
 ISR 250 to 254 are *always* reserved for IPIs, *even* if there are no APs
 ISR 249 is *always* a syscall handler, even if the syscall or sysenter instructions are enabled
-
-ISR 64 is the APIC timer handler
+ISR 248 is the APIC timer handler

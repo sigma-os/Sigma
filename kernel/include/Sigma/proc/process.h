@@ -170,7 +170,7 @@ namespace proc::process
     };
 
     constexpr uint64_t cpu_quantum = 100;
-    constexpr uint16_t cpu_quantum_interrupt_vector = 64;
+    constexpr uint16_t cpu_quantum_interrupt_vector = 248;
 
     void init_multitasking(acpi::madt& madt);
     void init_cpu();
