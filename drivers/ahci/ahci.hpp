@@ -78,8 +78,8 @@ namespace ahci
             union vs_t {
                 vs_t(uint32_t vs): raw(vs) {}
                 struct {
-                    uint32_t minor : 8;
                     uint32_t subminor : 8;
+                    uint32_t minor : 8;
                     uint32_t major : 16;
                 };
                 uint32_t raw;
