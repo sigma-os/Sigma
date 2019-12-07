@@ -85,6 +85,14 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
     if(n < 32){
         printf("[IDT]: Received interrupt %d, #%s: %s\n    Error Code: %x\n", n, exceptions[n].mnemonic, exceptions[n].message, registers->error_code);
         printf("    RIP: %x, RSP: %x, CPU: %d\n", registers->rip, registers->rsp, cpu->lapic_id);
+
+        debug_printf("[IDT]: Received interrupt %d, #%s: %s\n    Error Code: %x\n", n, exceptions[n].mnemonic, exceptions[n].message, registers->error_code);
+        debug_printf("    RIP: %x, RSP: %x, CPU: %d\n", registers->rip, registers->rsp, cpu->lapic_id);
+        debug_printf("    RAX: %x, RBX: %x, RCX: %x, RDX: %x\n", registers->rax, registers->rbx, registers->rcx, registers->rbx);
+        debug_printf("    RSI: %x, RDI: %x, RSP: %x, RBP: %x\n", registers->rsi, registers->rdi, registers->rsp, registers->rbp);
+        debug_printf("    R8: %x, R9: %x, R10: %x, R11: %x\n", registers->r8, registers->r9, registers->r10, registers->r11);
+        debug_printf("    R12: %x, R12: %x, R13: %x, R14: %x\n", registers->r12, registers->r13, registers->r13, registers->r14);
+        debug_printf("    R15: %x\n", registers->r15);
     }
     
     if(handlers[n].callback)

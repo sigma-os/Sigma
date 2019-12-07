@@ -58,8 +58,7 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
     {
     case 0: { // Do sbrk-like allocation
         void* base = proc::process::get_current_thread()->expand_thread_heap(SYSCALL_GET_ARG2());
-        if(!misc::is_canonical(reinterpret_cast<uint64_t>(base)))
-            PANIC("Non-canonical return from sbrk-like syscall_valloc");
+        CHECK_PTR((uint64_t)base);
         return reinterpret_cast<uint64_t>(base);
     }
     case 1: {
@@ -89,8 +88,7 @@ static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
     
     auto ret = proc::process::get_current_thread()->map_anonymous(SYSCALL_GET_ARG2(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG1()), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 
-    if(!misc::is_canonical(reinterpret_cast<uint64_t>(ret)))
-        PANIC("Non-canonical return from syscall_vm_map");
+    CHECK_PTR((uint64_t)ret);
 
     return reinterpret_cast<uint64_t>(ret);
 }

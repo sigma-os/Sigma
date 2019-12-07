@@ -441,6 +441,7 @@ void proc::process::thread::expand_thread_stack(size_t pages){
         
         this->image.stack_bottom -= mm::pmm::block_size;
         this->vmm.map_page(reinterpret_cast<uint64_t>(phys), this->image.stack_bottom, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
+        memset_aligned_4k((void*)this->image.stack_bottom, 0);
     }
 }
 
@@ -454,6 +455,7 @@ void* proc::process::thread::expand_thread_heap(size_t pages){
         this->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
 
         this->vmm.map_page(reinterpret_cast<uint64_t>(phys), this->image.heap_top, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
+        memset_aligned_4k((void*)this->image.heap_top, 0);
         this->image.heap_top += mm::pmm::block_size;
     }
     return reinterpret_cast<void*>(base);
@@ -502,6 +504,7 @@ void* proc::process::thread::map_anonymous(size_t size, void *virt_base, void* p
             if(block == nullptr) PANIC("Couldn't allocate pages for map_anonymous");
             this->resources.frames.push_back(reinterpret_cast<uint64_t>(block));
             this->vmm.map_page(reinterpret_cast<uint64_t>(block), virt, map_flags);
+            memset_aligned_4k((void*)virt, 0);
         } else {
             this->vmm.map_page(phys, virt, map_flags);
         }
