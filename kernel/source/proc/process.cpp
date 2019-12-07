@@ -308,10 +308,6 @@ proc::process::thread* proc::process::create_blocked_thread(void* rip, uint64_t 
     return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::BLOCKED);
 }
 
-void proc::process::set_thread_state(proc::process::thread* thread, proc::process::thread_state new_state){
-    thread->state = new_state;
-}
-
 proc::process::thread* proc::process::thread_for_tid(tid_t tid){
     for(auto& entry : thread_list){
         if(entry.tid == tid) return &entry;
@@ -325,59 +321,21 @@ proc::process::thread* proc::process::get_current_thread(){
 }
 
 void proc::process::block_thread(tid_t tid, proc::process::block_reason reason, x86_64::idt::idt_registers* regs){
-    for(auto& entry : thread_list){
-        if(entry.tid == tid){
-            proc::process::block_thread(&entry, reason, regs);
-            return;
-        }
-    }
-}
-
-void proc::process::block_thread(proc::process::thread* thread, proc::process::block_reason reason, x86_64::idt::idt_registers* regs){
-    thread->thread_lock.lock();
-    thread->blocking_reason = reason;
-    thread->state = proc::process::thread_state::BLOCKED;
-    thread->thread_lock.unlock();
-    timer_handler(regs); // Switch out of the thread
+    thread_for_tid(tid)->block(reason, regs);
 }
 
 void proc::process::wake_thread(tid_t tid){
-    for(auto& entry : thread_list){
-        if(entry.tid == tid){
-            proc::process::wake_thread(&entry);
-            return;
-        }
-    }
-}
-
-void proc::process::wake_thread(proc::process::thread* thread){
-    std::lock_guard guard{thread->thread_lock};
-    thread->state = proc::process::thread_state::IDLE;
-}
-
-bool proc::process::is_blocked(proc::process::thread* thread, proc::process::block_reason reason){
-    std::lock_guard guard{thread->thread_lock};
-
-    if(thread->state == proc::process::thread_state::BLOCKED && thread->blocking_reason == reason)
-        return true;
-    else
-        return false;
+    thread_for_tid(tid)->wake();
 }
 
 bool proc::process::is_blocked(tid_t tid, proc::process::block_reason reason){
-    auto* thread = proc::process::thread_for_tid(tid);
-    std::lock_guard guard{thread->thread_lock};
-
-    if(thread->state == proc::process::thread_state::BLOCKED && thread->blocking_reason == reason)
-        return true;
-    else
-        return false;
+    return proc::process::thread_for_tid(tid)->is_blocked(reason);
 }
 
 void proc::process::wake_if_blocked(tid_t tid, proc::process::block_reason reason){
     auto* thread = proc::process::thread_for_tid(tid);
-    if(proc::process::is_blocked(thread, reason))
-        proc::process::wake_thread(thread);
+    if(thread->is_blocked(reason))
+        thread->wake();
 }
 
 bool proc::process::receive_message(tid_t* origin, size_t* size, uint8_t* data){
@@ -388,53 +346,12 @@ size_t proc::process::get_message_size(){
     return get_current_thread()->ipc_manager.get_msg_size();
 }
 
-void proc::process::expand_thread_stack(proc::process::thread* thread, size_t pages){
-    std::lock_guard guard{thread->thread_lock};
-    for(uint64_t i = 0; i < pages; i++){
-        void* phys = mm::pmm::alloc_block();
-        if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread stack");
-        thread->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
-        
-        thread->image.stack_bottom -= mm::pmm::block_size;
-        thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), thread->image.stack_bottom, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
-    }
-}
-
-void* proc::process::expand_thread_heap(proc::process::thread* thread, size_t pages){
-    std::lock_guard guard{thread->thread_lock};
-    uint64_t base = thread->image.heap_top;
-
-    for(uint64_t i = 0; i < pages; i++){
-        void* phys = mm::pmm::alloc_block();
-        if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread heap");
-        thread->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
-
-        thread->vmm.map_page(reinterpret_cast<uint64_t>(phys), thread->image.heap_top, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
-        thread->image.heap_top += mm::pmm::block_size;
-    }
-    return reinterpret_cast<void*>(base);
-}
-
 tid_t proc::process::get_current_tid(){
     auto* cpu = get_current_managed_cpu();
     if(cpu == nullptr) return 0; // Kernel thread should be safe
     auto* thread = cpu->current_thread;
     if(thread == nullptr) return 0; // Same
     return thread->tid;
-}
-
-void proc::process::set_current_thread_fs(uint64_t fs){
-    if(!misc::is_canonical(fs)) PANIC("Tried to set non canonical FS for thread");
-    auto* thread = get_current_thread();
-    if(thread == nullptr){
-        PANIC("Tried to modify nullptr thread?");
-        return;
-    }
-
-    std::lock_guard guard{thread->thread_lock};
-
-    thread->context.fs = fs;
-    x86_64::msr::write(x86_64::msr::fs_base, fs);
 }
 
 void proc::process::kill(x86_64::idt::idt_registers* regs){
@@ -463,75 +380,6 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     PANIC("idle_cpu returned, how is this happening");
 }
 
-void* proc::process::map_anonymous(proc::process::thread* thread, size_t size, void *virt_base, void* phys_base, int prot, int flags){
-    std::lock_guard guard{thread->thread_lock};
-
-    if(!virt_base)
-        virt_base = reinterpret_cast<void*>(thread->vmm.get_free_range(mmap_bottom, mmap_top, size));
-
-    // If we couldn't find any just return
-    if(!virt_base)
-        return nullptr;
-
-    (void)(flags);
-
-    uint64_t map_flags = ((prot & PROT_READ) ? (map_page_flags_present) : 0) | \
-                     ((prot & PROT_WRITE) ? (map_page_flags_writable) : 0) | \
-                     (!(prot & PROT_EXEC) ? (map_page_flags_no_execute) : 0) | \
-                     map_page_flags_user;
-
-    size_t pages = misc::div_ceil(size, mm::pmm::block_size);
-    uint64_t virt = reinterpret_cast<uint64_t>(virt_base);
-    uint64_t phys = reinterpret_cast<uint64_t>(phys_base);
-
-    bool allocate_phys = (phys_base == nullptr);
-
-    for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size, phys += mm::pmm::block_size){
-        if(allocate_phys){
-            void* block = mm::pmm::alloc_block();
-            if(block == nullptr) PANIC("Couldn't allocate pages for map_anonymous");
-            thread->resources.frames.push_back(reinterpret_cast<uint64_t>(block));
-            thread->vmm.map_page(reinterpret_cast<uint64_t>(block), virt, map_flags);
-        } else {
-            thread->vmm.map_page(phys, virt, map_flags);
-        }
-    }
-
-    return virt_base;
-}
-
-bool proc::process::get_phys_region(proc::process::thread* thread, size_t size, int prot, int flags, phys_region* region){
-    thread->thread_lock.lock();
-    size_t n_pages = misc::div_ceil(size, mm::pmm::block_size);
-    void* phys_addr = mm::pmm::alloc_n_blocks(n_pages);
-    
-    if(phys_addr == nullptr){
-        uintptr_t phys = (uintptr_t)phys_addr;
-        for(size_t i = 0; i < n_pages; i++){
-            uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
-            mm::pmm::free_block((void*)cur_phys);
-        }
-        return false;
-    }
-
-    uintptr_t phys = (uintptr_t)phys_addr;
-    for(size_t i = 0; i < n_pages; i++){
-        uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
-        thread->resources.frames.push_back(cur_phys);
-    } 
-    
-    thread->thread_lock.unlock();
-    void* virt_addr = map_anonymous(thread, size, nullptr, phys_addr, prot, flags);
-    if(virt_addr == nullptr)
-        return false;
-        
-    region->physical_addr = (uint64_t)phys_addr;
-    region->virtual_addr = (uint64_t)virt_addr;
-    region->size = size;
-
-    return true;
-}
-
 tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     auto* parent = proc::process::get_current_thread();
     if(parent == nullptr) return 0;
@@ -554,7 +402,144 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     child->context.rax = 0; // Child should get 0 as return value
 
     child->thread_lock.unlock();
-    proc::process::wake_thread(child);
+    child->wake();
     parent->thread_lock.unlock();
     return child->tid;
 }
+
+#pragma region proc::process::thread
+
+void proc::process::thread::set_state(proc::process::thread_state new_state){
+    this->state = new_state;
+}
+
+void proc::process::thread::block(proc::process::block_reason reason, x86_64::idt::idt_registers* regs){
+    this->thread_lock.lock();
+    this->blocking_reason = reason;
+    this->state = proc::process::thread_state::BLOCKED;
+    this->thread_lock.unlock();
+    timer_handler(regs); // Switch out of the thread
+}
+
+void proc::process::thread::wake(){
+    std::lock_guard guard{this->thread_lock};
+    this->state = proc::process::thread_state::IDLE;
+}
+
+bool proc::process::thread::is_blocked(proc::process::block_reason reason){
+    std::lock_guard guard{this->thread_lock};
+
+    return (this->state == proc::process::thread_state::BLOCKED && this->blocking_reason == reason);
+}
+
+void proc::process::thread::expand_thread_stack(size_t pages){
+    std::lock_guard guard{this->thread_lock};
+    for(uint64_t i = 0; i < pages; i++){
+        void* phys = mm::pmm::alloc_block();
+        if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread stack");
+        this->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
+        
+        this->image.stack_bottom -= mm::pmm::block_size;
+        this->vmm.map_page(reinterpret_cast<uint64_t>(phys), this->image.stack_bottom, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
+    }
+}
+
+void* proc::process::thread::expand_thread_heap(size_t pages){
+    std::lock_guard guard{this->thread_lock};
+    uint64_t base = this->image.heap_top;
+
+    for(uint64_t i = 0; i < pages; i++){
+        void* phys = mm::pmm::alloc_block();
+        if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread heap");
+        this->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
+
+        this->vmm.map_page(reinterpret_cast<uint64_t>(phys), this->image.heap_top, map_page_flags_present | map_page_flags_writable | map_page_flags_user | map_page_flags_no_execute);
+        this->image.heap_top += mm::pmm::block_size;
+    }
+    return reinterpret_cast<void*>(base);
+}
+
+void proc::process::thread::set_fsbase(uint64_t fs){
+    if(!misc::is_canonical(fs)) PANIC("Tried to set non canonical FS for thread");
+    auto* thread = get_current_thread();
+    if(thread == nullptr){
+        PANIC("Tried to modify nullptr thread?");
+        return;
+    }
+
+    std::lock_guard guard{this->thread_lock};
+
+    this->context.fs = fs;
+    x86_64::msr::write(x86_64::msr::fs_base, fs);
+}
+
+void* proc::process::thread::map_anonymous(size_t size, void *virt_base, void* phys_base, int prot, int flags){
+    std::lock_guard guard{this->thread_lock};
+
+    if(!virt_base)
+        virt_base = reinterpret_cast<void*>(this->vmm.get_free_range(mmap_bottom, mmap_top, size));
+
+    // If we couldn't find any just return
+    if(!virt_base)
+        return nullptr;
+
+    (void)(flags);
+
+    uint64_t map_flags = ((prot & PROT_READ) ? (map_page_flags_present) : 0) | \
+                     ((prot & PROT_WRITE) ? (map_page_flags_writable) : 0) | \
+                     (!(prot & PROT_EXEC) ? (map_page_flags_no_execute) : 0) | \
+                     map_page_flags_user;
+
+    size_t pages = misc::div_ceil(size, mm::pmm::block_size);
+    uint64_t virt = reinterpret_cast<uint64_t>(virt_base);
+    uint64_t phys = reinterpret_cast<uint64_t>(phys_base);
+
+    bool allocate_phys = (phys_base == nullptr);
+
+    for(size_t i = 0; i < pages; i++, virt += mm::pmm::block_size, phys += mm::pmm::block_size){
+        if(allocate_phys){
+            void* block = mm::pmm::alloc_block();
+            if(block == nullptr) PANIC("Couldn't allocate pages for map_anonymous");
+            this->resources.frames.push_back(reinterpret_cast<uint64_t>(block));
+            this->vmm.map_page(reinterpret_cast<uint64_t>(block), virt, map_flags);
+        } else {
+            this->vmm.map_page(phys, virt, map_flags);
+        }
+    }
+
+    return virt_base;
+}
+
+bool proc::process::thread::get_phys_region(size_t size, int prot, int flags, phys_region* region){
+    this->thread_lock.lock();
+    size_t n_pages = misc::div_ceil(size, mm::pmm::block_size);
+    void* phys_addr = mm::pmm::alloc_n_blocks(n_pages);
+    
+    if(phys_addr == nullptr){
+        uintptr_t phys = (uintptr_t)phys_addr;
+        for(size_t i = 0; i < n_pages; i++){
+            uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
+            mm::pmm::free_block((void*)cur_phys);
+        }
+        return false;
+    }
+
+    uintptr_t phys = (uintptr_t)phys_addr;
+    for(size_t i = 0; i < n_pages; i++){
+        uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
+        this->resources.frames.push_back(cur_phys);
+    } 
+    
+    this->thread_lock.unlock();
+    void* virt_addr = this->map_anonymous(size, nullptr, phys_addr, prot, flags);
+    if(virt_addr == nullptr)
+        return false;
+        
+    region->physical_addr = (uint64_t)phys_addr;
+    region->virtual_addr = (uint64_t)virt_addr;
+    region->size = size;
+
+    return true;
+}
+
+#pragma endregion

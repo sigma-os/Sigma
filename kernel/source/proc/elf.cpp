@@ -151,7 +151,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
             x86_64::smap::smap_guard guard{};
             load_executable(initrd_filename, &aux, new_thread, &ld_path, 0);
 
-            proc::process::expand_thread_stack(new_thread, 10); // Create a stack of 10 pages for the process
+            new_thread->expand_thread_stack(10); // Create a stack of 10 pages for the process
 
             new_thread->context.rsp = new_thread->image.stack_top;
             new_thread->context.rbp = new_thread->context.rsp;
@@ -201,7 +201,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
 
             mm::vmm::kernel_vmm::get_instance().set();
             *thread = new_thread;
-            proc::process::set_thread_state(new_thread, proc::process::thread_state::IDLE);
+            new_thread->set_state(proc::process::thread_state::IDLE);
         }
         break;
     default:

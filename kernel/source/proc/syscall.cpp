@@ -34,7 +34,7 @@ static uint64_t syscall_early_klog(x86_64::idt::idt_registers* regs){
 // ARG0: New FSbase
 static uint64_t syscall_set_fsbase(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG0());
-    proc::process::set_current_thread_fs(SYSCALL_GET_ARG0());
+    proc::process::get_current_thread()->set_fsbase(SYSCALL_GET_ARG0());
     return 0;
 }
 
@@ -57,7 +57,7 @@ static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
     switch (SYSCALL_GET_ARG0())
     {
     case 0: { // Do sbrk-like allocation
-        void* base = proc::process::expand_thread_heap(proc::process::get_current_thread(), SYSCALL_GET_ARG2());
+        void* base = proc::process::get_current_thread()->expand_thread_heap(SYSCALL_GET_ARG2());
         if(!misc::is_canonical(reinterpret_cast<uint64_t>(base)))
             PANIC("Non-canonical return from sbrk-like syscall_valloc");
         return reinterpret_cast<uint64_t>(base);
@@ -87,7 +87,7 @@ static uint64_t syscall_vm_map(x86_64::idt::idt_registers* regs){
         return 1;
 
     
-    auto ret = proc::process::map_anonymous(proc::process::get_current_thread(), SYSCALL_GET_ARG2(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG1()), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
+    auto ret = proc::process::get_current_thread()->map_anonymous(SYSCALL_GET_ARG2(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0()), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG1()), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 
     if(!misc::is_canonical(reinterpret_cast<uint64_t>(ret)))
         PANIC("Non-canonical return from syscall_vm_map");
@@ -160,7 +160,7 @@ static uint64_t syscall_get_um_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_regis
 
 // ARG0: Reason
 static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
-    proc::process::block_thread(proc::process::get_current_thread(), static_cast<proc::process::block_reason>(SYSCALL_GET_ARG0()), regs);
+    proc::process::get_current_thread()->block(static_cast<proc::process::block_reason>(SYSCALL_GET_ARG0()), regs);
     return 0;
 }
 
@@ -186,7 +186,7 @@ static uint64_t syscall_get_phys_region(x86_64::idt::idt_registers* regs){
         return 1;
 
     
-    auto ret = proc::process::get_phys_region(proc::process::get_current_thread(), SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), (proc::process::phys_region*)SYSCALL_GET_ARG3());
+    auto ret = proc::process::get_current_thread()->get_phys_region(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), (proc::process::thread::phys_region*)SYSCALL_GET_ARG3());
         
     if(ret == false)
         return 1;

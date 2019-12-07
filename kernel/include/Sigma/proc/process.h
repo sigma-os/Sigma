@@ -123,6 +123,40 @@ namespace proc::process
         x86_64::paging::paging vmm;
         tid_t tid;
         x86_64::spinlock::mutex thread_lock;
+
+        void set_state(proc::process::thread_state new_state);
+
+
+        void block(proc::process::block_reason reason, x86_64::idt::idt_registers* regs);
+        void wake();
+        bool is_blocked(proc::process::block_reason reason);
+
+
+        // Internal Thread Modifying functions
+        void expand_thread_stack(size_t pages);
+        void* expand_thread_heap(size_t pages);
+
+        void set_fsbase(uint64_t fs);
+
+        #define PROT_NONE 0x00
+        #define PROT_READ 0x01
+        #define PROT_WRITE 0x02
+        #define PROT_EXEC 0x04
+
+        #define MAP_PRIVATE 0x01
+        #define MAP_SHARED 0x02
+        #define MAP_FIXED 0x04
+        #define MAP_ANON 0x08
+
+        void* map_anonymous(size_t size, void *virt_base, void* phys_base, int prot, int flags);
+
+        struct phys_region {
+            uint64_t physical_addr;
+            uint64_t virtual_addr;
+            size_t size;
+        };
+    
+        bool get_phys_region(size_t size, int prot, int flags, phys_region* region);
     };
     
 
@@ -141,62 +175,31 @@ namespace proc::process
     void init_multitasking(acpi::madt& madt);
     void init_cpu();
 
-
+    // Thread Creation
     using kernel_thread_function = void (*)();
     proc::process::thread* create_kernel_thread(kernel_thread_function function);
     proc::process::thread* create_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
     proc::process::thread* create_blocked_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
-    void set_thread_state(proc::process::thread* thread, proc::process::thread_state new_state);
 
+    // Get current x
     proc::process::thread* thread_for_tid(tid_t tid);
     proc::process::thread* get_current_thread();
     proc::process::managed_cpu* get_current_managed_cpu();
     tid_t get_current_tid();
 
+
+    // Blocking
     void block_thread(tid_t tid, proc::process::block_reason reason, x86_64::idt::idt_registers* regs);
-    void block_thread(proc::process::thread* thread, proc::process::block_reason reason, x86_64::idt::idt_registers* regs);
-
     void wake_thread(tid_t tid);
-    void wake_thread(proc::process::thread* thread);
-
-    bool is_blocked(proc::process::thread* thread, proc::process::block_reason reason);
     bool is_blocked(tid_t tid, proc::process::block_reason reason);
-
     void wake_if_blocked(tid_t tid, proc::process::block_reason reason);
     
+    // General Management
     tid_t fork(x86_64::idt::idt_registers* regs);
-
-    // Internal Thread Modifying functions
-    void expand_thread_stack(proc::process::thread* thread, size_t pages);
-    void* expand_thread_heap(proc::process::thread* thread, size_t pages);
-
-    #define PROT_NONE 0x00
-    #define PROT_READ 0x01
-    #define PROT_WRITE 0x02
-    #define PROT_EXEC 0x04
-
-    #define MAP_PRIVATE 0x01
-    #define MAP_SHARED 0x02
-    #define MAP_FIXED 0x04
-    #define MAP_ANON 0x08
-
-    void* map_anonymous(proc::process::thread* thread, size_t size, void *virt_base, void* phys_base, int prot, int flags);
-
-    struct phys_region {
-        uint64_t physical_addr;
-        uint64_t virtual_addr;
-        size_t size;
-    };
-    
-    bool get_phys_region(proc::process::thread* thread, size_t size, int prot, int flags, phys_region* region);
-    // General Thread Modifying functions
-    void set_thread_fs(tid_t tid, uint64_t fs);
-
-    // Current Thread Modifying functions
-    // You should always use these because they are O(1) and not O(n), where n is the amount of threads, like the general ones
-    void set_current_thread_fs(uint64_t fs);
     void kill(x86_64::idt::idt_registers* regs);
 
+
+    // IPC
     bool receive_message(tid_t* origin, size_t* size, uint8_t* data);
     size_t get_message_size();
 } // namespace proc::sched
