@@ -9,18 +9,18 @@
 #include <string.h>
 
 template<typename Ret>
-void send_return_int([[maybe_unused]] uint64_t dest, [[maybe_unused]] uint64_t msg_id, [[maybe_unused]] Ret ret){
+void send_return_int([[maybe_unused]] tid_t dest, [[maybe_unused]] uint64_t msg_id, [[maybe_unused]] Ret ret){
     libsigma_klog("zeta: Unsupported return type\n");
     return;
 }
 
 template<>
-void send_return_int<uint64_t>(uint64_t dest, uint64_t msg_id, uint64_t ret){
+void send_return_int<uint64_t>(tid_t dest, uint64_t msg_id, uint64_t ret){
     auto ret_msg = std::make_unique<libsigma_ret_message>();
 
     ret_msg->command = RET;
     ret_msg->msg_id = msg_id;
-    ret_msg->ret = ret; // TODO support other things than int
+    ret_msg->ret = ret;
 
     libsigma_ipc_set_message_checksum(ret_msg->msg(), sizeof(libsigma_ret_message));
 
@@ -28,12 +28,12 @@ void send_return_int<uint64_t>(uint64_t dest, uint64_t msg_id, uint64_t ret){
 }
 
 template<>
-void send_return_int<int>(uint64_t dest, uint64_t msg_id, int ret){
+void send_return_int<int>(tid_t dest, uint64_t msg_id, int ret){
     auto ret_msg = std::make_unique<libsigma_ret_message>();
 
     ret_msg->command = RET;
     ret_msg->msg_id = msg_id;
-    ret_msg->ret = ret; // TODO support other things than int
+    ret_msg->ret = ret;
 
     libsigma_ipc_set_message_checksum(ret_msg->msg(), sizeof(libsigma_ret_message));
 
@@ -41,7 +41,7 @@ void send_return_int<int>(uint64_t dest, uint64_t msg_id, int ret){
 }
 
 template<>
-void send_return_int<std::vector<char>>(uint64_t dest, uint64_t msg_id, std::vector<char> ret){
+void send_return_int<std::vector<char>>(tid_t dest, uint64_t msg_id, std::vector<char> ret){
     auto* ret_msg = reinterpret_cast<libsigma_ret_message*>(new uint8_t[sizeof(libsigma_ret_message) + ret.size()]);
 
     ret_msg->command = RET;
@@ -60,7 +60,7 @@ void handle_request(){
 
     auto msg_size = libsigma_ipc_get_msg_size();
     auto msg = std::make_unique<uint8_t[]>(msg_size);
-    uint64_t origin;
+    tid_t origin;
     size_t useless_msg_size;
     if(libsigma_ipc_receive(&origin, &useless_msg_size, msg.get()) == 1){
         libsigma_klog("zeta: Failed to receive IPC message\n");

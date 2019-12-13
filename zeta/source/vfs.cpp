@@ -22,13 +22,13 @@ vfs& fs::get_vfs(){
 
 #pragma region vfs
 
-thread_vfs_entry& vfs::get_thread_entry(uint64_t tid){
+thread_vfs_entry& vfs::get_thread_entry(tid_t tid){
     auto& data = this->thread_data[tid];
     if(!data.enabled) data.init(tid);
     return data;
 }
 
-std::string vfs::make_path_absolute(uint64_t tid, std::string_view path){
+std::string vfs::make_path_absolute(tid_t tid, std::string_view path){
     auto& cwd = this->get_thread_entry(tid).cwd;
     auto absolute = std::string();
     auto ret = std::string();
@@ -82,7 +82,7 @@ std::vector<std::string_view> vfs::split_path(std::string& path){
     return ret;
 }
 
-fs_calls* vfs::get_mountpoint(uint64_t tid, std::string path, std::string& out_local_path) {
+fs_calls* vfs::get_mountpoint(tid_t tid, std::string path, std::string& out_local_path) {
 	auto absolute = this->make_path_absolute(tid, path);
 
     size_t guess_size = 0;
@@ -144,7 +144,7 @@ void* vfs::mount(fs_node* node, std::string_view path, std::string_view fs_type)
 }
 
 
-int vfs::open(uint64_t tid, std::string_view path, int mode) {
+int vfs::open(tid_t tid, std::string_view path, int mode) {
 	std::string out_local_path{};
 	auto* fs_calls_node = this->get_mountpoint(tid, std::string{path}, out_local_path);
 	if(fs_calls_node == nullptr)
@@ -165,7 +165,7 @@ int vfs::open(uint64_t tid, std::string_view path, int mode) {
     return fd;
 }
 
-int vfs::read(uint64_t tid, int fd, void* buf, size_t count){
+int vfs::read(tid_t tid, int fd, void* buf, size_t count){
 	auto& thread = this->get_thread_entry(tid);
 	auto& file_descriptor = thread.fd_map[fd];
 	if(file_descriptor.open){ // Check for initialization
@@ -177,7 +177,7 @@ int vfs::read(uint64_t tid, int fd, void* buf, size_t count){
 	return -1;
 }
 
-int vfs::write(uint64_t tid, int fd, const void* buf, size_t count){
+int vfs::write(tid_t tid, int fd, const void* buf, size_t count){
 	auto& thread = this->get_thread_entry(tid);
 	auto& file_descriptor = thread.fd_map[fd];
 	if(file_descriptor.open){ // Check for initialization
@@ -189,7 +189,7 @@ int vfs::write(uint64_t tid, int fd, const void* buf, size_t count){
 	return -1;
 }
 
-int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
+int vfs::seek(tid_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 	auto& thread = this->thread_data[tid];
 	auto& file_descriptor = thread.fd_map[fd];
 	if(file_descriptor.open && file_descriptor.node->type == fs_node_types::file){ // Check for initialization
@@ -220,7 +220,7 @@ int vfs::seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& ret){
 	return 0;
 }
 
-uint64_t vfs::tell(uint64_t tid, int fd){
+uint64_t vfs::tell(tid_t tid, int fd){
 	auto& thread = this->thread_data[tid];
 	auto& file_descriptor = thread.fd_map[fd];
 	if(file_descriptor.open){ // Check for initialization
@@ -231,7 +231,7 @@ uint64_t vfs::tell(uint64_t tid, int fd){
 	return -1;
 }
 
-int vfs::dup2(uint64_t tid, int oldfd, int newfd){
+int vfs::dup2(tid_t tid, int oldfd, int newfd){
 	auto& thread_entry = this->get_thread_entry(tid);
 
 	if(!thread_entry.fd_map[oldfd].open) return -1;
@@ -246,7 +246,7 @@ int vfs::dup2(uint64_t tid, int oldfd, int newfd){
 	return newfd;
 }
 
-int vfs::close(uint64_t tid, int fd){
+int vfs::close(tid_t tid, int fd){
 	auto& thread_entry = this->get_thread_entry(tid);
 	auto& fd_entry = thread_entry.fd_map[fd];
 	if(fd_entry.open){

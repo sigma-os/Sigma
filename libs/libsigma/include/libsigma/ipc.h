@@ -13,21 +13,21 @@ extern "C" {
 #error "Compiling libsigma/ipc.h on unknown language"
 #endif
 
+#include <libsigma/thread.h>
 
 typedef struct libsigma_message {
     uint64_t command;
     uint8_t checksum;
     uint64_t msg_id;
-    // TODO, anything more?
+
     uint8_t command_data[];
 } libsigma_message_t;
 
 bool libsigma_ipc_check_message(libsigma_message_t* msg, size_t size);
 void libsigma_ipc_set_message_checksum(libsigma_message_t* msg, size_t size);
 
-// TODO: tid_t
-int libsigma_ipc_send(uint64_t dest, size_t buf_size, uint8_t* buffer);
-int libsigma_ipc_receive(uint64_t* origin, size_t* buf_size, uint8_t* buffer);
+int libsigma_ipc_send(tid_t dest, size_t buf_size, uint8_t* buffer);
+int libsigma_ipc_receive(tid_t* origin, size_t* buf_size, uint8_t* buffer);
 
 size_t libsigma_ipc_get_msg_size();
 

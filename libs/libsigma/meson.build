@@ -1,7 +1,7 @@
 project('libsigma', 'c')
 
 headers_only = get_option('headers_only')
-no_headers = get_option('mlibc_no_headers')
+no_headers = get_option('no_headers')
 
 if no_headers
 

@@ -9,6 +9,8 @@
 #include <Zeta/singleton.h>
 #include <functional>
 
+#include <libsigma/thread.h>
+
 namespace fs {
 
 // TODO: File things
@@ -60,14 +62,13 @@ namespace fs {
 
 	struct thread_vfs_entry {
 		thread_vfs_entry(): enabled(false) {}
-		void init(uint64_t tid) {
+		void init(tid_t tid) {
 			// TODO: CWD
 			this->enabled = true;
 			this->fd_map = std::unordered_map<int, fd_data>();
 			this->tid = tid;
 		}
-		// TODO: use tid_t or pid_t
-		uint64_t tid;
+		tid_t tid;
 		int free_fd = 500; // TODO: Handle this correctly
 		std::unordered_map<int, fd_data> fd_map;
 		std::string cwd;
@@ -93,26 +94,26 @@ namespace fs {
 
 		void* mount(fs_node* node, std::string_view path, fs_calls* fs);
 		void* mount(fs_node* node, std::string_view path, std::string_view fs_type);
-		int open(uint64_t tid, std::string_view path, int mode);
-		int close(uint64_t tid, int fd);
-		int read(uint64_t tid, int fd, void* buf, size_t count);
-		int write(uint64_t tid, int fd, const void* buf, size_t count);
-		int seek(uint64_t tid, int fd, uint64_t offset, int whence, uint64_t& new_offset);
-		uint64_t tell(uint64_t tid, int fd);
-		int dup2(uint64_t tid, int oldfd, int newfd);
+		int open(tid_t tid, std::string_view path, int mode);
+		int close(tid_t tid, int fd);
+		int read(tid_t tid, int fd, void* buf, size_t count);
+		int write(tid_t tid, int fd, const void* buf, size_t count);
+		int seek(tid_t tid, int fd, uint64_t offset, int whence, uint64_t& new_offset);
+		uint64_t tell(tid_t tid, int fd);
+		int dup2(tid_t tid, int oldfd, int newfd);
 
-		std::string make_path_absolute(uint64_t tid, std::string_view path);
+		std::string make_path_absolute(tid_t tid, std::string_view path);
 		std::vector<std::string_view> split_path(std::string& path);
 
-		fs_calls* get_mountpoint(uint64_t tid, std::string path, std::string& out_local_path);
+		fs_calls* get_mountpoint(tid_t tid, std::string path, std::string& out_local_path);
 
 		void register_fs(std::string_view fs_name, fs_calls calls);
 
 		private:
-		thread_vfs_entry& get_thread_entry(uint64_t tid);
+		thread_vfs_entry& get_thread_entry(tid_t tid);
 		std::vector<vfs_entry> mount_list;
-		// TODO: use tid_t
-		std::unordered_map<uint64_t, thread_vfs_entry> thread_data;
+		
+		std::unordered_map<tid_t, thread_vfs_entry> thread_data;
 		std::unordered_map<std::string, fs_calls> filesystems;
 	};
 
