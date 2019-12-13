@@ -12,79 +12,83 @@ namespace types
         using iterator = T*;
         using const_iterator = const T*;
 
-        vector(): length(16), offset(0){
-            data = new (malloc(sizeof(T) * length)) T;
+        vector(): _length(16), _offset(0){
+            _data = new (malloc(sizeof(T) * _length)) T;
         }
 
         ~vector(){
-            free(static_cast<void*>(this->data));
+            free(static_cast<void*>(this->_data));
         }
 
         void push_back(T value){
-            if((offset + 1) >= length){
-                length *= 2;
-                data = new (realloc(data, sizeof(T) * length)) T;
+            if((_offset + 1) >= _length){
+                _length *= 2;
+                _data = new (realloc(_data, sizeof(T) * _length)) T;
                 
             } 
-            data[offset++] = value;
+            _data[_offset++] = value;
         }
 
 		NODISCARD_ATTRIBUTE
 		T* empty_entry() {
-			if((offset + 1) >= length) {
-				length *= 2;
-				data = new(realloc(data, sizeof(T) * length)) T;
+			if((_offset + 1) >= _length) {
+				_length *= 2;
+				_data = new(realloc(_data, sizeof(T) * _length)) T;
 			}
-			return new (&data[offset++]) T();
+			return new (&_data[_offset++]) T();
 		}
 
 		NODISCARD_ATTRIBUTE
 		T& operator[](size_t index) {
-			if(index >= length)
+			if(index >= _offset)
 				PANIC("Tried to access vector out of bounds");
 
-            return data[index];
+            return _data[index];
         }
 
+		T* data(){
+			return this->_data;
+		}
+
 		size_t size(){
-			return offset;
+			return _offset;
 		}
 
 		NODISCARD_ATTRIBUTE
 		iterator begin() {
-			return data;
+			return _data;
 		}
 
 		NODISCARD_ATTRIBUTE
 		iterator end() {
-			return data + offset;
+			return _data + _offset;
 		}
 
 		NODISCARD_ATTRIBUTE
 		T& back(){
-			return *(data + offset - 1);
+			return *(_data + _offset - 1);
 		}
 
         NODISCARD_ATTRIBUTE
 		const_iterator begin() const {
-			return data;
+			return _data;
 		}
 
 		NODISCARD_ATTRIBUTE
 		const_iterator end() const {
-			return data + offset;
+			return _data + _offset;
 		}
 
 		NODISCARD_ATTRIBUTE
 		T& back() const {
-			return *(data + offset - 1);
+			return *(_data + _offset - 1);
 		}
 
 
         private:
-        size_t length;
-        size_t offset;
-        T* data;
+        size_t _length;
+        size_t _offset;
+        T* _data;
     };
 } // namespace types
 

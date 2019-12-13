@@ -59,7 +59,7 @@ void htoa(int64_t n, char* str){
 void abort(void){
     printf("Kernel panic, abort\n");
     asm("cli; hlt");
-    while(true);
+    __builtin_unreachable();
 }
 
 NODISCARD_ATTRIBUTE

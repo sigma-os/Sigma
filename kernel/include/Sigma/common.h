@@ -22,7 +22,15 @@ using std::size_t;
 #include <Sigma/panic.h>
 #include <Sigma/compiler.h>
 
+
+
 #define PANIC(message) (misc::panic::panic_m(message, SIGMA_FUNCTION_NAME, std::experimental::source_location::current()))
+
+#define ASSERT(condition) do { \
+				if(!(condition)){ \
+                    PANIC("Assertion Failed, condition: " #condition); \
+				} \
+			} while(0);
 
 #include <Sigma/misc.h>
 
