@@ -44,11 +44,6 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
         } else if(program_section_header.p_type == proc::elf::pt_load){ // Normal Program Section
             if(program_section_header.p_memsz == 0) continue;
 
-
-            uint64_t flags = map_page_flags_present | map_page_flags_writable | map_page_flags_user; // TODO: Don't have .text as writable
-            //proc::elf::Elf64_Word p_flags = program_section_header.p_flags;
-            //if((p_flags & proc::elf::pf_x) == 0) flags |= map_page_flags_no_execute;
-
             uint64_t n_pages = misc::div_ceil(program_section_header.p_memsz, mm::pmm::block_size);
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
@@ -59,13 +54,23 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
                 thread->resources.frames.push_back(frame);
 
                 uint64_t virt = base + program_section_header.p_vaddr + (j * mm::pmm::block_size);
-                thread->vmm.map_page(frame, virt, flags);
+                thread->vmm.map_page(frame, virt, map_page_flags_present | map_page_flags_writable);
                 memset_aligned_4k(reinterpret_cast<void*>(virt & ~(mm::pmm::block_size - 1)), 0);
             }
 
             if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(base + program_section_header.p_vaddr), program_section_header.p_offset, program_section_header.p_filesz)){
                 printf("[ELF]: Couldn't read program data [%s]\n", initrd_filename);
                 return false;
+            }
+
+            uint64_t flags = map_page_flags_present | map_page_flags_user;
+            proc::elf::Elf64_Word p_flags = program_section_header.p_flags;
+            if((p_flags & proc::elf::pf_x) == 0) flags |= map_page_flags_no_execute;
+            if(p_flags & proc::elf::pf_w) flags |= map_page_flags_writable;
+
+            for(uint64_t j = 0; j < n_pages; j++){
+                uint64_t virt = base + program_section_header.p_vaddr + (j * mm::pmm::block_size);
+                thread->vmm.set_page_protection(virt, flags);
             }
         }
     }

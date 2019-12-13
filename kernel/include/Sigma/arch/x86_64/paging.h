@@ -62,7 +62,7 @@ namespace x86_64::paging
             void deinit();
 
             bool map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_chache_types cache = map_page_chache_types::normal);
-
+            bool set_page_protection(uint64_t virt, uint64_t flags, map_page_chache_types cache = map_page_chache_types::normal);
             uint64_t get_phys(uint64_t virt);
 
             void set();

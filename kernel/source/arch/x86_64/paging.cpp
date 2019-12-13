@@ -452,6 +452,50 @@ uint64_t x86_64::paging::paging::get_phys(uint64_t virt){
     return -1;
 }
 
+bool x86_64::paging::paging::set_page_protection(uint64_t virt, uint64_t flags, map_page_chache_types cache){
+    uint64_t pml4_index_number = pml4_index(virt);
+    uint64_t pdpt_index_number = pdpt_index(virt);
+    uint64_t pd_index_number = pd_index(virt);
+    uint64_t pt_index_number = pt_index(virt);
+
+    uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
+    if(bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
+        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_VBASE);
+        uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
+        if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
+            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_VBASE);
+            uint64_t pd_entry = pd->entries[pd_index_number];
+            if(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
+                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_VBASE);
+                uint64_t pt_entry = pt->entries[pt_index_number];
+                if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present)){
+                    uint64_t entry_flags = 0;
+                    if(flags & map_page_flags_present)
+                        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_present);
+                    if(flags & map_page_flags_user)
+                        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_user);
+                    if(flags & map_page_flags_no_execute)
+                        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_no_execute);
+                    if(flags & map_page_flags_writable)
+                        bitops<uint64_t>::bit_set(entry_flags, x86_64::paging::page_entry_writeable);
+                    if(flags & map_page_flags_global)
+                        bitops<uint64_t>::bit_set(pt_entry, x86_64::paging::page_entry_global);
+
+                    set_flags(pt_entry, entry_flags);
+                    pt_entry |= get_pat_flags(cache);
+
+                    pt->entries[pt_index_number] = pt_entry;
+
+                    x86_64::paging::invalidate_addr(virt);
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint64_t search_end_hint, size_t size){
     uintptr_t current_addr = (uintptr_t)-1;
     size_t needed_pages = misc::div_ceil(size, mm::pmm::block_size);
