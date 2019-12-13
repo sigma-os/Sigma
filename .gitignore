@@ -92,3 +92,6 @@ kernel/build_meson/
 Sigma.srctrlbm
 Sigma.srctrldb
 Sigma.srctrlprj
+
+.idea/
+cmake-build-debug
