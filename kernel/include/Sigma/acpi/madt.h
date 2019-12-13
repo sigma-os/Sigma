@@ -62,13 +62,21 @@ namespace acpi
     };
     static_assert(sizeof(madt_gsi_override) == 10);
 
-    struct PACKED_ATTRIBUTE madt_nmi_souce{
+    struct PACKED_ATTRIBUTE madt_lapic_override {
+        uint8_t type; // 5;
+        uint8_t length; // 12
+        uint16_t reserved;
+        uint64_t address;
+    };
+    static_assert(sizeof(madt_lapic_override) == 12);
+
+    struct PACKED_ATTRIBUTE madt_nmi_source{
         uint8_t type; // 8
         uint8_t length; // 8;
         uint16_t flags;
         uint32_t gsi;
     };
-    static_assert(sizeof(madt_nmi_souce) == 8);
+    static_assert(sizeof(madt_nmi_source) == 8);
     
 
     struct PACKED_ATTRIBUTE madt_x2apic {
@@ -106,8 +114,10 @@ namespace acpi
         void parse_x2apic(uint8_t* item);
         void parse_ioapic(uint8_t* item);
         void parse_iso(uint8_t* item);
+        void parse_lapic_address_override(uint8_t* item);
 
         bool legacy_pic;
+        uint64_t lapic_addr;
         types::linked_list<smp::cpu_entry> cpus;
         types::linked_list<std::pair<uint64_t, uint32_t>> ioapics;
         types::linked_list<x86_64::apic::interrupt_override> isos;

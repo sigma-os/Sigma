@@ -9,8 +9,7 @@ acpi::madt::madt(): legacy_pic(false) {
 }
 
 uint64_t acpi::madt::get_lapic_address(){
-    //TODO: Support LAPIC Address Override ID = 5
-    return this->table->lapic_addr;
+    return this->lapic_addr;
 }
 
 void acpi::madt::parse_lapic(uint8_t* item){
@@ -76,6 +75,14 @@ void acpi::madt::parse_iso(uint8_t* item){
     this->isos.push_back({.source = iso->source, .gsi = iso->gsi, .flags = iso->flags}); // constructs an x86_64::apic::interrupt_override
 }
 
+void acpi::madt::parse_lapic_address_override(uint8_t *item) {
+    auto* override = reinterpret_cast<madt_lapic_override*>(item);
+
+    debug_printf("[MADT]: Detected LAPIC Address Override, address: %x\n", override->address);
+
+    this->lapic_addr = override->address;
+}
+
 void acpi::madt::parse(){
     uint32_t flags = this->table->flags;
     if(bitops<uint32_t>::bit_test(flags, acpi::flags_pc_at_compatibility)){
@@ -83,6 +90,8 @@ void acpi::madt::parse(){
     } else {
         this->legacy_pic = false;
     }
+
+    this->lapic_addr = this->table->lapic_addr & 0xFFFFFFFF;
 
     size_t table_size = (this->table->header.length - sizeof(acpi::madt_header));
     uint64_t list = reinterpret_cast<uint64_t>(this->table) + sizeof(acpi::madt_header);
@@ -108,9 +117,6 @@ void acpi::madt::parse(){
             this->parse_x2apic(item);
             break;
         
-        case acpi::type_nmi_source:
-            break;
-        
         default:
             debug_printf("[MADT]: Unknown table type: %x\n", type);
             break;
@@ -118,8 +124,6 @@ void acpi::madt::parse(){
         offset += item[1]; // Length
     }
 }
-
-
 
 void acpi::madt::get_cpus(types::linked_list<smp::cpu_entry>& cpus){
     for(const auto& a : this->cpus) cpus.push_back(a);
