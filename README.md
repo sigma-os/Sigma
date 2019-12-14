@@ -12,7 +12,7 @@ Look in [sigma-os/bootstrap](https://github.com/sigma-os/bootstrap)
 - ACPI and AML support with [lai](https://www.github.com/qword-os/lai)
 - APIC support + LAPIC timer for scheduling IRQs
 - PCI / PCI-Express Configuration space enumeration
-- SMP with scheduler level support
+- SMP + Simple Queue based scheduler
 - Dynamically linked userland backed by [mlibc](https://www.github.com/managarm/mlibc)
  
 ## Notes

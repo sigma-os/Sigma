@@ -1,4 +1,5 @@
 #include <Sigma/proc/process.h>
+#include <Sigma/types/queue.h>
 
 auto thread_list = types::linked_list<proc::process::thread>();
 static uint64_t current_thread_list_offset = 0;
@@ -18,47 +19,57 @@ proc::process::managed_cpu* proc::process::get_current_managed_cpu(){
     return nullptr;
 }
 
+types::queue<tid_t> scheduling_queue{};
+
 static proc::process::thread* schedule(proc::process::thread* current){
-    if(current == nullptr){
-        // Just got called without any current thread, loop through all of them
-        for(auto& entry : thread_list){
+    auto round_robin = [current]() -> proc::process::thread* {
+        if(current == nullptr){
+            // Just got called without any current thread, loop through all of them
+            for(auto& entry : thread_list){
+                if(entry.state == proc::process::thread_state::IDLE){
+                    return &entry;
+                }
+            }
+            return nullptr;
+        }
+
+        auto current_it = thread_list.get_iterator_for_item(current);
+        if(current_it.entry == nullptr){
+            debug_printf("[SCHEDULER]: Couldn't find current task in thread_list, task pointer: %x\n", current);
+            return nullptr;
+        }
+
+        auto it = current_it;
+        auto end = thread_list.end();
+        while(it != end){
+            auto& entry = *it;
             if(entry.state == proc::process::thread_state::IDLE){
                 return &entry;
             }
+
+            end = thread_list.end();
+            ++it;
         }
+
+        it = thread_list.begin();
+        end = current_it;
+        while(it != end){
+            auto& entry = *it;
+            if(entry.state == proc::process::thread_state::IDLE){
+                return &entry;
+            }
+
+            ++it;
+        }
+
         return nullptr;
+    };
+
+    if(scheduling_queue.length() >= 1){
+        return proc::process::thread_for_tid(scheduling_queue.pop());
+    } else {
+        return round_robin();
     }
-
-    auto current_it = thread_list.get_iterator_for_item(current);
-    if(current_it.entry == nullptr){
-        debug_printf("[SCHEDULER]: Couldn't find current task in thread_list, task pointer: %x\n", current);
-        return nullptr;
-    }
-
-    auto it = current_it;
-    auto end = thread_list.end();
-    while(it != end){
-        auto& entry = *it;
-        if(entry.state == proc::process::thread_state::IDLE){
-            return &entry;
-        }
-
-        end = thread_list.end();
-        ++it;
-    }
-
-    it = thread_list.begin();
-    end = current_it;
-    while(it != end){
-        auto& entry = *it;
-        if(entry.state == proc::process::thread_state::IDLE){
-            return &entry;
-        }
-
-        ++it;
-    }
-
-    return nullptr;
 }
 
 static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread* thread){
