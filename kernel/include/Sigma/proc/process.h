@@ -161,7 +161,7 @@ namespace proc::process
     
 
     struct managed_cpu {
-        managed_cpu() {}
+        managed_cpu() = default;
         managed_cpu(smp::cpu_entry cpu, bool enabled, proc::process::thread* current_thread): cpu(cpu), \
              enabled(enabled), current_thread(current_thread) {}
         smp::cpu_entry cpu;

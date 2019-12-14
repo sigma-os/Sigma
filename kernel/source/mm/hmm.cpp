@@ -2,7 +2,6 @@
 
 void mm::hmm::init(){
     alloc::init();
-    return;
 }
 
 NODISCARD_ATTRIBUTE

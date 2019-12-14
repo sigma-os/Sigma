@@ -11,7 +11,7 @@ namespace types
     class minimal_array
     {
     public:
-        minimal_array(): current_index(0) {}
+        constexpr minimal_array() noexcept : current_index(0) {}
         
         NODISCARD_ATTRIBUTE
         T& at(int index){

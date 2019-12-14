@@ -105,7 +105,7 @@ namespace acpi
         }
 
         bool found_table(){
-            return (this->table == nullptr) ? (false) : (true);
+            return this->table != nullptr;
         }
 
         private:

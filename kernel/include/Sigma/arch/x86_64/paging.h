@@ -16,7 +16,7 @@ constexpr uint64_t map_page_flags_user = (1 << 2);
 constexpr uint64_t map_page_flags_no_execute = (1 << 3);
 constexpr uint64_t map_page_flags_global = (1 << 4);
 
-enum class map_page_chache_types {normal, uncacheable, write_through, write_back, write_combining};
+enum class map_page_cache_types {normal, uncacheable, write_through, write_back, write_combining};
 
 namespace x86_64::paging
 {
@@ -61,8 +61,8 @@ namespace x86_64::paging
             void init();
             void deinit();
 
-            bool map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_chache_types cache = map_page_chache_types::normal);
-            bool set_page_protection(uint64_t virt, uint64_t flags, map_page_chache_types cache = map_page_chache_types::normal);
+            bool map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_cache_types cache = map_page_cache_types::normal);
+            bool set_page_protection(uint64_t virt, uint64_t flags, map_page_cache_types cache = map_page_cache_types::normal);
             uint64_t get_phys(uint64_t virt);
 
             void set();

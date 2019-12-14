@@ -8,7 +8,7 @@ struct frame {
 
 void debug::trace_stack(){
     #if defined(DEBUG)
-    frame* current = static_cast<frame*>(__builtin_frame_address(0));
+    auto* current = static_cast<frame*>(__builtin_frame_address(0));
 
 	debug_printf("Starting Stack Trace\n");
 	for(size_t i = 0; i < UINT64_MAX; i++) {

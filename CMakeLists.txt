@@ -9,6 +9,8 @@ set(CMAKE_C_STANDARD 11)
 file(GLOB_RECURSE SOURCE_FILES_1 ./*.cpp ./*.c ./*.asm ./*.S)
 
 include_directories(kernel/include)
+include_directories(kernel/subprojects/lai/include)
+include_directories(kernel/subprojects/multiboot_loader/include)
 include_directories(libs/libsigma/include)
 include_directories(zeta/include)
 

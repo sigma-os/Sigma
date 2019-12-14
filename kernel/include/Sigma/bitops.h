@@ -4,8 +4,7 @@
 #include <Sigma/common.h>
 
 template<typename T>
-class bitops
-{
+class bitops {
 public:
     static constexpr bool bit_set(T* item, uint64_t bit){
         T set = *item & (1ULL << bit);

@@ -12,7 +12,7 @@ namespace x86_64::gdt
 {
     struct PACKED_ATTRIBUTE entry {
         explicit entry(uint64_t ent): ent(ent) {}
-        entry(){}
+        entry() = default;
 
         uint64_t ent;
     };

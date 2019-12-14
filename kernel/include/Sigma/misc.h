@@ -22,7 +22,7 @@ namespace misc
             _initialized = false;
         }
 
-        operator bool(){
+        explicit operator bool(){
             return this->_initialized;
         }
     
@@ -38,7 +38,7 @@ namespace misc
 		    if(_initialized){
                 return reinterpret_cast<T *>(&_storage);
             }
-            PANIC("Tried to access unintialized lazy variable");
+            PANIC("Tried to access uninitialized lazy variable");
             return nullptr; // Unreachable?
 	    }
 

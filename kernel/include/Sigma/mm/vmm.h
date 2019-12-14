@@ -21,8 +21,7 @@ namespace mm::vmm
 
         static x86_64::paging::paging& _instance();
 
-        kernel_vmm() {}
-
+        kernel_vmm() = default;
     };
 } // mm::vmm
 

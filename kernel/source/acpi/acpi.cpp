@@ -25,10 +25,10 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
         uint64_t dsdt_addr = 0;
         if(auto* override = misc::kernel_args::get_str("dsdt_override"); override != nullptr){
             // DSDT has been overridden via kernel arguments
-            debug_printf("[ACPI]: Loading DSDT via override at %s\n", override);
+            debug_printf("loading DSDT via override at %s, ", override);
             dsdt_addr = reinterpret_cast<uint64_t>(dsdt_override);
         } else {
-            acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
+            auto* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
 		    uint64_t dsdt_phys_addr = 0;
 
 		    if(misc::is_canonical(fadt->x_dsdt) && revision != 1)
@@ -39,11 +39,11 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 		    dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
 		    mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr,
-			    										 map_page_flags_present |map_page_flags_no_execute, map_page_chache_types::uncacheable);
+			    										 map_page_flags_present |map_page_flags_no_execute, map_page_cache_types::uncacheable);
 		    for(size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++) {
 			    mm::vmm::kernel_vmm::get_instance().map_page(
-				    (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
-				    map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+                        (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
+				    map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
 		    }
 
             debug_printf("Found at: %x\n", dsdt_addr);
@@ -78,7 +78,7 @@ acpi::table* acpi::get_table(const char* signature){
             debug_printf("[ACPI]: Loading DSDT via override at %s\n", override);
             dsdt_addr = reinterpret_cast<uint64_t>(dsdt_override);
         } else {
-            acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
+            auto* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
 		    uint64_t dsdt_phys_addr = 0;
 
 		    if(misc::is_canonical(fadt->x_dsdt) && revision != 0)
@@ -90,11 +90,11 @@ acpi::table* acpi::get_table(const char* signature){
 
 		    mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr,
 			    										 map_page_flags_present |
-				    										 map_page_flags_no_execute, map_page_chache_types::uncacheable);
+				    										 map_page_flags_no_execute, map_page_cache_types::uncacheable);
 		    for(size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++) {
 			    mm::vmm::kernel_vmm::get_instance().map_page(
-				    (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
-				    map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+                        (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
+				    map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
 		    }
 
             debug_printf("Found at: %x\n", dsdt_addr);
@@ -104,7 +104,7 @@ acpi::table* acpi::get_table(const char* signature){
 		return reinterpret_cast<acpi::table*>(dsdt_addr);
 	}
     for(auto table : acpi_tables){
-        acpi::sdt_header* header = reinterpret_cast<acpi::sdt_header*>(table);
+        auto* header = reinterpret_cast<acpi::sdt_header*>(table);
 
         if((signature[0] == header->signature[0]) && (signature[1] == header->signature[1]) && (signature[2] == header->signature[2]) && (signature[3] == header->signature[3])){
             return reinterpret_cast<acpi::table*>(header);
@@ -116,7 +116,7 @@ acpi::table* acpi::get_table(const char* signature){
 }
 
 uint16_t acpi::get_arch_boot_flags(){
-    acpi::fadt* fadt = reinterpret_cast<acpi::fadt*>(reinterpret_cast<uint64_t>(acpi::get_table(acpi::fadt_signature)) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    auto* fadt = reinterpret_cast<acpi::fadt*>(reinterpret_cast<uint64_t>(acpi::get_table(acpi::fadt_signature)) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
     uint16_t flags = 0;
 
@@ -138,17 +138,17 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
         return;
     }
 
-    mm::vmm::kernel_vmm::get_instance().map_page(info.rsdp_address, info.rsdp_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::normal);
-    acpi::rsdp* rsdp = reinterpret_cast<acpi::rsdp*>(info.rsdp_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    mm::vmm::kernel_vmm::get_instance().map_page(info.rsdp_address, info.rsdp_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::normal);
+    auto* rsdp = reinterpret_cast<acpi::rsdp*>(info.rsdp_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     revision = info.acpi_version;
 
     if(revision > 1){
         debug_printf("[ACPI]: Detected version 2 or higher\n");
-        acpi::xsdp* xsdp = reinterpret_cast<acpi::xsdp*>(rsdp);
+        auto* xsdp = reinterpret_cast<acpi::xsdp*>(rsdp);
 
         debug_printf("[ACPI]: Found XSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", xsdp->oem_id[0], xsdp->oem_id[1], xsdp->oem_id[2], xsdp->oem_id[3], xsdp->oem_id[4], xsdp->oem_id[5], xsdp->revision);
 
-        mm::vmm::kernel_vmm::get_instance().map_page(xsdp->xsdt_address, (xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+        mm::vmm::kernel_vmm::get_instance().map_page(xsdp->xsdt_address, (xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
 
         auto* xsdt = reinterpret_cast<acpi::xsdt*>(xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
@@ -162,7 +162,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
         for (size_t i = 0; i < entries; i++)
         {
             if(reinterpret_cast<uint64_t*>(xsdt->tables[i]) == nullptr) continue;
-            mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+            mm::vmm::kernel_vmm::get_instance().map_page(xsdt->tables[i], (xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
             auto* h = reinterpret_cast<acpi::sdt_header*>(xsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
             uint64_t addr = xsdt->tables[i] - mm::pmm::block_size;
@@ -170,7 +170,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t phys = addr + (j * mm::pmm::block_size);
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
-                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
             }
 
 
@@ -182,7 +182,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
         }
     } else {
         debug_printf("[ACPI]: Found RSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", rsdp->oem_id[0], rsdp->oem_id[1], rsdp->oem_id[2], rsdp->oem_id[3], rsdp->oem_id[4], rsdp->oem_id[5], rsdp->revision);
-        mm::vmm::kernel_vmm::get_instance().map_page(info.rsdt_address, (info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+        mm::vmm::kernel_vmm::get_instance().map_page(info.rsdt_address, (info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
         auto* rsdt = reinterpret_cast<acpi::rsdt*>(info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         if(!do_checksum(reinterpret_cast<acpi::sdt_header*>(rsdt))){
             printf("[ACPI]: Failed RSDT checksum\n");
@@ -194,14 +194,14 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
         {
             if(reinterpret_cast<uint64_t*>(rsdt->tables[i]) == nullptr) continue;
             auto* h = reinterpret_cast<acpi::sdt_header*>(rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-            mm::vmm::kernel_vmm::get_instance().map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+            mm::vmm::kernel_vmm::get_instance().map_page(rsdt->tables[i], (rsdt->tables[i] + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
 
             uint64_t addr = rsdt->tables[i] - mm::pmm::block_size;
             auto n_pages = misc::div_ceil(h->length, mm::pmm::block_size) + 2;
             for(uint64_t j = 0; j < n_pages; j++){
                 uint64_t phys = addr + (j * mm::pmm::block_size);
                 uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
-                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+                mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
             }
 
             if(do_checksum(h)){
@@ -217,7 +217,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
         if(size == 0)
             PANIC("Supplied DSDT override size is 0");
 
-        uint8_t* buffer = new uint8_t[size];
+        auto* buffer = new uint8_t[size];
         proc::initrd::read_file(override, buffer, 0, size);
 
         dsdt_override = reinterpret_cast<acpi::table*>(buffer);
@@ -278,7 +278,7 @@ void acpi::init_ec(){
             continue;
  
         // Found one
-        struct lai_ec_driver* driver = new struct lai_ec_driver; // Dynamically allocate the memory since -
+        auto* driver = new lai_ec_driver; // Dynamically allocate the memory since -
         lai_init_ec(node, driver);                               // we dont know how many ECs there could be
  
         struct lai_ns_child_iterator child_it = LAI_NS_CHILD_ITERATOR_INITIALIZER(node);

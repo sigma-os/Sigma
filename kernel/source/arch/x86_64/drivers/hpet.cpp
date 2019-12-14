@@ -73,7 +73,7 @@ void x86_64::hpet::init_hpet(){
     
     acpi_table = reinterpret_cast<x86_64::hpet::table*>(acpi::get_table("HPET"));
     if(acpi_table == nullptr){
-        // Huh thats odd, there is an AML device but no table?
+        // Huh that's odd, there is an AML device but no table?
         lai_nsnode_t* crs_node = lai_resolve_path(node, "_CRS");
         if(!crs_node)
             PANIC("No HPET table and no _CRS, can't initialize HPET");
@@ -98,7 +98,7 @@ void x86_64::hpet::init_hpet(){
         base = acpi_table->base_addr_low.address;
 
         if(acpi_table->base_addr_low.id != acpi::generic_address_structure_id_system_memory) {
-            printf("[HPET]: Unkown ACPI Generic Address Structure Access ID: %x\n", acpi_table->base_addr_low.id);
+            printf("[HPET]: Unknown ACPI Generic Address Structure Access ID: %x\n", acpi_table->base_addr_low.id);
             PANIC("");
         }
     }
@@ -106,7 +106,7 @@ void x86_64::hpet::init_hpet(){
     if(!base)
         PANIC("[HPET]: Wasn't able to find HPET base");
 
-    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute, map_page_chache_types::uncacheable);
+    mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute, map_page_cache_types::uncacheable);
     
     if(((hpet_read(general_capabilities_and_id_reg) >> 16) & 0xFFFF) == 0xFFFF)
         PANIC("[HPET]: No HPET detected, need HPET to further boot");
@@ -145,7 +145,7 @@ void x86_64::hpet::init_hpet(){
 bool x86_64::hpet::create_timer(uint8_t comparator, x86_64::hpet::hpet_timer_types type, 
 								MAYBE_UNUSED_ATTRIBUTE uint8_t vector, uint64_t ms) {
 	if(comparator > n_counters) {
-		printf("[HPET]: Unexisting comparator\n");
+		printf("[HPET]: Non-existing comparator\n");
 		return false;
 	}
 

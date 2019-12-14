@@ -46,7 +46,7 @@ static bool load_executable(const char* initrd_filename, auxvals* aux, proc::pro
 
             uint64_t n_pages = misc::div_ceil(program_section_header.p_memsz, mm::pmm::block_size);
             for(uint64_t j = 0; j < n_pages; j++){
-                uint64_t frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
+                auto frame = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
                 if(frame == 0){
                     printf("[ELF]: Couldn't allocate physical frames for process\n");
                     return false;
@@ -126,7 +126,7 @@ static bool check_elf_executable(proc::elf::Elf64_Ehdr* program_header){
 }
 
 bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige){
-    proc::elf::Elf64_Ehdr program_header;
+    proc::elf::Elf64_Ehdr program_header{};
     if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(&program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
         printf("[ELF]: Couldn't load file: %s\n", initrd_filename);
         return false;
@@ -167,7 +167,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                 new_thread->context.rip = aux.at_entry;
             } else {
                 // Load dynamic shit
-                proc::elf::Elf64_Ehdr ld_program_header;
+                proc::elf::Elf64_Ehdr ld_program_header{};
                 if(!proc::initrd::read_file(ld_path, reinterpret_cast<uint8_t*>(&ld_program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
                     printf("[ELF]: Couldn't load file: %s\n", ld_path);
                     return false;

@@ -12,7 +12,7 @@ static alloc::header* get_free_block(size_t size){
     // Basic First Fit algorithm
     alloc::header* curr = head;
     while(curr){
-        if((curr->is_free == true) && (curr->size >= size)) return curr;
+        if(curr->is_free && (curr->size >= size)) return curr;
         curr = curr->next;
     }
     return nullptr;
@@ -120,7 +120,7 @@ NODISCARD_ATTRIBUTE
 void* alloc::realloc(void* ptr, size_t size){
     if(!ptr && size == 0) return nullptr;
 
-    if(size == 0 && ptr != nullptr){
+    if(size == 0){
         alloc::free(ptr);
         return nullptr;
     }
@@ -166,8 +166,6 @@ void alloc::free(void* ptr){
     }
 
     header->is_free = true;
-
-    return;
 }
 
 void alloc::init(){

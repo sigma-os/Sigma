@@ -28,11 +28,8 @@ namespace proc::ipc {
 		ALWAYSINLINE_ATTRIBUTE 
 		NODISCARD_ATTRIBUTE
 		bool check_magic() {
-			if(this->magic_low != ipc_message_header_magic_low ||
-			   this->magic_high != ipc_message_header_magic_high)
-				return false;
-			else
-				return true;
+            return !(this->magic_low != ipc_message_header_magic_low ||
+                     this->magic_high != ipc_message_header_magic_high);
 		}
 
 		ALWAYSINLINE_ATTRIBUTE
@@ -67,11 +64,8 @@ namespace proc::ipc {
 		NODISCARD_ATTRIBUTE
 		ALWAYSINLINE_ATTRIBUTE 
 		bool check_magic() {
-			if(this->magic_low != ipc_message_footer_magic_low ||
-			   this->magic_high != ipc_message_footer_magic_high)
-				return false;
-			else
-				return true;
+            return !(this->magic_low != ipc_message_footer_magic_low ||
+                     this->magic_high != ipc_message_footer_magic_high);
 		}
 
 		ALWAYSINLINE_ATTRIBUTE
@@ -92,7 +86,7 @@ namespace proc::ipc {
 	public:
 		thread_ipc_manager(): msg_buffer(nullptr), current_offset(0), current_unread_messages_count(0), \
 							  tid(0), lock(x86_64::spinlock::mutex()) {}
-		~thread_ipc_manager(){}
+		~thread_ipc_manager() = default;
 
 		void init(tid_t tid);
 		void deinit();

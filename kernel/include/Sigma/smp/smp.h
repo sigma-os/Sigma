@@ -33,7 +33,6 @@ namespace smp
         private:
         void boot_cpu(cpu_entry& e);
 
-        void boot_external_apic(smp::cpu_entry& cpu);
         void boot_apic(smp::cpu_entry& cpu);
 
         x86_64::apic::lapic* bsp_lapic;

@@ -10,7 +10,7 @@ namespace KLIBCXX_NAMESPACE_NAME {
         public:
         constexpr mutex() noexcept : handle({}) {}
 
-        ~mutex(){}
+        ~mutex() = default;
 
         mutex(const mutex&) = delete;
         mutex& operator =(const mutex&) = delete;

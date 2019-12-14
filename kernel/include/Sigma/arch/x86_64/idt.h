@@ -20,9 +20,7 @@ namespace x86_64::idt
 
     class PACKED_ATTRIBUTE idt_entry {
         public:
-        idt_entry(){
-            
-        }
+        idt_entry() = default;
         idt_entry(void* function, uint16_t selector, bool present, uint8_t ist_number);
         idt_entry(void* function, uint16_t selector, bool present, uint8_t ist_number, uint8_t dpl);
         uint16_t pointer_low;

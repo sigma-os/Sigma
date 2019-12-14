@@ -136,7 +136,7 @@ void x86_64::tme::init(){
                 } else {
                     uint32_t capability = x86_64::msr::read(x86_64::msr::ia32_tme_capability);
                     if(bitops<uint32_t>::bit_test(capability, 0)){
-                        // AES-XTS 128bit encrytion supported, try to enable
+                        // AES-XTS 128bit encryption supported, try to enable
                         
                         // Enable, Generate new key, Save key to storage for use when out of standby, AES-XTS 128bit encryption
                         x86_64::msr::write(x86_64::msr::ia32_tme_activate, (1 << 1) | (1 << 3));
@@ -165,11 +165,11 @@ void x86_64::tme::restore_key(){
                 } else {
                     uint32_t capability = x86_64::msr::read(x86_64::msr::ia32_tme_capability);
                     if(bitops<uint32_t>::bit_test(capability, 0)){
-                        // AES-XTS 128bit encrytion supported, try to enable
+                        // AES-XTS 128bit encryption supported, try to enable
                         
                         // Enable, Retrieve key from storage, AES-XTS 128bit encryption
                         x86_64::msr::write(x86_64::msr::ia32_tme_activate, (1 << 1) | (1 << 2));
-                        debug_printf("[CPU]: Reenabled TME with stored key\n");
+                        debug_printf("[CPU]: Re-enabled TME with stored key\n");
                     } else {
                         debug_printf("[CPU]: No available TME encryption algorithm");
                     }

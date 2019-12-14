@@ -49,21 +49,21 @@ static inline uint64_t get_flags(uint64_t entry){
 }
 
 ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t get_pat_flags(map_page_chache_types types){
+static inline uint64_t get_pat_flags(map_page_cache_types types){
     uint64_t ret = 0;
     switch (types)
     {
-    case map_page_chache_types::normal: // Default is that so just don't
+    case map_page_cache_types::normal: // Default is that so just don't
         FALLTHROUGH_ATTRIBUTE;
-    case map_page_chache_types::write_back:
+    case map_page_cache_types::write_back:
         break;
-    case map_page_chache_types::write_combining:
+    case map_page_cache_types::write_combining:
         bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_write_through);
         break;
-    case map_page_chache_types::write_through:
+    case map_page_cache_types::write_through:
         bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_cache_disable);
         break;
-    case map_page_chache_types::uncacheable:
+    case map_page_cache_types::uncacheable:
         bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_write_through);
         bitops<uint64_t>::bit_set(ret, x86_64::paging::page_entry_pat);
         break;
@@ -236,7 +236,7 @@ void x86_64::paging::paging::deinit(){
     mm::pmm::free_block(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE));
 }   
 
-bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_chache_types cache){
+bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_cache_types cache){
     uint64_t pml4_index_number = pml4_index(virt);
     uint64_t pdpt_index_number = pdpt_index(virt);
     uint64_t pd_index_number = pd_index(virt);
@@ -452,7 +452,7 @@ uint64_t x86_64::paging::paging::get_phys(uint64_t virt){
     return -1;
 }
 
-bool x86_64::paging::paging::set_page_protection(uint64_t virt, uint64_t flags, map_page_chache_types cache){
+bool x86_64::paging::paging::set_page_protection(uint64_t virt, uint64_t flags, map_page_cache_types cache){
     uint64_t pml4_index_number = pml4_index(virt);
     uint64_t pdpt_index_number = pdpt_index(virt);
     uint64_t pd_index_number = pd_index(virt);

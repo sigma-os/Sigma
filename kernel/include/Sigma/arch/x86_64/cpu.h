@@ -73,7 +73,7 @@ namespace x86_64
                 asm("mov %0, %%cr4" : : "r"(reg.raw));
             }
 
-            cr4(uint64_t raw): raw(raw) {}
+            explicit cr4(uint64_t raw): raw(raw) {}
             cr4(){
                 *this = cr4::load();
             }
@@ -116,14 +116,15 @@ namespace x86_64
 
         union xcr0 {
             static xcr0 load(){
-                return {x86_64::read_xcr(0)};
+                uint64_t tmp = x86_64::read_xcr(0);
+                return xcr0{tmp};
             }
 
             static void store(xcr0 reg){
                 x86_64::write_xcr(0, reg.raw);
             }
 
-            xcr0(uint64_t raw): raw(raw) {}
+            explicit xcr0(uint64_t raw): raw(raw) {}
             xcr0(){
                 *this = xcr0::load();
             }

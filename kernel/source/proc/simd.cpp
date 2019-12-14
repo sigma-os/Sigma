@@ -32,7 +32,7 @@ void proc::simd::save_state(proc::process::thread* thread){
     } 
 
     #ifdef DEBUG
-    if(((uint64_t)thread->context.simd_state % save_align) != 0) PANIC("Trying to pass uncorrectly aligned pointer to simd save");
+    if(((uint64_t)thread->context.simd_state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd save");
     #endif
 
     global_save(thread->context.simd_state);
@@ -45,7 +45,7 @@ void proc::simd::restore_state(proc::process::thread* thread){
     } 
 
     #ifdef DEBUG
-    if(((uint64_t)thread->context.simd_state % save_align) != 0) PANIC("Trying to pass uncorrectly aligned pointer to simd restore");
+    if(((uint64_t)thread->context.simd_state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd restore");
     #endif
 
     global_restore(thread->context.simd_state);
@@ -86,11 +86,11 @@ void proc::simd::init_simd(){
         debug_printf("[PROC]: Initializing SIMD saving mechanism with fxsave, size: %x\n", save_size);
 
         global_save = +[](uint8_t* state){
-            asm("fxsave (%0)" : : "r"(state) : "memory");
+            asm("fxsave %0" : : "m"(*state));
         };
 
         global_restore = +[](uint8_t* state){
-            asm("fxrstor (%0)" : : "r"(state) : "memory");
+            asm("fxrstor %0" : : "m"(*state));
         };
     } else {
         PANIC("no known SIMD save mechanism available");
@@ -98,7 +98,7 @@ void proc::simd::init_simd(){
 
     default_state = static_cast<uint8_t*>(mm::hmm::kmalloc_a(save_size, save_align));
     memset(static_cast<void*>(default_state), 0, save_size);
-    fxsave_area* tmp = reinterpret_cast<fxsave_area*>(default_state);
+    auto* tmp = reinterpret_cast<fxsave_area*>(default_state);
 
     tmp->fcw |= 1 << 0; // Set Invalid Operation Mask
     tmp->fcw |= 1 << 1; // Set Denormal Operand Mask

@@ -18,13 +18,11 @@ struct rle_stack_entry {
     uint64_t n_pages;
 
     bool operator== (rle_stack_entry &rhs){
-        if((this->base == rhs.base) && (this->n_pages == rhs.n_pages)) return true;
-        return false;
+        return (this->base == rhs.base) && (this->n_pages == rhs.n_pages);
     }
 
     bool operator <(rle_stack_entry &rhs){
-        if(this->base < rhs.base) return true;
-        return false;
+        return (this->base < rhs.base);
     }
 };
 
@@ -65,7 +63,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     uint64_t n_blocks = 0;
     {
-        multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
+        auto* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
         for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++)
             if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
                 n_blocks += (entry->len / mm::pmm::block_size);
@@ -83,7 +81,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     initrd_start = boot_protocol->kernel_initrd_ptr;
     initrd_end = boot_protocol->kernel_initrd_size + initrd_start;
 
-    multiboot_tag_mmap* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
+    auto* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
     for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){
         debug_printf("[e820]: Base: %x, Len: %x, Type: ", entry->addr, entry->len);
         switch (entry->type)
@@ -177,7 +175,7 @@ void* mm::pmm::alloc_n_blocks(size_t n){
 void mm::pmm::free_block(void* block){
     std::lock_guard guard{pmm_global_mutex};
 
-    uint64_t addr = reinterpret_cast<uint64_t>(block);
+    auto addr = reinterpret_cast<uint64_t>(block);
 
     for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
         if((addr + mm::pmm::block_size) == entry->base){

@@ -22,8 +22,7 @@ void acpi::madt::parse_lapic(uint8_t* item){
         uint32_t a, b, c, d;
         if(x86_64::cpuid(0x1, a, b, c, d)){
             uint8_t id = ((b >> 24) & 0xFF);
-            if(id == lapic->apic_id) bsp = true;
-            else bsp = false;
+            bsp = (id == lapic->apic_id);
         } else {
             // Assume not BSP
             bsp = false;
@@ -44,8 +43,7 @@ void acpi::madt::parse_x2apic(uint8_t* item){
         bool bsp;
         uint32_t a, b, c, d;
         if(x86_64::cpuid(0xB, a, b, c, d)){
-            if(d == lapic->x2apic_id) bsp = true;
-            else bsp = false;
+            bsp = (d == lapic->x2apic_id);
         } else {
             // Assume not BSP
             bsp = false;

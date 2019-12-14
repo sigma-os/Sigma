@@ -30,13 +30,12 @@ namespace types
                         if(this->entry) this->entry = this->entry->next;
                     }
                     bool operator!=(linked_list_iterator it){
-                        if(this->entry == it.entry) return false;
-                        return true;
+                        return this->entry != it.entry;
                     }
                     linked_list_entry<iterator_T>* entry;
             };
 
-            linked_list(): head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), length(0) {}
+            constexpr linked_list() noexcept : head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), length(0) {}
 
             ~linked_list() {
                 if((this->head != nullptr) && (this->tail != nullptr) && (this->length != 0)){
@@ -48,7 +47,7 @@ namespace types
 
             T* push_back(T entry){
                 std::lock_guard guard{this->mutex};
-                linked_list_entry<T>* new_entry = new linked_list_entry<T>;
+                auto* new_entry = new linked_list_entry<T>;
 
                 new_entry->item = entry;
                 new_entry->next = nullptr;
@@ -71,7 +70,7 @@ namespace types
 
             T* empty_entry(){
                 std::lock_guard guard{this->mutex};
-                linked_list_entry<T>* new_entry = new linked_list_entry<T>;
+                auto* new_entry = new linked_list_entry<T>;
                 
                 new_entry->next = nullptr;
 
