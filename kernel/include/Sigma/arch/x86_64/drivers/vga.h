@@ -2,7 +2,7 @@
 #define SIGMA_ARCH_X86_64_VGA
 
 #include <Sigma/common.h>
-#include <Sigma/misc.h>
+#include <Sigma/misc/misc.h>
 
 #include <klibcxx/utility.hpp>
 

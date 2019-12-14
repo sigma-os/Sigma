@@ -1,5 +1,5 @@
-#include <Sigma/panic.h>
-#include <Sigma/debug.h>
+#include <Sigma/misc/panic.h>
+#include <Sigma/misc/debug.h>
 #include <klibc/stdio.h>
 #include <klibc/stdlib.h>
 

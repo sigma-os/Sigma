@@ -1,4 +1,4 @@
-#include <Sigma/debug.h>
+#include <Sigma/misc/debug.h>
 #include <Sigma/proc/elf.h>
 
 struct frame {

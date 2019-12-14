@@ -2,7 +2,7 @@
 #define SIGMA_KERNEL_IDT
 
 #include <Sigma/common.h>
-#include <Sigma/bitops.h>
+#include <Sigma/misc/bitops.h>
 
 #include <Sigma/arch/x86_64/gdt.h>
 

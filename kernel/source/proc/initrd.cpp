@@ -1,6 +1,6 @@
 #include <Sigma/proc/initrd.h>
 #include <klibc/stdio.h>
-#include <Sigma/misc.h>
+#include <Sigma/misc/misc.h>
 #include <Sigma/types/vector.h>
 #include <klibcxx/algorithm.hpp>
 

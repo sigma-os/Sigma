@@ -23,6 +23,10 @@ main_sources = files(
     'source/klibc/stdio.cpp',
     'source/klibc/stdlib.cpp',
     'source/klibc/string.cpp',
+    'source/misc/misc.cpp',
+    'source/misc/panic.cpp',
+    'source/misc/debug.cpp',
+    'source/misc/cpp_support.cpp',
     'source/mm/hmm.cpp',
     'source/mm/pmm.cpp',
     'source/mm/vmm.cpp',
@@ -37,13 +41,9 @@ main_sources = files(
     'source/proc/elf.cpp',
     'source/proc/syscall.cpp',
     'source/proc/simd.cpp',
-    'source/cpp_support.cpp',
     'source/crti.S',
     'source/crtn.S',
-    'source/kernel_main.cpp',
-    'source/panic.cpp',
-    'source/debug.cpp',
-    'source/misc.cpp')
+    'source/kernel_main.cpp')
 
 cpp_includes = include_directories('include')
 

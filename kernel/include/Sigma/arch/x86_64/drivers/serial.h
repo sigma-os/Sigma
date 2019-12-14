@@ -2,7 +2,7 @@
 #define SIGMA_KERNEL_SERIAL
 
 #include <Sigma/common.h>
-#include <Sigma/bitops.h>
+#include <Sigma/misc/bitops.h>
 #include <klibcxx/mutex.hpp>
 #include <Sigma/arch/x86_64/io.h>
 

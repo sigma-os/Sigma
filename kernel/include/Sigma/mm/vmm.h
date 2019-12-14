@@ -2,7 +2,7 @@
 #define SIGMA_KERNEL_MM_VMM
 
 #include <Sigma/common.h>
-#include <Sigma/misc.h>
+#include <Sigma/misc/misc.h>
 
 #include <Sigma/arch/x86_64/paging.h>
 

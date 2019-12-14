@@ -1,5 +1,5 @@
 #include <Sigma/common.h>
-#include <Sigma/misc.h>
+#include <Sigma/misc/misc.h>
 #include <klibc/string.h>
 #include <klibc/stdio.h>
 #include <atomic>

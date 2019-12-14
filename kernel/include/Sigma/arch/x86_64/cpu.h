@@ -2,7 +2,7 @@
 #define SIGMA_ARCH_X86_64_CPU
 
 #include <Sigma/common.h>
-#include <Sigma/misc.h>
+#include <Sigma/misc/misc.h>
 #include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
 #include <Sigma/smp/cpu.h>

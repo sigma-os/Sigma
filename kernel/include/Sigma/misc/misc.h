@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <cstddef>
-#include <Sigma/panic.h>
+#include <Sigma/misc/panic.h>
 #include <type_traits>
 
 namespace misc

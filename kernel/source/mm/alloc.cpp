@@ -1,6 +1,6 @@
 #include <Sigma/mm/alloc.h>
 
-#include <Sigma/debug.h>
+#include <Sigma/misc/debug.h>
 
 static x86_64::spinlock::mutex alloc_global_mutex = x86_64::spinlock::mutex();
 

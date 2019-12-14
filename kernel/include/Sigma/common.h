@@ -18,9 +18,9 @@ using std::int64_t;
 using std::uintptr_t;
 using std::size_t;
 
-#include <Sigma/bitops.h>
-#include <Sigma/panic.h>
-#include <Sigma/compiler.h>
+#include <Sigma/misc/bitops.h>
+#include <Sigma/misc/panic.h>
+#include <Sigma/misc/compiler.h>
 
 
 
@@ -32,7 +32,7 @@ using std::size_t;
 				} \
 			} while(0);
 
-#include <Sigma/misc.h>
+#include <Sigma/misc/misc.h>
 
 
 // Things to log debug
