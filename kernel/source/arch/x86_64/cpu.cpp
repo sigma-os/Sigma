@@ -122,7 +122,7 @@ void x86_64::tsd::init(){
     }
 }
 
-// Intel paper on TME: http://kib.kiev.ua/x86docs/SDMs/336907-001.pdf
+// Intel paper on TME: https://web.archive.org/web/20190514134553/http://kib.kiev.ua/x86docs/SDMs/336907-001.pdf
 void x86_64::tme::init(){
     if(!misc::kernel_args::get_bool("notme")){
         uint32_t a, b, c, d;
