@@ -45,33 +45,6 @@ static uint64_t syscall_kill(x86_64::idt::idt_registers* regs){
     return 0;
 }
 
-// ARG0: Allocate type
-//       - 0: SBRK like allocation
-//       - 1: Allocation at free base, TODO
-// ARG1: Base
-// ARG2: n pages
-
-#include <Sigma/mm/alloc.h>
-static uint64_t syscall_valloc(x86_64::idt::idt_registers* regs){
-    // TODO: Limit amount of allocatable frames
-    switch (SYSCALL_GET_ARG0())
-    {
-    case 0: { // Do sbrk-like allocation
-        void* base = proc::process::get_current_thread()->expand_thread_heap(SYSCALL_GET_ARG2());
-        CHECK_PTR((uint64_t)base);
-        return reinterpret_cast<uint64_t>(base);
-    }
-    case 1: {
-        PANIC("//TODO");
-        break;
-    }
-    default:
-        PANIC("syscall_valloc unknown allocate type");
-        break;
-    }
-    return 0;
-}
-
 // ARG0: void* to virtual addr
 // ARG1: void* to physical addr, only allowed if thread is DRIVER level or KERNEL
 // ARG2: size_t length
@@ -203,7 +176,6 @@ kernel_syscall syscalls[] = {
     {.func = syscall_early_klog, .name = "early_klog"},
     {.func = syscall_set_fsbase, .name = "set_fsbase"},
     {.func = syscall_kill, .name = "kill"},
-    {.func = syscall_valloc, .name = "valloc"},
     {.func = syscall_vm_map, .name = "vm_map"},
     {.func = syscall_initrd_read, .name = "initrd_read"},
     {.func = syscall_initrd_get_size, .name = "initrd_get_size"},

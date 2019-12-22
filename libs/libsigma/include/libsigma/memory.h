@@ -12,10 +12,6 @@ extern "C" {
 #error "Compiling libsigma/memory.h on unknown language"
 #endif
 
-#define LIBSIGMA_VALLOC_TYPE_SBRK_LIKE 0
-#define LIBSIGMA_VALLOC_TYPE_FREE_BASE 1
-
-uint64_t libsigma_valloc(uint64_t type, uint64_t base, uint64_t n_pages);
 void* libsigma_vm_map(size_t size, void *virt_addr, void* phys_addr, int prot, int flags);
 
 typedef struct {

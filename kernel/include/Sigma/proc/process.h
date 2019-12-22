@@ -92,15 +92,11 @@ namespace proc::process
     constexpr uint64_t mmap_top = 0x7FFF'FFFF'FFFF;
     constexpr uint64_t mmap_bottom = 0x9'0000'0000;
     constexpr uint64_t default_stack_top = 0x800000000;
-    constexpr uint64_t default_heap_bottom = 0x400000000;
 
     struct thread_image {
-        thread_image(): stack_top(default_stack_top), stack_bottom(default_stack_top), \
-                        heap_bottom(default_heap_bottom), heap_top(default_heap_bottom) {}
+        thread_image(): stack_top(default_stack_top), stack_bottom(default_stack_top) {}
         uint64_t stack_top;
         uint64_t stack_bottom;
-        uint64_t heap_bottom;
-        uint64_t heap_top;
     };
 
     enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED};
@@ -134,7 +130,6 @@ namespace proc::process
 
         // Internal Thread Modifying functions
         void expand_thread_stack(size_t pages);
-        void* expand_thread_heap(size_t pages);
 
         void set_fsbase(uint64_t fs);
 
