@@ -9,6 +9,7 @@
 namespace x86_64::serial
 {
     constexpr uint16_t com1_base = 0x3F8;
+    constexpr uint16_t com2_base = 0x2F8;
 
     constexpr uint8_t interrupt_enable = 1;
 
@@ -33,6 +34,12 @@ namespace x86_64::serial
             while((x86_64::io::inb(this->base + x86_64::serial::line_status) & 0x20) == 0);
             x86_64::io::outb(this->base, c);
         }
+
+        char get_char(){
+            while((x86_64::io::inb(this->base + x86_64::serial::line_status) & 0x1) == 0);
+            return x86_64::io::inb(this->base);
+        }
+
 
         void nprint(const char* str, size_t n){
             std::lock_guard guard{this->mutex};
