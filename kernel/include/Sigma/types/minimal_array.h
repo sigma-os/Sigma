@@ -20,8 +20,12 @@ namespace types
             else {
                 if(!dynamic_elements)
                     dynamic_elements.init();
-                return dynamic_elements[index - NStaticElements];
+                return dynamic_elements->operator[](index - NStaticElements);
             }    
+        }
+
+        size_t length(){
+            return current_index;
         }
 
         NODISCARD_ATTRIBUTE
@@ -38,7 +42,7 @@ namespace types
             }
         }
     private:
-        int current_index;
+        size_t current_index;
         T static_elements[NStaticElements];
         misc::lazy_initializer<types::vector<T>> dynamic_elements;
     };

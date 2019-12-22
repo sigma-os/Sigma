@@ -35,10 +35,10 @@ namespace types
                     linked_list_entry<iterator_T>* entry;
             };
 
-            constexpr linked_list() noexcept : head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), length(0) {}
+            constexpr linked_list() noexcept : head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), _length(0) {}
 
             ~linked_list() {
-                if((this->head != nullptr) && (this->tail != nullptr) && (this->length != 0)){
+                if((this->head != nullptr) && (this->tail != nullptr) && (this->_length != 0)){
                     for(T& e : *this){
                         delete &e;
                     }
@@ -53,18 +53,18 @@ namespace types
                 new_entry->next = nullptr;
 
                 
-                if(this->length == 0){
+                if(this->_length == 0){
                     this->head = new_entry;
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
-                    this->length++;
+                    this->_length++;
                     return &(new_entry->item);
                 }
 
                 this->tail->next = new_entry;
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
-                this->length++;
+                this->_length++;
                 return &(new_entry->item);
             }
 
@@ -75,18 +75,18 @@ namespace types
                 new_entry->next = nullptr;
 
                 
-                if(this->length == 0){
+                if(this->_length == 0){
                     this->head = new_entry;
                     this->tail = new_entry;
                     new_entry->prev = nullptr;
-                    this->length++;
+                    this->_length++;
                     return &(new_entry->item);
                 }
 
                 this->tail->next = new_entry;
                 new_entry->prev = this->tail;
                 this->tail = new_entry;
-                this->length++;
+                this->_length++;
                 return &(new_entry->item);
             }
 
@@ -114,12 +114,16 @@ namespace types
                 return linked_list_iterator<T>(nullptr);
             }
 
+            size_t length(){
+                return _length;
+            }
+
 
             linked_list_entry<T>* head;
             linked_list_entry<T>* tail;
         private:
             x86_64::spinlock::mutex mutex;
-            size_t length;
+            size_t _length;
     };
 } // types
 
