@@ -7,10 +7,11 @@ size_t strlen(const char* s){
 }
 
 char *strcpy(char *dest, const char *src) {
-    while(*src)
-        *(dest++) = *(src++);
-    *dest = 0;
-    return dest;
+    //while(*src)
+    //   *(dest++) = *(src++);
+    //*dest = 0;
+    //return dest;
+    return (char*)memcpy((void*)dest, (void*)src, strlen(src) + 1);
 }
 
 void* memset(void* s, int c, size_t n){
