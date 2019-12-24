@@ -3,6 +3,7 @@
 #include <libsigma/memory.h>
 #include <iostream>
 #include <sys/mman.h>
+#include <assert.h>
 
 using namespace ahci::regs;
 
@@ -243,4 +244,37 @@ void ahci::controller::port::wait_idle(){
         if(!poll.fr)
             break;
     }
+}
+
+std::pair<int, ahci::regs::h2d_register_fis*> ahci::controller::allocate_command(ahci::controller::port& port, size_t fis_size){
+    auto index = get_free_command_slot(port);
+    if(index == -1)
+        return {-1, nullptr}; // No free command slot available rn
+
+    assert(index < 32);
+
+    auto& header = port.region->command_headers[index];
+
+    libsigma_phys_region_t region = {};
+    if(libsigma_get_phys_region(fis_size, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "ahci: Failed to allocate physical region for h2d FIS\n";
+        return {-1, nullptr};
+    }
+
+    header.ctba = region.physical_addr & 0xFFFFFFFF;
+    if(addressing_64bit) header.ctbau = (region.physical_addr >> 32) & 0xFFFFFFFF;
+
+    //assert((fis_size % sizeof(uint32_t)) == 0); // Make sure FIS size is divisible by 4
+
+    header.flags.cfl = 5; // h2d fis is 5 dwords long
+
+    return {index, (ahci::regs::h2d_register_fis*)region.virtual_addr};
+}
+
+int ahci::controller::get_free_command_slot(ahci::controller::port& port){
+    for(int i = 0; i < n_command_slots; i++)
+        if((port.regs->ci & (1u << i)) == 0)
+            return i;
+                    
+    return -1;
 }

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <utility>
 
 #define PACKED [[gnu::packed]]
 
@@ -488,12 +489,12 @@ namespace ahci
                 uint32_t pmp : 4;
                 uint32_t prdtl : 16;
             } flags;
+            static_assert(sizeof(flags) == 4);
 
             uint32_t prdbc;
             uint32_t ctba;
             uint32_t ctbau;
             std::byte reserved[16];
-            static_assert(sizeof(flags) == 4);
         };
         static_assert(sizeof(cmd_header) == 32);
 
@@ -561,6 +562,8 @@ namespace ahci
             void wait_idle();
         };
 
+        std::pair<int, regs::h2d_register_fis*> allocate_command(port& port, size_t fis_size);
+        int get_free_command_slot(port& port);
         port* ports;
     };
 } // namespace ahci
