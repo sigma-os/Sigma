@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
 #include <cstddef>
 #include <utility>
 
@@ -309,7 +310,15 @@ namespace ahci
             union tfd_t {
                 tfd_t(uint32_t tfd): raw(tfd) {}
                 struct {
-                    uint32_t sts : 8;
+                    struct {
+                        uint8_t error : 1;
+                        uint8_t command_specific : 2;
+                        uint8_t drq : 1;
+                        uint8_t command_specific_1 : 3;
+                        uint8_t busy : 1;
+                    } status;
+                    static_assert(sizeof(status) == 1);
+
                     uint32_t err : 8;
                     uint32_t  reserved : 16;
                 };
@@ -492,6 +501,7 @@ namespace ahci
             static_assert(sizeof(flags) == 4);
 
             uint32_t prdbc;
+            
             uint32_t ctba;
             uint32_t ctbau;
             std::byte reserved[16];
@@ -500,7 +510,12 @@ namespace ahci
 
         struct PACKED h2d_register_fis {
             uint8_t type = 0x27;
-            uint8_t flags;
+            struct {
+                uint8_t pm_port : 4;
+                uint8_t reserved : 3;
+                uint8_t c : 1;
+            } flags;
+            static_assert(sizeof(flags) == 1);
             uint8_t command;
             uint8_t features;
             uint8_t lba_0;
@@ -519,7 +534,7 @@ namespace ahci
         };
         static_assert(sizeof(h2d_register_fis) == 20);
 
-        struct PACKED prdt {
+        struct PACKED prdt_t {
             uint32_t low;
             uint32_t high;
             uint32_t reserved;
@@ -528,10 +543,81 @@ namespace ahci
                 uint32_t reserved : 9;
                 uint32_t irq_on_completion : 1;
             } flags;
+
+            static constexpr uint32_t calculate_bytecount(size_t count){
+                assert((count % 2) == 0);
+
+                assert(count <= 0x3FFFFF);
+
+                return ((((count + 1) & ~1) - 1) & 0x3FFFFF);
+            }
             static_assert(sizeof(flags) == 4);
         };
-        static_assert(sizeof(prdt) == 16);
+        static_assert(sizeof(prdt_t) == 16);
+        static_assert(prdt_t::calculate_bytecount(512) == 0x1FF);
+
+
+        struct PACKED command_table_t {
+            uint8_t fis[64];
+            uint8_t packet[16];
+            uint8_t reserved[48];
+            prdt_t prdts[];
+            static constexpr size_t calculate_length(size_t n_prdts){
+                return sizeof(command_table_t) + (sizeof(prdt_t) * n_prdts);
+            }
+        };
+        static_assert(command_table_t::calculate_length(0) == sizeof(command_table_t));
     } // namespace regs
+
+
+    // TODO: Move to some ATA / AHCI common lib
+    namespace commands
+    {
+        // Read
+        constexpr uint8_t read = 0x20;
+        constexpr uint8_t read_dma = 0xC8;
+        constexpr uint8_t read_extended = 0x24;
+        constexpr uint8_t read_extended_dma = 0x25;
+
+        // Write
+        constexpr uint8_t write = 0x30;
+        constexpr uint8_t write_dma = 0xCA;
+        constexpr uint8_t write_extended = 0x34;
+        constexpr uint8_t write_extended_dma = 0x35;
+
+        // Identification
+        constexpr uint8_t identify = 0xEC;
+        constexpr uint8_t identify_packet_interface = 0xA1;
+
+        // Misc
+        constexpr uint8_t send_packet = 0xA0;
+
+        namespace packet_commands{
+            namespace read_capacity {
+                constexpr uint8_t command = 0x25;
+
+                struct PACKED packet {
+                    uint8_t command;
+                    uint8_t reserved;
+                    uint32_t lba;
+                    uint8_t reserved_0;
+                    uint8_t reserved_1;
+                    uint8_t reserved_2;
+                    uint8_t control_2;
+                    uint8_t zero;
+                    uint8_t zero_0;
+                };
+
+                struct PACKED response {
+                    uint32_t lba;
+                    uint32_t block_size;
+                };
+            }
+
+
+        }
+    } // namespace commands
+    
 
     class controller {
         public:
@@ -559,11 +645,24 @@ namespace ahci
 
 
             phys_region* region;
+
+            uint8_t identification[512];
+            bool lba48;
+            bool removeable;
+
+            uint64_t n_sectors;
+            uint32_t bytes_per_sector;
+
             void wait_idle();
+            void wait_ready();
         };
 
-        std::pair<int, regs::h2d_register_fis*> allocate_command(port& port, size_t fis_size);
+        std::pair<int, regs::command_table_t*> allocate_command(port& port, size_t fis_size);
         int get_free_command_slot(port& port);
+
+        void identify(bool packet_device, port& port);
+        std::pair<uint32_t, uint32_t> pi_read_capacity(port& port);
+
         port* ports;
     };
 } // namespace ahci
