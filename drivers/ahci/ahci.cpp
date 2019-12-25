@@ -417,7 +417,7 @@ void ahci::controller::identify(bool packet_device, ahci::controller::port& port
             for(int i = 0; i < 511; i++)
                 checksum += identity[i];
 
-            return ((uint8_t)~checksum == identity[511]);
+            return ((uint8_t)-checksum == identity[511]);
         } else if(identity[510] != 0){
             return false;
         } else { // Might be a version below ATA-5 which had no checksum
@@ -485,4 +485,65 @@ std::pair<uint32_t, uint32_t> ahci::controller::pi_read_capacity(ahci::controlle
     uint32_t lba = response.lba;
     uint32_t block_size = response.block_size;
     return {bswap32(lba), bswap32(block_size)};
+}
+
+std::vector<uint8_t> ahci::controller::read_sector(ahci::controller::port& port, uint64_t lba){
+    auto slot = allocate_command(port, command_table_t::calculate_length(1)); // Sector size > 4MiB not happening
+
+    auto command_index = slot.first;
+    assert(command_index != -1);
+
+    port.region->command_headers[command_index].flags.prdtl = 1; // 1 PRDT entry
+    port.region->command_headers[command_index].flags.write = 0; // Reading from device
+    port.region->command_headers[command_index].flags.cfl = 5; // h2d fis is 5 dwords long
+
+    auto& fis = *(ahci::regs::h2d_register_fis*)(slot.second->fis);
+    fis.type = 0x27;
+    fis.flags.c = 1;
+    fis.command = commands::read_extended_dma;
+    fis.control = 0x08; // Legacy stuff
+    fis.dev_head = 0xA0 | (1 << 6); // Legacy stuff + LBA mode
+    fis.sector_count_low = 1;
+    fis.sector_count_high = 0;
+    fis.lba_0 = lba & 0xFF;
+    fis.lba_1 = (lba >> 8) & 0xFF;
+    fis.lba_2 = (lba >> 16) & 0xFF;
+    fis.lba_3 = (lba >> 24) & 0xFF;
+    fis.lba_4 = (lba >> 32) & 0xFF;
+    fis.lba_5 = (lba >> 40) & 0xFF;    
+
+    auto& prdt = slot.second->prdts[0];
+    prdt.flags.byte_count = regs::prdt_t::calculate_bytecount(port.bytes_per_sector);
+    
+    libsigma_phys_region_t region = {};
+    if(libsigma_get_phys_region(port.bytes_per_sector, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "Failed to allocate physical region for identification data\n";
+        return {};
+    }
+
+    prdt.low = region.physical_addr & 0xFFFFFFFF;
+    prdt.high = (region.physical_addr >> 32) & 0xFFFFFFFF;
+
+    port.wait_ready();
+
+    port.regs->ci |= (1u << command_index); // Start command
+
+    while(port.regs->ci & (1u << command_index)){
+        prs_t::is_t is{port.regs->is};
+        if(is.tfes){
+            prs_t::tfd_t tfd{port.regs->tfd};
+
+            if(tfd.status.error){
+                std::cerr << "ahci: Error on identify code: " << tfd.err << std::endl;
+                return {};
+            }
+        }
+    }
+
+    std::vector<uint8_t> ret{};
+    ret.resize(port.bytes_per_sector);
+
+    memcpy((void*)ret.data(), (void*)region.virtual_addr, port.bytes_per_sector);
+
+    return ret;
 }

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <utility>
+#include <vector>
 
 #define PACKED [[gnu::packed]]
 
@@ -663,6 +664,11 @@ namespace ahci
         void identify(bool packet_device, port& port);
         std::pair<uint32_t, uint32_t> pi_read_capacity(port& port);
 
+        public:
+
+        std::vector<uint8_t> read_sector(port& port, uint64_t lba);
+
+        
         port* ports;
     };
 } // namespace ahci
