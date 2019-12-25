@@ -532,6 +532,8 @@ bool proc::process::thread::get_phys_region(size_t size, int prot, int flags, ph
     void* virt_addr = this->map_anonymous(size, nullptr, phys_addr, prot, flags);
     if(virt_addr == nullptr)
         return false;
+
+    memset(virt_addr, 0, size);
         
     region->physical_addr = (uint64_t)phys_addr;
     region->virtual_addr = (uint64_t)virt_addr;
