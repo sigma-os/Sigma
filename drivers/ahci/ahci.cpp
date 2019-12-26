@@ -454,8 +454,8 @@ std::pair<uint32_t, uint32_t> ahci::controller::pi_read_capacity(ahci::controlle
     
     libsigma_phys_region_t region = {};
     if(libsigma_get_phys_region(8, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
-        std::cerr << "Failed to allocate physical region for identification data\n";
-        return {-1, -1};
+        std::cerr << "Failed to allocate physical region for SATAPI Read Capacity data\n";
+        return {0, 0};
     }
 
     prdt.low = region.physical_addr & 0xFFFFFFFF;
@@ -475,7 +475,7 @@ std::pair<uint32_t, uint32_t> ahci::controller::pi_read_capacity(ahci::controlle
 
             if(tfd.status.error){
                 std::cerr << "ahci: Error on identify code: " << tfd.err << std::endl;
-                return {-1, -1};
+                return {0, 0};
             }
         }
     }
@@ -517,7 +517,7 @@ std::vector<uint8_t> ahci::controller::read_sector(ahci::controller::port& port,
     
     libsigma_phys_region_t region = {};
     if(libsigma_get_phys_region(port.bytes_per_sector, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
-        std::cerr << "Failed to allocate physical region for identification data\n";
+        std::cerr << "Failed to allocate physical region for sector data\n";
         return {};
     }
 
