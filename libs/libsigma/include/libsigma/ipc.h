@@ -23,11 +23,8 @@ typedef struct libsigma_message {
     uint8_t command_data[];
 } libsigma_message_t;
 
-bool libsigma_ipc_check_message(libsigma_message_t* msg, size_t size);
-void libsigma_ipc_set_message_checksum(libsigma_message_t* msg, size_t size);
-
-int libsigma_ipc_send(tid_t dest, size_t buf_size, uint8_t* buffer);
-int libsigma_ipc_receive(tid_t* origin, size_t* buf_size, uint8_t* buffer);
+int libsigma_ipc_send(tid_t dest, libsigma_message_t* msg, size_t msg_size);
+int libsigma_ipc_receive(tid_t* origin, libsigma_message_t* buffer, size_t* buf_size);
 
 size_t libsigma_ipc_get_msg_size();
 
