@@ -1,5 +1,5 @@
 #include "ahci.hpp"
-#include "lib.hpp"
+#include <libdriver/bit.hpp>
 
 #include <libsigma/memory.h>
 #include <iostream>

@@ -1,30 +1,7 @@
 #include "ata.hpp"
 #include <iostream>
 #include <cstring>
-
-namespace {
-    uint8_t inb(uint16_t port){
-        uint8_t ret;
-        asm volatile ("in %1, %0" : "=a"(ret) : "Nd"(port));
-        return ret;
-    }
-
-    void outb(uint16_t port, uint8_t value){
-        asm volatile ("out %0, %1" : : "a"(value), "Nd"(port));
-    }
-
-    uint16_t inw(uint16_t port){
-        uint16_t ret;
-        asm volatile ("in %1, %0" : "=a"(ret) : "Nd"(port));
-        return ret;
-    }
-
-    uint32_t ind(uint16_t port){
-        uint32_t ret;
-        asm volatile ("in %1, %0" : "=a"(ret) : "Nd"(port));
-        return ret;
-    }
-}
+#include <libdriver/io.hpp>
 
 uint8_t ata::controller::read_cmd(uint8_t reg){
     return inb(this->base.first + reg);

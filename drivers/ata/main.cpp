@@ -10,6 +10,8 @@ int main(){
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
 
+    std::cerr << "ata: Driver is W.I.P." << std::endl;
+
     auto device_descriptor = devctl(DEVCTL_CMD_FIND_PCI_CLASS, 0x1, 0x1, 0, 0);
     if(device_descriptor == -1){
         std::cout << "ata: Couldn't find IDE controller" << std::endl;
