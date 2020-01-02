@@ -69,7 +69,7 @@ namespace proc::device {
     void add_pci_device(x86_64::pci::device* dev);
     device_descriptor find_acpi_node(lai_nsnode_t* node);
     device_descriptor find_pci_node(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function);
-    device_descriptor find_pci_class_node(uint16_t class_code, uint16_t subclass_code, uint64_t index);
+    device_descriptor find_pci_class_node(uint8_t class_code, uint8_t subclass_code, uint8_t prog_if, uint64_t index);
     bool get_resource_region(device_descriptor dev, uint8_t index, device::resource_region* data);
 
     constexpr uint64_t devctl_cmd_nop = 0;

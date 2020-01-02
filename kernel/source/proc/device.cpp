@@ -48,10 +48,10 @@ proc::device::device_descriptor proc::device::find_pci_node(uint16_t seg, uint8_
     return UINT64_MAX;
 }
 
-proc::device::device_descriptor proc::device::find_pci_class_node(uint16_t class_code, uint16_t subclass_code, uint64_t index){
+proc::device::device_descriptor proc::device::find_pci_class_node(uint8_t class_code, uint8_t subclass_code, uint8_t prog_if, uint64_t index){
     uint64_t i = 0;
     for(auto& entry : *device_list){
-        if(entry.contact.pci && entry.pci_contact.device->class_code == class_code && entry.pci_contact.device->subclass_code == subclass_code){
+        if(entry.contact.pci && entry.pci_contact.device->class_code == class_code && entry.pci_contact.device->subclass_code == subclass_code && entry.pci_contact.device->prog_if == prog_if){
             if(i == index)
                 return &entry - device_list->begin();
             else
@@ -110,9 +110,9 @@ uint64_t proc::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64
 
     case proc::device::devctl_cmd_find_pci_class:
         #ifdef LOG_SYSCALLS
-        debug_printf("[DEVICE]: Handling cmd_find_pci_class, %d:%d, index: %d\n", arg1, arg2, arg3);
+        debug_printf("[DEVICE]: Handling cmd_find_pci_class, %d:%d:%d, index: %d\n", arg1, arg2, arg3, arg4);
         #endif
-        ret = find_pci_class_node(arg1, arg2, arg3);
+        ret = find_pci_class_node(arg1, arg2, arg3, arg4);
         break;
     
     case proc::device::devctl_cmd_get_resource_region:

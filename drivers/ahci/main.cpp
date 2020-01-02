@@ -15,7 +15,7 @@ int main(){
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    auto device_descriptor = devctl(DEVCTL_CMD_FIND_PCI_CLASS, 0x1, 0x6, 0, 0);
+    auto device_descriptor = devctl(DEVCTL_CMD_FIND_PCI_CLASS, 0x1, 0x6, 0x1, 0);
     if(device_descriptor == -1){
         std::cout << "ahci: Couldn't find a compatible controller" << std::endl;
         return 0;

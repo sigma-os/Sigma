@@ -213,8 +213,10 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
 
     uint8_t class_code = (x86_64::pci::read(seg, bus, device, function, 11, 1) & 0xFF);
     uint8_t subclass_code = (x86_64::pci::read(seg, bus, device, function, 10, 1) & 0xFF);
+    uint8_t prog_if = (x86_64::pci::read(seg, bus, device, function, 9, 1) & 0xFF);
     dev->class_code = class_code;
     dev->subclass_code = subclass_code;
+    dev->prog_if = prog_if;
 
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge
@@ -343,9 +345,9 @@ void x86_64::pci::parse_pci(){
     for(const auto& entry : pci_devices){
         if(entry.exists){
             if(entry.has_irq)
-                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d], gsi: %d\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.gsi);
+                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d], gsi: %d\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.prog_if, entry.gsi);
             else
-                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d]\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code);
+                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d]\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.prog_if);
         }
     } 
 }

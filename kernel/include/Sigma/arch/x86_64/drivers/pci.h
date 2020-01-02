@@ -63,7 +63,7 @@ namespace x86_64::pci
         uint16_t seg;
         uint8_t bus, device, function;
         uint16_t vendor_id;
-        uint8_t header_type, class_code, subclass_code;
+        uint8_t header_type, class_code, subclass_code, prog_if;
 
         x86_64::pci::device* parent;
         lai_nsnode_t* node;
