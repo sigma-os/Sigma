@@ -69,7 +69,7 @@ namespace misc
 	}
 
     constexpr uint64_t pow(uint64_t base, uint64_t pow){
-        uint64_t tmp = base;
+        uint64_t tmp = 1;
         for(uint64_t i = 0; i < pow; i++) tmp *= base;
         return tmp;
     }

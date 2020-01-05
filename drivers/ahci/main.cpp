@@ -30,5 +30,6 @@ int main(){
     devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 5, (uint64_t)&region, 0);
 
     ahci::controller controller{region.base, region.len};
-    while(1);
+    while(1)
+        asm("pause");
 }
