@@ -16,8 +16,8 @@ namespace nvme
         queue_pair() = default;
         queue_pair(size_t n_entries, uint16_t* submission_doorbell, uint16_t* completion_doorbell, qid_t qid);
 
-        cid_t send_command(regs::command& cmd);
-        bool send_and_wait(regs::command& cmd);
+        cid_t send_command(regs::command* cmd);
+        bool send_and_wait(regs::command* cmd);
 
         size_t get_n_entries();
         uintptr_t get_submission_phys_base();

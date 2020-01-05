@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include <cstring>
+#include <string_view>
 #include <libdriver/math.hpp>
 
 
@@ -91,6 +92,127 @@ nvme::controller::controller(libsigma_resource_region_t region){
     while(!(this->base->controller_status & (1 << 0))); // Wait for CSTS.RDY to become 1
 
     std::cerr << "nvme: Enabled controller\n";
+
+    std::cout << "nvme: Identifying...";
+
+    regs::identify_info info{};
+    this->identify(&info);
+
+    std::cout << "Done\n";
+    std::cout << "      PCI Vendor id: " << std::hex << info.pci_vendor_id << ", Subsystem Vendor ID: " << info.pci_subsystem_vendor_id << std::endl;
+    std::cout << "      Model: " << std::string_view{info.model_number, sizeof(info.model_number)} << std::endl;
+    std::cout << "      Serial Number: " << std::string_view{info.serial_number, sizeof(info.serial_number)} << std::endl;
+    std::cout << "      Firmware Revision: " << std::string_view{info.fw_revision, sizeof(info.fw_revision)} << std::endl;
+    printf("      Organizationally Unique Identifier: %02lX%02lX%02lX\n", (uint64_t)info.ieee_oui_id[0] & 0xFF, (uint64_t)info.ieee_oui_id[1] & 0xFF, (uint64_t)info.ieee_oui_id[2] & 0xFF);
+    if(strlen(info.subnqn))
+        std::cout << "      NVM Subsystem Name: " << (const char*)info.subnqn << std::endl;
+
+    std::cout << "      Controller ID: " << info.controller_id << std::endl;
+    if(info.cntrltype){
+        std::cout << "      Controller type: ";
+        switch (info.cntrltype)
+        {
+        case 1:
+            std::cout << "I/O Controller";
+            break;
+    
+        case 2:
+            std::cout << "Discovery Controller";
+            break;
+    
+        case 3:
+            std::cout << "Administrative Controller";
+            break;
+
+        default:
+        case 0:
+            std::cout << "Reserved";
+            break;
+        }
+
+        std::cout << std::endl;
+    }
+
+    if(info.oacs){
+        std::cout << "      Optional Admin Command Support:" << std::endl;
+
+        if(info.oacs & (1 << 0))
+            std::cout << "       - Security {Send, Receive}" << std::endl;
+        if(info.oacs & (1 << 1))
+            std::cout << "       - Format NVM" << std::endl;
+        if(info.oacs & (1 << 2))
+            std::cout << "       - Firmware {Commit, Image Download}" << std::endl;
+        if(info.oacs & (1 << 3))
+            std::cout << "       - NS management" << std::endl;
+        if(info.oacs & (1 << 4))
+            std::cout << "       - Device Self-test" << std::endl;
+        if(info.oacs & (1 << 5))
+            std::cout << "       - Directives" << std::endl;
+        if(info.oacs & (1 << 6))
+            std::cout << "       - NVMe-MI {Send, Receive}" << std::endl;
+        if(info.oacs & (1 << 7))
+            std::cout << "       - Virtualization Management" << std::endl;
+        if(info.oacs & (1 << 8))
+            std::cout << "       - Doorbell Buffer Config" << std::endl;
+        if(info.oacs & (1 << 9))
+            std::cout << "       - Get LBA Status" << std::endl;
+    }
+
+    if(info.oncs){
+        std::cout << "      Optional NVM Command Support" << std::endl;
+
+        if(info.oncs & (1 << 0))
+            std::cout << "       - Compare" << std::endl;
+        if(info.oncs & (1 << 1))
+            std::cout << "       - Write Uncorrectable" << std::endl;
+        if(info.oncs & (1 << 2))
+            std::cout << "       - Dataset Management" << std::endl;
+        if(info.oncs & (1 << 3))
+            std::cout << "       - Write Zeroes" << std::endl;
+        if(info.oncs & (1 << 4))
+            std::cout << "       - Non-zero {Save, Select} field in Get Features" << std::endl;
+        if(info.oncs & (1 << 5))
+            std::cout << "       - Reservations" << std::endl;
+        if(info.oncs & (1 << 6))
+            std::cout << "       - Timestamp" << std::endl;
+        if(info.oncs & (1 << 7))
+            std::cout << "       - Verify" << std::endl;
+    }
+
+    if(info.fuses){
+        std::cout << "      Supported Fused Commands" << std::endl;
+
+        if(info.fuses & (1 << 0))
+            std::cout << "       - Compare and Write" << std::endl;
+    }
+
+    
+    std::cout << "      Recommended Arbitration Burst: 0x" << std::hex << pow2(info.rab) << std::endl;
+
+    if(info.mtds)
+        std::cout << "      Maximum DMA Transfer Size: 0x" << std::hex << (info.mtds * pow2(12 + cap.mpsmin)) << std::endl;
+    else
+        std::cout << "      Maximum DMA Transfer Size: Infinity" << std::endl;
+
+    if(info.rtd3r)
+        std::cout << "      D3 power state -> Normal Latency " << info.rtd3r << " microseconds\n";
+
+    if(info.rtd3e)
+        std::cout << "      Normal -> D3 power state Latency " << info.rtd3e << " microseconds\n";    
+
+    std::cout << "      Submission Queue Entry Size: Minimum: " << std::dec << pow2(info.sqes & 0xF) << " Maximum: " << pow2((info.sqes >> 4) & 0xF) << std::endl;
+    std::cout << "      Completion Queue Entry Size: Minimum: " << std::dec << pow2(info.cqes & 0xF) << " Maximum: " << pow2((info.cqes >> 4) & 0xF) << std::endl;
+
+    std::cout << "      Abort Command Limit: " << info.acl + 1 << std::endl;
+    if(info.maxcmd)
+        std::cout << "      Maximum Commands per Queue: " << info.maxcmd << std::endl;
+
+    std::cout << "      Number of Namespaces: " << info.nn << std::endl;
+
+    if(info.mnan)
+        std::cout << "      Maximum number of NSes in NVM subsystem: " << info.mnan << std::endl;
+    else
+        std::cout << "      Maximum number of NSes in NVM subsystem: " << info.nn << std::endl;
 }
 
 void nvme::controller::set_power_state(nvme::controller::shutdown_types type){
@@ -111,4 +233,27 @@ void nvme::controller::reset_subsystem(){
     auto cap = regs::bar::cap_t{this->base->cap};
     if(cap.nssrs)
         this->base->subsystem_reset = 0x4E564D65;
+}
+
+bool nvme::controller::identify(nvme::regs::identify_info* info){
+    regs::identify_command cmd{};
+
+    cmd.header.opcode = regs::identify_opcode;
+    cmd.header.namespace_id = 0;
+    cmd.cns = 1;
+
+    libsigma_phys_region_t region = {};
+    if(libsigma_get_phys_region(0x1000, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "nvme: Failed to allocate physical region for identify\n";
+        return false;
+    }
+
+    cmd.header.prp1 = region.physical_addr;
+
+    this->admin_queue.send_and_wait((regs::command*)&cmd);
+
+    auto* buf = (regs::identify_info*)region.virtual_addr;
+
+    memcpy(info, buf, 0x1000);
+    return true;
 }

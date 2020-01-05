@@ -37,13 +37,13 @@ queue_pair::completion_info::completion_info(size_t n_entries, uint16_t* doorbel
 
 queue_pair::queue_pair(size_t n_entries, uint16_t* submission_doorbell, uint16_t* completion_doorbell, qid_t qid): n_entries{n_entries}, qid{qid}, available_cids{bitmap<n_commands>{}}, submission{submission_info{n_entries, submission_doorbell}}, completion{completion_info{n_entries, completion_doorbell}}{}
 
-cid_t queue_pair::send_command(regs::command& cmd){
+cid_t queue_pair::send_command(regs::command* cmd){
     cid_t cid = this->available_cids.get_free_bit();
 
-    cmd.header.cid = cid;
+    cmd->header.cid = cid;
 
     uint16_t tail = submission.tail;
-    memcpy((void*)(submission.queue + tail), &cmd, 64);
+    memcpy((void*)(submission.queue + tail), cmd, 64);
     tail++;
 
     if(tail == n_entries)
@@ -55,7 +55,7 @@ cid_t queue_pair::send_command(regs::command& cmd){
     return cid;
 }
 
-bool queue_pair::send_and_wait(regs::command& cmd){
+bool queue_pair::send_and_wait(regs::command* cmd){
     uint16_t head = completion.head;
 
     auto cid = send_command(cmd);

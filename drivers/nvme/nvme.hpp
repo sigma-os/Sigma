@@ -20,6 +20,8 @@ namespace nvme {
         void reset_subsystem();
 
         private:
+        bool identify(regs::identify_info* info);
+
         bool weighted_round_robin_supported;
         bool nssr_supported;
 
