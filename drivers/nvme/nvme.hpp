@@ -22,8 +22,9 @@ namespace nvme {
         private:
         bool identify(regs::identify_info* info);
 
+        void print_identify_info(regs::identify_info& info);
+
         bool weighted_round_robin_supported;
-        bool nssr_supported;
 
         size_t doorbell_stride;
         size_t n_queue_entries;

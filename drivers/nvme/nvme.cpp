@@ -99,10 +99,59 @@ nvme::controller::controller(libsigma_resource_region_t region){
     this->identify(&info);
 
     std::cout << "Done\n";
+    this->print_identify_info(info);
+}
+
+void nvme::controller::set_power_state(nvme::controller::shutdown_types type){
+    switch (type)
+    {
+    case shutdown_types::AbruptShutdown:
+        this->base->cc &= ~(3 << 14); // Clear bits
+        this->base->cc |= (1 << 15); // Set abrupt shutdown bit
+        break;
+    case shutdown_types::NormalShutdown:
+        this->base->cc &= ~(3 << 14); // Clear bits
+        this->base->cc |= (1 << 14); // Set normal shutdown bit
+        break;
+    }
+}
+
+void nvme::controller::reset_subsystem(){
+    auto cap = regs::bar::cap_t{this->base->cap};
+    if(cap.nssrs)
+        this->base->subsystem_reset = 0x4E564D65;
+}
+
+bool nvme::controller::identify(nvme::regs::identify_info* info){
+    regs::identify_command cmd{};
+
+    cmd.header.opcode = regs::identify_opcode;
+    cmd.header.namespace_id = 0;
+    cmd.cns = 1;
+
+    libsigma_phys_region_t region = {};
+    if(libsigma_get_phys_region(0x1000, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "nvme: Failed to allocate physical region for identify\n";
+        return false;
+    }
+
+    cmd.header.prp1 = region.physical_addr;
+
+    this->admin_queue.send_and_wait((regs::command*)&cmd);
+
+    auto* buf = (regs::identify_info*)region.virtual_addr;
+
+    memcpy(info, buf, 0x1000);
+    return true;
+}
+
+void nvme::controller::print_identify_info(nvme::regs::identify_info& info){
+    std::cout << "nvme: Identification info" << std::endl;
     std::cout << "      PCI Vendor id: " << std::hex << info.pci_vendor_id << ", Subsystem Vendor ID: " << info.pci_subsystem_vendor_id << std::endl;
     std::cout << "      Model: " << std::string_view{info.model_number, sizeof(info.model_number)} << std::endl;
     std::cout << "      Serial Number: " << std::string_view{info.serial_number, sizeof(info.serial_number)} << std::endl;
     std::cout << "      Firmware Revision: " << std::string_view{info.fw_revision, sizeof(info.fw_revision)} << std::endl;
+    // See http://standards-oui.ieee.org/oui.txt
     printf("      Organizationally Unique Identifier: %02lX%02lX%02lX\n", (uint64_t)info.ieee_oui_id[0] & 0xFF, (uint64_t)info.ieee_oui_id[1] & 0xFF, (uint64_t)info.ieee_oui_id[2] & 0xFF);
     if(strlen(info.subnqn))
         std::cout << "      NVM Subsystem Name: " << (const char*)info.subnqn << std::endl;
@@ -213,47 +262,4 @@ nvme::controller::controller(libsigma_resource_region_t region){
         std::cout << "      Maximum number of NSes in NVM subsystem: " << info.mnan << std::endl;
     else
         std::cout << "      Maximum number of NSes in NVM subsystem: " << info.nn << std::endl;
-}
-
-void nvme::controller::set_power_state(nvme::controller::shutdown_types type){
-    switch (type)
-    {
-    case shutdown_types::AbruptShutdown:
-        this->base->cc &= ~(3 << 14); // Clear bits
-        this->base->cc |= (1 << 15); // Set abrupt shutdown bit
-        break;
-    case shutdown_types::NormalShutdown:
-        this->base->cc &= ~(3 << 14); // Clear bits
-        this->base->cc |= (1 << 14); // Set normal shutdown bit
-        break;
-    }
-}
-
-void nvme::controller::reset_subsystem(){
-    auto cap = regs::bar::cap_t{this->base->cap};
-    if(cap.nssrs)
-        this->base->subsystem_reset = 0x4E564D65;
-}
-
-bool nvme::controller::identify(nvme::regs::identify_info* info){
-    regs::identify_command cmd{};
-
-    cmd.header.opcode = regs::identify_opcode;
-    cmd.header.namespace_id = 0;
-    cmd.cns = 1;
-
-    libsigma_phys_region_t region = {};
-    if(libsigma_get_phys_region(0x1000, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
-        std::cerr << "nvme: Failed to allocate physical region for identify\n";
-        return false;
-    }
-
-    cmd.header.prp1 = region.physical_addr;
-
-    this->admin_queue.send_and_wait((regs::command*)&cmd);
-
-    auto* buf = (regs::identify_info*)region.virtual_addr;
-
-    memcpy(info, buf, 0x1000);
-    return true;
 }
