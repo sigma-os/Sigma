@@ -26,7 +26,7 @@ struct {
     {.mnemonic = "MC", .message = "Machine Check"},
     {.mnemonic = "XM/XF", .message = "SIMD Floating-Point Exception"},
     {.mnemonic = "VE", .message = "Virtualization Exception"},
-    {.mnemonic = "-", .message = "Reserved"},
+    {.mnemonic = "CP", .message = "Control Protection Exception"},
     {.mnemonic = "-", .message = "Reserved"},
     {.mnemonic = "-", .message = "Reserved"},
     {.mnemonic = "-", .message = "Reserved"},
