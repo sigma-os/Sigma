@@ -8,12 +8,16 @@ Look in [sigma-os/bootstrap](https://github.com/sigma-os/bootstrap)
  
 ## Features
 - Full x86_64 long mode support
-- Support for a lot of x86(\_64) minor features (e.g. SMEP, [SMAP](https://en.wikipedia.org/wiki/Supervisor_Mode_Access_Prevention), UMIP and PCID)
+- Support for a lot of x86(\_64) minor features (e.g. SMEP, [SMAP](https://en.wikipedia.org/wiki/Supervisor_Mode_Access_Prevention), PCID and x2APIC)
 - ACPI and AML support with [lai](https://www.github.com/qword-os/lai)
 - APIC support + LAPIC timer for scheduling IRQs
 - PCI / PCI-Express Configuration space enumeration
 - SMP + Simple Queue based scheduler
 - Dynamically linked userland backed by [mlibc](https://www.github.com/managarm/mlibc)
+- Modern disk drivers (AHCI, NVMe)
+
+## Drivers
+- AHCI and NVMe blockdevices
  
 ## Notes
 
