@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <libsigma/device.h>
+#include <vector>
 
 #include "nvme/queue.hpp"
 #include "nvme/regs.hpp"
@@ -18,6 +19,8 @@ namespace nvme {
 
         void set_power_state(shutdown_types type);
         void reset_subsystem();
+        
+        std::vector<uint8_t> read_sector(uint64_t lba);
 
         private:
         bool set_features(uint8_t fid, uint32_t data);
@@ -34,5 +37,8 @@ namespace nvme {
         volatile regs::bar* base;
 
         queue_pair admin_queue;
+        queue_pair io_queue;
+
+        uint64_t n_lbas;
     };
 }

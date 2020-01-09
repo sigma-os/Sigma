@@ -107,9 +107,9 @@ nvme::controller::controller(libsigma_resource_region_t region){
     qid_t io_qid = 1; // IO queue
     uint16_t* io_submission_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + (2 * io_qid * (4 << this->doorbell_stride)));
     uint16_t* io_completion_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + ((2 * io_qid + 1) * (4 << this->doorbell_stride)));
-    auto* io_pair = new queue_pair{n_queue_entries, io_submission_doorbell, io_completion_doorbell, io_qid};
+    this->io_queue = queue_pair{n_queue_entries, io_submission_doorbell, io_completion_doorbell, io_qid};
 
-    if(!this->register_queue_pair(*io_pair)){
+    if(!this->register_queue_pair(this->io_queue)){
         std::cerr << "nvme: Failed to create I/O queue\n";
         return;
     }
@@ -197,6 +197,35 @@ bool nvme::controller::register_queue_pair(nvme::queue_pair& pair){
         return false;
     
     return true;
+}
+
+std::vector<uint8_t> nvme::controller::read_sector(uint64_t lba){
+    // TODO Verify that this sector does actually exist
+
+    regs::read_command cmd{};
+
+    cmd.header.opcode = regs::read_opcode;
+    cmd.start_lba = lba;
+    cmd.n_sectors = 0; // Zero based so 1 sector
+    cmd.header.namespace_id = 1;
+
+    libsigma_phys_region_t region = {};
+    // TODO: get sector size
+    if(libsigma_get_phys_region(512, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "nvme: Failed to allocate physical region for reading\n";
+        return {};
+    }
+
+    cmd.header.prp1 = region.physical_addr;
+
+    this->io_queue.send_and_wait((regs::command*)&cmd);
+
+    auto* buf = (regs::identify_info*)region.virtual_addr;
+
+    std::vector<uint8_t> ret{};
+    ret.resize(512);
+    memcpy(ret.data(), buf, 512);
+    return ret;
 }
 
 void nvme::controller::print_identify_info(nvme::regs::identify_info& info){

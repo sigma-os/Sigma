@@ -290,4 +290,27 @@ namespace nvme::regs {
     constexpr uint8_t set_features_opcode = 0x09;
 
     constexpr uint8_t n_queues_fid = 0x07;
+
+    struct PACKED read_command {
+        command_header header;
+        uint64_t start_lba;
+        struct {
+            uint32_t n_sectors : 16;
+            uint32_t reserved : 10;
+            uint32_t prinfo : 4;
+            uint32_t fua : 1;
+            uint32_t lr : 1;
+        };
+        struct {
+            uint32_t dsm : 8;
+            uint32_t reserved_1 : 24;
+        };
+        uint32_t eilbrt;
+        struct {
+            uint32_t elbatm : 16;
+            uint32_t elbat : 16;
+        };
+    };
+    static_assert(sizeof(read_command) == sizeof(command));
+    constexpr uint8_t read_opcode = 0x02;
 }
