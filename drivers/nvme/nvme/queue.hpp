@@ -22,6 +22,9 @@ namespace nvme
         size_t get_n_entries();
         uintptr_t get_submission_phys_base();
         uintptr_t get_completion_phys_base();
+        qid_t get_qid(){
+            return qid;
+        }
 
         private:
         size_t n_entries;

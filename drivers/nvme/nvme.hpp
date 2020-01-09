@@ -20,6 +20,8 @@ namespace nvme {
         void reset_subsystem();
 
         private:
+        bool set_features(uint8_t fid, uint32_t data);
+        bool register_queue_pair(queue_pair& pair);
         bool identify(regs::identify_info* info);
 
         void print_identify_info(regs::identify_info& info);

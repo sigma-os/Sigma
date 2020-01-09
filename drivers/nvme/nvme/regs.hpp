@@ -88,6 +88,23 @@ namespace nvme::regs {
         uint64_t acq;
     };
 
+    struct PACKED completion {
+        uint32_t command_specific;
+        uint32_t reserved;
+        uint16_t sq_head_pointer;
+        uint16_t sq_id;
+        uint16_t command_id;
+        struct {
+            uint16_t phase : 1;
+            uint16_t code : 8;
+            uint16_t code_type : 3;
+            uint16_t retry_delay : 2;
+            uint16_t more_info : 1;
+            uint16_t do_not_retry : 1;
+        } status;
+    };
+    static_assert(sizeof(completion) == 16);
+
     struct PACKED command_header {
         struct {
             uint32_t opcode : 8;
@@ -139,23 +156,6 @@ namespace nvme::regs {
     };
     static_assert(sizeof(identify_command) == sizeof(command));
     constexpr uint8_t identify_opcode = 0x6;
-
-    struct PACKED completion {
-        uint32_t command_specific;
-        uint32_t reserved;
-        uint16_t sq_head_pointer;
-        uint16_t sq_id;
-        uint16_t command_id;
-        struct {
-            uint16_t phase : 1;
-            uint16_t code : 8;
-            uint16_t code_type : 3;
-            uint16_t retry_delay : 2;
-            uint16_t more_info : 1;
-            uint16_t do_not_retry : 1;
-        } status;
-    };
-    static_assert(sizeof(completion) == 16);
 
     struct PACKED identify_info {
         uint16_t pci_vendor_id;
@@ -241,4 +241,53 @@ namespace nvme::regs {
         uint8_t vendor_specific[1024];
     };
     static_assert(sizeof(identify_info) == 0x1000);
+
+    struct PACKED create_completion_queue_command {
+        command_header header;
+        struct {
+            uint32_t qid : 16;
+            uint32_t size : 16;
+        };
+        struct {
+            uint32_t pc : 1;
+            uint32_t irq_enable : 1;
+            uint32_t reserved : 14;
+            uint32_t irq_vector : 16;
+        };
+        uint32_t reserved_1[4];
+    };
+    static_assert(sizeof(create_completion_queue_command) == sizeof(command));
+    constexpr uint8_t create_completion_queue_opcode = 0x05;
+
+    struct PACKED create_submission_queue_command {
+        command_header header;
+        struct {
+            uint32_t qid : 16;
+            uint32_t size : 16;
+        };
+        struct {
+            uint32_t pc : 1;
+            uint32_t priority : 2;
+            uint32_t reserved : 13;
+            uint32_t cqid : 16;
+        };
+        uint32_t reserved_1[4];
+    };
+    static_assert(sizeof(create_submission_queue_command) == sizeof(command));
+    constexpr uint8_t create_submission_queue_opcode = 0x01;
+
+    struct PACKED set_features_command {
+        command_header header;
+        struct {
+            uint32_t fid : 8;
+            uint32_t reserved : 23;
+            uint32_t save : 1;
+        };
+        uint32_t data;
+        uint32_t reserved_1[4];
+    };
+    static_assert(sizeof(set_features_command) == sizeof(command));
+    constexpr uint8_t set_features_opcode = 0x09;
+
+    constexpr uint8_t n_queues_fid = 0x07;
 }

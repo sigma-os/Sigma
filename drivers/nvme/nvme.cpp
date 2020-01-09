@@ -64,10 +64,10 @@ nvme::controller::controller(libsigma_resource_region_t region){
 
     while(this->base->controller_status & (1 << 0)); // Wait for CSTS.RDY to become 0
 
-    qid_t qid = 0; // Admin queue
-    uint16_t* submission_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + (2 * qid * (4 << this->doorbell_stride)));
-    uint16_t* completion_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + ((2 * qid + 1) * (4 << this->doorbell_stride)));
-    this->admin_queue = queue_pair{n_queue_entries, submission_doorbell, completion_doorbell, qid};
+    qid_t admin_qid = 0; // Admin queue
+    uint16_t* admin_submission_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + (2 * admin_qid * (4 << this->doorbell_stride)));
+    uint16_t* admin_completion_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + ((2 * admin_qid + 1) * (4 << this->doorbell_stride)));
+    this->admin_queue = queue_pair{n_queue_entries, admin_submission_doorbell, admin_completion_doorbell, admin_qid};
 
     this->base->acq = this->admin_queue.get_completion_phys_base();
     this->base->asq = this->admin_queue.get_submission_phys_base();
@@ -100,6 +100,19 @@ nvme::controller::controller(libsigma_resource_region_t region){
 
     std::cout << "Done\n";
     this->print_identify_info(info);
+
+    // Let the controller allocate as many queues as possible so we don't have to care about it
+    this->set_features(regs::n_queues_fid, ~0);
+
+    qid_t io_qid = 1; // IO queue
+    uint16_t* io_submission_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + (2 * io_qid * (4 << this->doorbell_stride)));
+    uint16_t* io_completion_doorbell = (uint16_t*)((size_t)this->base + 0x1000 + ((2 * io_qid + 1) * (4 << this->doorbell_stride)));
+    auto* io_pair = new queue_pair{n_queue_entries, io_submission_doorbell, io_completion_doorbell, io_qid};
+
+    if(!this->register_queue_pair(*io_pair)){
+        std::cerr << "nvme: Failed to create I/O queue\n";
+        return;
+    }
 }
 
 void nvme::controller::set_power_state(nvme::controller::shutdown_types type){
@@ -142,6 +155,47 @@ bool nvme::controller::identify(nvme::regs::identify_info* info){
     auto* buf = (regs::identify_info*)region.virtual_addr;
 
     memcpy(info, buf, 0x1000);
+    return true;
+}
+
+bool nvme::controller::set_features(uint8_t fid, uint32_t data){
+    regs::set_features_command cmd{};
+
+    cmd.header.opcode = regs::set_features_opcode;
+    cmd.header.namespace_id = 0;
+    cmd.fid = fid;
+    cmd.data = data;
+    
+    auto status = this->admin_queue.send_and_wait((regs::command*)&cmd);
+    if(status != 0){
+        return false;
+    }
+    
+    return true;
+}
+
+bool nvme::controller::register_queue_pair(nvme::queue_pair& pair){
+    regs::create_completion_queue_command cq_cmd{};
+    cq_cmd.header.opcode = regs::create_completion_queue_opcode;
+    cq_cmd.header.prp1 = pair.get_completion_phys_base();
+    cq_cmd.qid = pair.get_qid();
+    cq_cmd.size = pair.get_n_entries() - 1;
+    cq_cmd.irq_enable = 0;
+    cq_cmd.pc = 1;
+    if(!this->admin_queue.send_and_wait((regs::command*)&cq_cmd))
+        return false;
+
+    regs::create_submission_queue_command sq_cmd{};
+    sq_cmd.header.opcode = regs::create_submission_queue_opcode;
+    sq_cmd.header.prp1 = pair.get_submission_phys_base();
+    sq_cmd.qid = pair.get_qid();
+    sq_cmd.cqid = pair.get_qid();
+    sq_cmd.size = pair.get_n_entries() - 1;
+    sq_cmd.pc = 1;
+    sq_cmd.priority = 2; // Medium Priority
+    if(!this->admin_queue.send_and_wait((regs::command*)&sq_cmd))
+        return false;
+    
     return true;
 }
 
@@ -238,6 +292,7 @@ void nvme::controller::print_identify_info(nvme::regs::identify_info& info){
     
     std::cout << "      Recommended Arbitration Burst: 0x" << std::hex << pow2(info.rab) << std::endl;
 
+    auto cap = regs::bar::cap_t{this->base->cap};
     if(info.mtds)
         std::cout << "      Maximum DMA Transfer Size: 0x" << std::hex << (info.mtds * pow2(12 + cap.mpsmin)) << std::endl;
     else
