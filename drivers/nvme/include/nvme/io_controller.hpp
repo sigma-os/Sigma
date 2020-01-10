@@ -22,14 +22,15 @@ namespace nvme {
         void set_power_state(shutdown_types type);
         void reset_subsystem();
         
-        std::vector<uint8_t> read_sector(uint64_t lba);
+        std::vector<uint8_t> read_sector(nsid_t nsid, uint64_t lba);
 
         private:
         bool set_features(uint8_t fid, uint32_t data);
         bool register_queue_pair(queue_pair& pair);
-        bool identify(regs::identify_info* info);
+        bool identify_controller(regs::controller_identify_info* info);
+        bool identify_namespace(nsid_t nsid, regs::namespace_identify_info* info);
 
-        void print_identify_info(regs::identify_info& info);
+        void print_identify_info(regs::controller_identify_info& info);
 
         std::vector<nsid_t> get_active_namespaces(nsid_t max_nsid);
 

@@ -100,8 +100,8 @@ nvme::io_controller::io_controller(libsigma_resource_region_t region){
 
     std::cout << "nvme: Identifying...";
 
-    regs::identify_info info{};
-    this->identify(&info);
+    regs::controller_identify_info info{};
+    this->identify_controller(&info);
 
     std::cout << "Done\n";
     this->print_identify_info(info);
@@ -119,6 +119,23 @@ nvme::io_controller::io_controller(libsigma_resource_region_t region){
     for(const auto nsid : active_namespaces){
         std::cout << "nvme: Detected namespace: " << nsid << std::endl;
         // TODO:
+
+        std::cout << "nvme: Identifying NS...";
+        regs::namespace_identify_info ns_info{};
+        if(!this->identify_namespace(nsid, &ns_info)){
+            std::cout << "nvme: Failed to identify namespace";
+            continue;
+        }
+        std::cout << "Done\n";
+
+        uint8_t lba_format = ns_info.flbas & 0xFF;
+        std::cout << "      LBA format: " << std::dec << (uint64_t)lba_format << std::endl;
+        
+        namespaces[nsid].sector_size = (1ull << ns_info.lba_formats[lba_format].ds);
+        std::cout << "      Sector size: " << std::dec << (uint64_t)(namespaces[nsid].sector_size) << std::endl;
+
+        namespaces[nsid].n_lbas = ns_info.nsize;
+        printf("      Namespace size: %ld sectors [%ld MiB]\n", namespaces[nsid].n_lbas, ((namespaces[nsid].n_lbas * namespaces[nsid].sector_size) / 1024 / 1024));
     }
 
     // Let the controller allocate as many queues as possible so we don't have to care about it
@@ -155,7 +172,7 @@ void nvme::io_controller::reset_subsystem(){
         this->base->subsystem_reset = 0x4E564D65;
 }
 
-bool nvme::io_controller::identify(nvme::regs::identify_info* info){
+bool nvme::io_controller::identify_controller(nvme::regs::controller_identify_info* info){
     regs::identify_command cmd{};
 
     cmd.header.opcode = regs::identify_opcode;
@@ -163,7 +180,7 @@ bool nvme::io_controller::identify(nvme::regs::identify_info* info){
 
     libsigma_phys_region_t region = {};
     if(libsigma_get_phys_region(0x1000, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
-        std::cerr << "nvme: Failed to allocate physical region for identify\n";
+        std::cerr << "nvme: Failed to allocate physical region for controller identify\n";
         return false;
     }
 
@@ -171,7 +188,30 @@ bool nvme::io_controller::identify(nvme::regs::identify_info* info){
 
     this->admin_queue.send_and_wait((regs::command*)&cmd);
 
-    auto* buf = (regs::identify_info*)region.virtual_addr;
+    auto* buf = (regs::controller_identify_info*)region.virtual_addr;
+
+    memcpy(info, buf, 0x1000);
+    return true;
+}
+
+bool nvme::io_controller::identify_namespace(nsid_t nsid, nvme::regs::namespace_identify_info* info){
+    regs::identify_command cmd{};
+
+    cmd.header.opcode = regs::identify_opcode;
+    cmd.cns = 0;
+    cmd.header.namespace_id = nsid;
+
+    libsigma_phys_region_t region = {};
+    if(libsigma_get_phys_region(0x1000, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "nvme: Failed to allocate physical region for namespace identify\n";
+        return false;
+    }
+
+    cmd.header.prp1 = region.physical_addr;
+
+    this->admin_queue.send_and_wait((regs::command*)&cmd);
+
+    auto* buf = (regs::controller_identify_info*)region.virtual_addr;
 
     memcpy(info, buf, 0x1000);
     return true;
@@ -247,15 +287,18 @@ bool nvme::io_controller::register_queue_pair(nvme::queue_pair& pair){
     return true;
 }
 
-std::vector<uint8_t> nvme::io_controller::read_sector(uint64_t lba){
-    // TODO Verify that this sector does actually exist
+std::vector<uint8_t> nvme::io_controller::read_sector(nvme::nsid_t nsid, uint64_t lba){
+    if(lba >= namespaces[nsid].n_lbas){
+        printf("nvme: Tried to read from invalid LBA, namespace: %d\n", nsid);
+        return {};
+    }
 
     regs::read_command cmd{};
 
     cmd.header.opcode = regs::read_opcode;
     cmd.start_lba = lba;
     cmd.n_sectors = 0; // Zero based so 1 sector
-    cmd.header.namespace_id = 1;
+    cmd.header.namespace_id = nsid;
 
     libsigma_phys_region_t region = {};
     // TODO: get sector size
@@ -268,7 +311,7 @@ std::vector<uint8_t> nvme::io_controller::read_sector(uint64_t lba){
 
     this->io_queue.send_and_wait((regs::command*)&cmd);
 
-    auto* buf = (regs::identify_info*)region.virtual_addr;
+    auto* buf = (regs::controller_identify_info*)region.virtual_addr;
 
     std::vector<uint8_t> ret{};
     ret.resize(512);
@@ -276,7 +319,7 @@ std::vector<uint8_t> nvme::io_controller::read_sector(uint64_t lba){
     return ret;
 }
 
-void nvme::io_controller::print_identify_info(nvme::regs::identify_info& info){
+void nvme::io_controller::print_identify_info(nvme::regs::controller_identify_info& info){
     std::cout << "nvme: Identification info" << std::endl;
     std::cout << "      PCI Vendor id: " << std::hex << info.pci_vendor_id << ", Subsystem Vendor ID: " << info.pci_subsystem_vendor_id << std::endl;
     std::cout << "      Model: " << std::string_view{info.model_number, sizeof(info.model_number)} << std::endl;

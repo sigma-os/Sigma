@@ -157,7 +157,7 @@ namespace nvme::regs {
     static_assert(sizeof(identify_command) == sizeof(command));
     constexpr uint8_t identify_opcode = 0x6;
 
-    struct PACKED identify_info {
+    struct PACKED controller_identify_info {
         uint16_t pci_vendor_id;
         uint16_t pci_subsystem_vendor_id;
         char serial_number[20];
@@ -240,7 +240,53 @@ namespace nvme::regs {
         uint8_t psd0[32][32]; // 32 PSDs in total
         uint8_t vendor_specific[1024];
     };
-    static_assert(sizeof(identify_info) == 0x1000);
+    static_assert(sizeof(controller_identify_info) == 0x1000);
+
+    struct PACKED namespace_identify_info {
+        uint64_t nsize;
+        uint64_t ncap;
+        uint64_t nuse;
+        uint8_t nsfeat;
+        uint8_t nlbaf;
+        uint8_t flbas;
+        uint8_t mc;
+        uint8_t dpc;
+        uint8_t dps;
+        uint8_t nmic;
+        uint8_t rescap;
+        uint8_t fpi;
+        uint8_t dlfeat;
+        uint16_t nawun;
+        uint16_t nawupf;
+        uint16_t nacwu;
+        uint16_t nabsn;
+        uint16_t nabo;
+        uint16_t nabspf;
+        uint16_t noiob;
+        uint8_t nvmcap[16];
+        uint16_t npwg;
+        uint16_t npwa;
+        uint16_t npdg;
+        uint16_t npda;
+        uint16_t nows;
+        uint8_t reserved[18];
+        uint32_t anagrpid;
+        uint8_t reserved_1[3];
+        uint8_t nsattr;
+        uint16_t nvmsetid;
+        uint16_t endgid;
+        uint8_t nguid[16];
+        uint64_t eui64;
+        struct {
+            uint32_t ms : 16;
+            uint32_t ds : 8;
+            uint32_t rp : 2;
+            uint32_t reserved : 6;
+        } lba_formats[16];
+        uint8_t reserved_2[192];
+        uint8_t vendor_specific[3712];
+    };
+    static_assert(sizeof(namespace_identify_info) == 0x1000);
 
     struct PACKED create_completion_queue_command {
         command_header header;
