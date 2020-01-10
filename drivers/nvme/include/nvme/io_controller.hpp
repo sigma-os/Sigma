@@ -3,14 +3,16 @@
 #include <stdint.h>
 #include <libsigma/device.h>
 #include <vector>
+#include <unordered_map>
 
-#include "nvme/queue.hpp"
-#include "nvme/regs.hpp"
+#include <nvme/common.hpp>
+#include <nvme/queue.hpp>
+#include <nvme/regs.hpp>
 
 namespace nvme {
-    class controller {
+    class io_controller {
         public:
-        controller(libsigma_resource_region_t region);
+        io_controller(libsigma_resource_region_t region);
 
         enum class shutdown_types {
             NormalShutdown,
@@ -29,6 +31,8 @@ namespace nvme {
 
         void print_identify_info(regs::identify_info& info);
 
+        std::vector<nsid_t> get_active_namespaces(nsid_t max_nsid);
+
         bool weighted_round_robin_supported;
 
         size_t doorbell_stride;
@@ -39,6 +43,11 @@ namespace nvme {
         queue_pair admin_queue;
         queue_pair io_queue;
 
-        uint64_t n_lbas;
+        struct ns {
+            uint64_t n_lbas;
+            uint64_t sector_size;
+        };
+
+        std::unordered_map<nsid_t, ns> namespaces;
     };
 }

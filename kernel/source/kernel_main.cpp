@@ -169,7 +169,7 @@ C_LINKAGE void kernel_main(){
     proc::syscall::set_user_manager_tid(thread->tid);
 
     proc::process::thread* blockdev = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/ahci", &blockdev, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load ahci\n");
+    if(!proc::elf::start_elf_executable("/usr/bin/nvme", &blockdev, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load nvme\n");
 
     /*proc::process::create_kernel_thread(+[](){
         // TODO: Initialize ACPI kernel thread and PCI kernel thread

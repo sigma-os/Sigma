@@ -3,14 +3,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <libsigma/memory.h>
-#include "regs.hpp"
 #include <libdriver/bit.hpp>
 
+#include <nvme/common.hpp>
+#include <nvme/regs.hpp>
+
 namespace nvme
-{
-    using cid_t = uint16_t;
-    using qid_t = uint16_t;
-        
+{       
     class queue_pair {
         public:
         queue_pair() = default;

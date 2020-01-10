@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <libsigma/device.h>
-#include "nvme.hpp"
+#include <nvme/io_controller.hpp>
 
 
 int main(){
@@ -29,7 +29,7 @@ int main(){
     libsigma_resource_region_t region = {};
     devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 0, (uint64_t)&region, 0);
 
-    nvme::controller controller{region};
+    nvme::io_controller controller{region};
     while(1)
         asm("pause");
 }

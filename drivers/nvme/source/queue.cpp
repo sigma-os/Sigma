@@ -1,4 +1,4 @@
-#include "queue.hpp"
+#include <nvme/queue.hpp>
 #include <sys/mman.h>
 #include <iostream>
 #include <string.h>
@@ -67,9 +67,10 @@ bool queue_pair::send_and_wait(regs::command* cmd){
     }
 
     uint8_t status_code = completion.queue[completion.head].status.code;
+    bool ret = true;
     if(status_code){
-        std::cerr << "nvme: Error in completion queue, code: 0x" << std::hex << status_code << std::endl;
-        return false;
+        std::cerr << "nvme: Error in completion queue, code: 0x" << std::hex << (uint64_t)(status_code & 0xFF) << std::endl;
+        ret = false;
     }
 
     head++;
@@ -81,7 +82,7 @@ bool queue_pair::send_and_wait(regs::command* cmd){
     *completion.doorbell = head;
     completion.head = head;
 
-    return true;
+    return ret;
 }
 
 size_t queue_pair::get_n_entries(){

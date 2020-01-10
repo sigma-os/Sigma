@@ -1,4 +1,5 @@
-#include "nvme.hpp"
+#include <nvme/io_controller.hpp>
+
 #include <libsigma/memory.h>
 #include <iostream>
 #include <sys/mman.h>
@@ -7,8 +8,12 @@
 #include <string_view>
 #include <libdriver/math.hpp>
 
+constexpr uint32_t get_vs(uint16_t major, uint8_t minor, uint8_t tertiary){
+    return (major << 16) | (minor << 8) | tertiary;
+}
 
-nvme::controller::controller(libsigma_resource_region_t region){
+
+nvme::io_controller::io_controller(libsigma_resource_region_t region){
     this->base = (volatile regs::bar*)libsigma_vm_map(region.len, nullptr, (void*)region.base, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON);
     
     printf("nvme: Initializing controller, phys: [0x%lx -> 0x%lx], virt: %p\n", region.base, region.base + region.len, base);
@@ -101,6 +106,21 @@ nvme::controller::controller(libsigma_resource_region_t region){
     std::cout << "Done\n";
     this->print_identify_info(info);
 
+    std::vector<nsid_t> active_namespaces{};
+
+    // Get Active Namespace list has been supported since version 1.1.0
+    if(base->vs >= get_vs(1, 1, 0)){
+        active_namespaces = this->get_active_namespaces(info.nn);
+    } else {
+        std::cout << "nvme: Identify CNS 0x02 [Active Namespace ID list] is unsupported, assuming only namespace 1 is active for now...\n";
+        active_namespaces = {1}; // Assume only nsid 1 is active for now
+    }
+    
+    for(const auto nsid : active_namespaces){
+        std::cout << "nvme: Detected namespace: " << nsid << std::endl;
+        // TODO:
+    }
+
     // Let the controller allocate as many queues as possible so we don't have to care about it
     this->set_features(regs::n_queues_fid, ~0);
 
@@ -115,7 +135,7 @@ nvme::controller::controller(libsigma_resource_region_t region){
     }
 }
 
-void nvme::controller::set_power_state(nvme::controller::shutdown_types type){
+void nvme::io_controller::set_power_state(nvme::io_controller::shutdown_types type){
     switch (type)
     {
     case shutdown_types::AbruptShutdown:
@@ -129,17 +149,16 @@ void nvme::controller::set_power_state(nvme::controller::shutdown_types type){
     }
 }
 
-void nvme::controller::reset_subsystem(){
+void nvme::io_controller::reset_subsystem(){
     auto cap = regs::bar::cap_t{this->base->cap};
     if(cap.nssrs)
         this->base->subsystem_reset = 0x4E564D65;
 }
 
-bool nvme::controller::identify(nvme::regs::identify_info* info){
+bool nvme::io_controller::identify(nvme::regs::identify_info* info){
     regs::identify_command cmd{};
 
     cmd.header.opcode = regs::identify_opcode;
-    cmd.header.namespace_id = 0;
     cmd.cns = 1;
 
     libsigma_phys_region_t region = {};
@@ -158,7 +177,36 @@ bool nvme::controller::identify(nvme::regs::identify_info* info){
     return true;
 }
 
-bool nvme::controller::set_features(uint8_t fid, uint32_t data){
+std::vector<nvme::nsid_t> nvme::io_controller::get_active_namespaces(nvme::nsid_t max_nsid){
+    regs::identify_command cmd{};
+
+    cmd.header.opcode = regs::identify_opcode;
+    cmd.cns = 2; // Active NSID list
+    
+    libsigma_phys_region_t region = {};
+    if(libsigma_get_phys_region(0x1000, PROT_READ | PROT_WRITE, MAP_ANON, &region)){
+        std::cerr << "nvme: Failed to allocate physical region for Active NSIDs\n";
+        return {};
+    }
+
+    cmd.header.prp1 = region.physical_addr;
+
+    std::vector<nsid_t> list{};
+    for(nsid_t i = 0; i < max_nsid; i += 1024){
+        cmd.header.namespace_id = i;
+
+        this->admin_queue.send_and_wait((regs::command*)&cmd);
+
+        auto* nsid_list = (nsid_t*)region.virtual_addr;
+        for(uint16_t j = 0; j < 1024; j++)
+            if(nsid_list[j]) // 0 == Unused
+                list.push_back(nsid_list[j]);
+    }
+
+    return list;
+}
+
+bool nvme::io_controller::set_features(uint8_t fid, uint32_t data){
     regs::set_features_command cmd{};
 
     cmd.header.opcode = regs::set_features_opcode;
@@ -174,7 +222,7 @@ bool nvme::controller::set_features(uint8_t fid, uint32_t data){
     return true;
 }
 
-bool nvme::controller::register_queue_pair(nvme::queue_pair& pair){
+bool nvme::io_controller::register_queue_pair(nvme::queue_pair& pair){
     regs::create_completion_queue_command cq_cmd{};
     cq_cmd.header.opcode = regs::create_completion_queue_opcode;
     cq_cmd.header.prp1 = pair.get_completion_phys_base();
@@ -199,7 +247,7 @@ bool nvme::controller::register_queue_pair(nvme::queue_pair& pair){
     return true;
 }
 
-std::vector<uint8_t> nvme::controller::read_sector(uint64_t lba){
+std::vector<uint8_t> nvme::io_controller::read_sector(uint64_t lba){
     // TODO Verify that this sector does actually exist
 
     regs::read_command cmd{};
@@ -228,7 +276,7 @@ std::vector<uint8_t> nvme::controller::read_sector(uint64_t lba){
     return ret;
 }
 
-void nvme::controller::print_identify_info(nvme::regs::identify_info& info){
+void nvme::io_controller::print_identify_info(nvme::regs::identify_info& info){
     std::cout << "nvme: Identification info" << std::endl;
     std::cout << "      PCI Vendor id: " << std::hex << info.pci_vendor_id << ", Subsystem Vendor ID: " << info.pci_subsystem_vendor_id << std::endl;
     std::cout << "      Model: " << std::string_view{info.model_number, sizeof(info.model_number)} << std::endl;
