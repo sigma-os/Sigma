@@ -1,3 +1,49 @@
 <iota version="0.0.1" module="sigma.zeta">
+    <enum name="client_request_type" type="uint64">
+        <entry value="0">NoOperation</entry>
+        <entry value="1">Open</entry>
+        <entry value="2">Close</entry>
+        <entry value="3">Read</entry>
+        <entry value="4">Write</entry>
+        <entry value="5">Seek</entry>
+        <entry value="6">Tell</entry>
+        <entry value="7">Dup2</entry>
+    </enum>
 
+    <message name="client_request">
+        <field type="uint64">command</field>
+        <field type="uint64">flags</field>
+
+        <!--Open-->
+        <field type="string">path</field>
+        
+        <!--Close / Dup2-->
+        <field type="uint64">fd</field>
+
+        <!--Dup2-->
+        <field type="uint64">newfd</field>
+
+        <!--Read / Write-->
+        <field type="uint64">count</field>
+
+        <!--Write-->
+        <field type="buffer">buffer</field>
+
+        <!--Seek-->
+        <field type="uint64">whence</field>
+        <field type="uint64">offset</field>
+    </message>
+
+    <message name="server_response">
+        <field type="int64">status</field>
+
+        <!--Open-->
+        <field type="uint64">fd</field>
+
+        <!--Seek / Tell-->
+        <field type="uint64">offset</field>
+
+        <!--Read-->
+        <field type="buffer">buffer</field>
+    </message>
 </iota>

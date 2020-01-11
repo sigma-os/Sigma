@@ -1,51 +1,26 @@
 #include <libsigma/klog.h>
 #include <libsigma/ipc.h>
 #include <libsigma/thread.h>
+#include <protocols/zeta-std.hpp>
 #include <memory>
 #include <iostream>
 #include <Zeta/devfs.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
-template<typename Ret>
-void send_return_int([[maybe_unused]] tid_t dest, [[maybe_unused]] uint64_t msg_id, [[maybe_unused]] Ret ret){
-    libsigma_klog("zeta: Unsupported return type\n");
-    return;
-}
+#define ZETA_ASSERT(condition) do { \
+				if(!(condition)){ \
+                    libsigma_klog("Zeta Assertion Failed, condition: " #condition); \
+                    while(1) asm("pause"); \
+				} \
+			} while(0);
 
-template<>
-void send_return_int<uint64_t>(tid_t dest, uint64_t msg_id, uint64_t ret){
-    auto ret_msg = std::make_unique<libsigma_ret_message>();
-
-    ret_msg->command = RET;
-    ret_msg->msg_id = msg_id;
-    ret_msg->ret = ret;
-
-    libsigma_ipc_send(dest, ret_msg->msg(), sizeof(libsigma_ret_message));
-}
-
-template<>
-void send_return_int<int>(tid_t dest, uint64_t msg_id, int ret){
-    auto ret_msg = std::make_unique<libsigma_ret_message>();
-
-    ret_msg->command = RET;
-    ret_msg->msg_id = msg_id;
-    ret_msg->ret = ret;
-
-    libsigma_ipc_send(dest, ret_msg->msg(), sizeof(libsigma_ret_message));
-}
-
-template<>
-void send_return_int<std::vector<char>>(tid_t dest, uint64_t msg_id, std::vector<char> ret){
-    auto* ret_msg = reinterpret_cast<libsigma_ret_message*>(new uint8_t[sizeof(libsigma_ret_message) + ret.size()]);
-
-    ret_msg->command = RET;
-    ret_msg->msg_id = msg_id;
-    ret_msg->ret = ret.size();
-    memcpy(ret_msg->buf, ret.data(), ret.size());
-
-    libsigma_ipc_send(dest, ret_msg->msg(), sizeof(libsigma_ret_message));
+static void send_return(tid_t target, sigma::zeta::server_response_builder& res){
+    auto* buf = res.serialize();
+    size_t len = res.length();
+    libsigma_ipc_send(target, (libsigma_message_t*)buf, len);
 }
 
 void handle_request(){
@@ -63,69 +38,107 @@ void handle_request(){
         return;
     }
 
-    auto send_return = [&](auto ret){
-        send_return_int(origin, msg->msg_id, ret);
-    };
+    sigma::zeta::client_request_parser parser{msg_raw.get(), msg_size};
+    ZETA_ASSERT(parser.has_command());
 
-    switch (msg->command)
+    auto command = static_cast<sigma::zeta::client_request_type>(parser.get_command());
+
+    switch (command)
     {
-    case OPEN:{
-            auto* open_info = (libsigma_open_message*)msg;
-            if(msg_size < open_info->path_len){ // TODO: Incoroperate the other members in this calculation
-                // Wut? No we won't corrupt heap for you
-                send_return(-1);
-            } else {
-                int ret = fs::get_vfs().open(origin, std::string_view{open_info->path, open_info->path_len}, open_info->flags);
-                send_return(ret);
-            }
+    case sigma::zeta::client_request_type::Open: {
+            ZETA_ASSERT(parser.has_path());
+            ZETA_ASSERT(parser.has_flags());
+
+            int ret = fs::get_vfs().open(origin, std::string_view{parser.get_path()}, parser.get_flags());
+
+            sigma::zeta::server_response_builder builder{};
+            builder.add_status(0);
+            builder.add_fd(ret);
+            
+            send_return(origin, builder);
         }
         break;
-    case CLOSE:{
-            auto* close_info = (libsigma_close_message*)msg;
-            int ret = fs::get_vfs().close(origin, close_info->fd);
-            send_return(ret);
+    case sigma::zeta::client_request_type::Close: {
+            ZETA_ASSERT(parser.has_fd());
+            int ret = fs::get_vfs().close(origin, parser.get_fd());
+
+            sigma::zeta::server_response_builder builder{};
+
+            builder.add_status(ret);
+
+            send_return(origin, builder);
         }
         break;
-    case READ: {
-            auto* read_info = (libsigma_read_message*)msg;
-            std::vector<char> buf{};
-            buf.resize(read_info->count);
-            int ret = fs::get_vfs().read(origin, read_info->fd , static_cast<void*>(buf.data()), read_info->count);
-            send_return(buf);
+    case sigma::zeta::client_request_type::Read: {
+            ZETA_ASSERT(parser.has_fd());
+            ZETA_ASSERT(parser.has_count());
+
+            std::vector<uint8_t> buffer{};
+            buffer.resize(parser.get_count());
+
+            int ret = fs::get_vfs().read(origin, parser.get_fd() , static_cast<void*>(buffer.data()), parser.get_count());
+            
+            sigma::zeta::server_response_builder builder{};
+            builder.add_status(ret);
+            builder.add_buffer(buffer);
+
+            send_return(origin, builder);
         }
         break;
-    case WRITE: {
-            auto* write_info = (libsigma_write_message*)msg;
-            if(msg_size < write_info->count){ // TODO: Incoroperate the other members in this calculation
-                // Wut? No we won't corrupt heap for you
-                send_return(-1);
-            } else {
-                int ret = fs::get_vfs().write(origin, write_info->fd, write_info->buf, write_info->count);
-                send_return(ret);
-            }
+    case sigma::zeta::client_request_type::Write: {
+            ZETA_ASSERT(parser.has_buffer());
+            ZETA_ASSERT(parser.has_fd());
+            ZETA_ASSERT(parser.has_count());
+
+            ZETA_ASSERT(parser.get_buffer().size() >= parser.get_count());
+            
+            int ret = fs::get_vfs().write(origin, parser.get_fd(), parser.get_buffer().data(), parser.get_count());
+            
+            sigma::zeta::server_response_builder builder{};
+            builder.add_status(ret);
+
+            send_return(origin, builder);
         }
         break;
-    case DUP2: {
-            auto* dup_info = (libsigma_dup2_message*)msg;         
-            int ret = fs::get_vfs().dup2(origin, dup_info->oldfd, dup_info->newfd);
-            send_return(ret);
+    case sigma::zeta::client_request_type::Dup2: {
+            ZETA_ASSERT(parser.has_fd());
+            ZETA_ASSERT(parser.has_newfd());
+
+            int ret = fs::get_vfs().dup2(origin, parser.get_fd(), parser.get_newfd());
+            
+            sigma::zeta::server_response_builder builder{};
+            builder.add_status(ret);
+
+            send_return(origin, builder);
         }
         break;
-    case SEEK: {
-            auto* seek_info = (libsigma_seek_message*)msg;
+    case sigma::zeta::client_request_type::Seek: {
+            ZETA_ASSERT(parser.has_offset());
+            ZETA_ASSERT(parser.has_whence());
+            ZETA_ASSERT(parser.has_fd());
+            
             uint64_t useless;
-            int ret = fs::get_vfs().seek(origin, seek_info->fd, seek_info->offset, seek_info->whence, useless);
-            send_return(ret);
+            int ret = fs::get_vfs().seek(origin, parser.get_fd(), parser.get_offset(), parser.get_whence(), useless);
+            
+            sigma::zeta::server_response_builder builder{};
+            builder.add_status(ret);
+
+            send_return(origin, builder);
         }
         break;
-    case TELL: {
-            auto* tell_info = (libsigma_tell_message*)msg;
-            uint64_t ret = fs::get_vfs().tell(origin, tell_info->fd);
-            send_return(ret);
+    case sigma::zeta::client_request_type::Tell: {
+            ZETA_ASSERT(parser.has_fd());
+
+            uint64_t ret = fs::get_vfs().tell(origin, parser.get_fd());
+            
+            sigma::zeta::server_response_builder builder{};
+            builder.add_status(0);
+            builder.add_offset(ret);
+
+            send_return(origin, builder);
         }
         break;
     default:
-        std::cout << "Unknown IPC command: 0x" << std::hex << msg->command << std::endl;
         break;
     }
 }
