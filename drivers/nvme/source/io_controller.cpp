@@ -2,6 +2,7 @@
 
 #include <libsigma/memory.h>
 #include <iostream>
+#include <sstream>
 #include <sys/mman.h>
 #include <assert.h>
 #include <cstring>
@@ -106,6 +107,14 @@ nvme::io_controller::io_controller(libsigma_resource_region_t region){
     std::cout << "Done\n";
     this->print_identify_info(info);
 
+    std::ostringstream stream{};
+    stream << "/dev/nvme" << info.controller_id;
+    this->path = std::move(stream.str());
+
+    printf("      Controller blockdev path: %s\n", this->path.c_str());
+    // TODO: Register blockdev in VFS
+
+
     std::vector<nsid_t> active_namespaces{};
 
     // Get Active Namespace list has been supported since version 1.1.0
@@ -118,7 +127,6 @@ nvme::io_controller::io_controller(libsigma_resource_region_t region){
     
     for(const auto nsid : active_namespaces){
         std::cout << "nvme: Detected namespace: " << nsid << std::endl;
-        // TODO:
 
         std::cout << "nvme: Identifying NS...";
         regs::namespace_identify_info ns_info{};
@@ -136,6 +144,15 @@ nvme::io_controller::io_controller(libsigma_resource_region_t region){
 
         namespaces[nsid].n_lbas = ns_info.nsize;
         printf("      Namespace size: %ld sectors [%ld MiB]\n", namespaces[nsid].n_lbas, ((namespaces[nsid].n_lbas * namespaces[nsid].sector_size) / 1024 / 1024));
+
+        std::ostringstream ns_stream{};
+        ns_stream << "/dev/nvme" << info.controller_id << "n" << nsid;
+
+        namespaces[nsid].path = std::move(ns_stream.str());
+
+        printf("      Blockdev path: %s\n", namespaces[nsid].path.c_str());
+
+        // TODO: Register blockdev in VFS
     }
 
     // Let the controller allocate as many queues as possible so we don't have to care about it

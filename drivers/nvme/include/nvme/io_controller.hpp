@@ -44,9 +44,12 @@ namespace nvme {
         queue_pair admin_queue;
         queue_pair io_queue;
 
+        std::string path;
+
         struct ns {
             uint64_t n_lbas;
             uint64_t sector_size;
+            std::string path;
         };
 
         std::unordered_map<nsid_t, ns> namespaces;
