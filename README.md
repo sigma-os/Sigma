@@ -15,9 +15,6 @@ Look in [sigma-os/bootstrap](https://github.com/sigma-os/bootstrap)
 - SMP + Simple Queue based scheduler
 - Dynamically linked userland backed by [mlibc](https://www.github.com/managarm/mlibc)
 - Modern disk drivers (AHCI, NVMe)
-
-## Drivers
-- AHCI and NVMe blockdevices
  
 ## Notes
 
