@@ -144,7 +144,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
         // Executable File
         {
             proc::process::thread* new_thread = proc::process::create_blocked_thread(nullptr, 0, 0, privilige);
-            new_thread->vmm = x86_64::paging::paging();
+            new_thread->vmm = x86_64::paging::context();
 
             mm::vmm::kernel_vmm::get_instance().clone_paging_info(new_thread->vmm);
 

@@ -8,6 +8,7 @@ main_sources = files(
     'source/acpi/acpi.cpp',
     'source/acpi/madt.cpp',
     'source/acpi/laihost.cpp',
+    'source/arch/x86_64/amd/svm.cpp',
     'source/arch/x86_64/drivers/apic.cpp',
     'source/arch/x86_64/drivers/hpet.cpp',
     'source/arch/x86_64/drivers/pic.cpp',
@@ -48,6 +49,7 @@ main_sources = files(
 cpp_includes = include_directories('include')
 
 nasm_sources = files(
+    'source/arch/x86_64/amd/svm_low.asm',
     'source/arch/x86_64/misc/spinlock.asm',
     'source/arch/x86_64/interrupts.asm',
     'source/arch/x86_64/cpu_low.asm',

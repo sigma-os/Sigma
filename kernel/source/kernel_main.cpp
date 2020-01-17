@@ -65,9 +65,9 @@ C_LINKAGE void kernel_main(){
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
     entry.set_gs();
 
-    x86_64::misc_early_features_init();
-
     mm::pmm::init(boot_protocol);
+
+    x86_64::misc_early_features_init();
 
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();

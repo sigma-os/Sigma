@@ -97,7 +97,11 @@ static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread
     thread->context.rflags = regs->rflags;
 
     thread->context.cr3 = reinterpret_cast<uint64_t>(x86_64::paging::get_current_info());
-    proc::simd::save_state(thread);
+
+    if(!thread->context.simd_state)
+        thread->context.simd_state = proc::simd::create_state();
+
+    proc::simd::save_state(thread->context.simd_state);
 
     thread->context.fs = x86_64::msr::read(x86_64::msr::fs_base);
 }
@@ -130,13 +134,13 @@ static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thre
 
     x86_64::msr::write(x86_64::msr::fs_base, new_thread->context.fs);
 
+    proc::simd::restore_state(new_thread->context.simd_state);
+
     if(old_thread == nullptr){
         x86_64::paging::set_current_info(&new_thread->vmm);
-        proc::simd::restore_state(new_thread);
     } else {
         if(old_thread->context.cr3 != new_thread->context.cr3){
             x86_64::paging::set_current_info(&new_thread->vmm);
-            proc::simd::restore_state(new_thread);
         }
     }
 }
@@ -265,6 +269,7 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 													// Bit 9 is IF, Interrupt flag, Force enable this
 												    // so timer interrupts arrive
 	thread->privilege = privilege;
+    thread->context.simd_state = proc::simd::create_state();
 
 	switch(thread->privilege) {
 		case proc::process::thread_privilege_level::KERNEL:
@@ -373,7 +378,7 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 
     thread->state = proc::process::thread_state::DISABLED;
 
-    if(thread->context.simd_state) delete[] thread->context.simd_state;
+    proc::simd::destroy_state(thread->context.simd_state);
     thread->context = proc::process::thread_context(); // Remove all traces from previous function
     thread->ipc_manager.deinit();
     thread->privilege = proc::process::thread_privilege_level::APPLICATION; // Lowest privilege

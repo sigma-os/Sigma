@@ -54,10 +54,10 @@ namespace x86_64::paging
     constexpr uint64_t page_entry_global = 8;
     constexpr uint64_t page_entry_no_execute = 63;
 
-    class paging  {
+    class context  {
         public:
-            paging(): paging_info(nullptr) {}
-            ~paging() {}
+            context(): paging_info(nullptr) {}
+            ~context() {}
             void init();
             void deinit();
 
@@ -67,7 +67,7 @@ namespace x86_64::paging
 
             void set();
 
-            void clone_paging_info(x86_64::paging::paging& new_info);
+            void clone_paging_info(x86_64::paging::context& new_info);
 
             void fork_address_space(proc::process::thread& new_thread);
 
@@ -80,7 +80,7 @@ namespace x86_64::paging
     };
 
     x86_64::paging::pml4* get_current_info();
-    void set_current_info(x86_64::paging::paging* info);
+    void set_current_info(x86_64::paging::context* info);
     void invalidate_addr(uint64_t addr);
 
     class pcid_cpu_context;
@@ -92,16 +92,16 @@ namespace x86_64::paging
 
         void set_context();
 
-        void set_context(x86_64::paging::paging* context);
+        void set_context(x86_64::paging::context* context);
         bool is_active();
 
         uint64_t get_timestamp();
 
-        x86_64::paging::paging* get_context();
+        x86_64::paging::context* get_context();
 
         private:
         uint16_t pcid;
-        x86_64::paging::paging* context;
+        x86_64::paging::context* context;
 
         uint64_t timestamp;
 

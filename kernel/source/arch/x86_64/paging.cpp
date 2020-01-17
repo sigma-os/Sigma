@@ -78,7 +78,7 @@ x86_64::paging::pml4* x86_64::paging::get_current_info(){
         return reinterpret_cast<x86_64::paging::pml4*>(pointer);
 }
 
-void x86_64::paging::set_current_info(x86_64::paging::paging* info){
+void x86_64::paging::set_current_info(x86_64::paging::context* info){
     auto* cpu = smp::cpu::entry::get_cpu();
     auto& cpu_context = cpu->pcid_context;
 
@@ -158,7 +158,7 @@ void x86_64::paging::pcid_context::set_context(){
     smp::cpu::entry::get_cpu()->pcid_context.active_context = this->pcid;
 }
 
-void x86_64::paging::pcid_context::set_context(x86_64::paging::paging* context){
+void x86_64::paging::pcid_context::set_context(x86_64::paging::context* context){
     this->context = context;
     // TODO: TLB shootdown
 
@@ -175,14 +175,14 @@ bool x86_64::paging::pcid_context::is_active(){
     return this->pcid == smp::cpu::entry::get_cpu()->pcid_context.active_context;
 }
 
-x86_64::paging::paging* x86_64::paging::pcid_context::get_context(){
+x86_64::paging::context* x86_64::paging::pcid_context::get_context(){
     return context;
 }
 #pragma endregion
 
 #pragma region paging::paging
 
-void x86_64::paging::paging::init(){
+void x86_64::paging::context::init(){
     if(this->paging_info != nullptr) this->deinit();
 
     this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
@@ -217,7 +217,7 @@ static void clean_pdpt(x86_64::paging::pdpt* pdpt){
     }
 }
 
-void x86_64::paging::paging::deinit(){
+void x86_64::paging::context::deinit(){
     if(this->paging_info == nullptr) return;
 
     for(uint64_t pml4_loop_index = 0; pml4_loop_index < x86_64::paging::paging_structures_n_entries / 2; pml4_loop_index++){
@@ -236,7 +236,7 @@ void x86_64::paging::paging::deinit(){
     mm::pmm::free_block(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE));
 }   
 
-bool x86_64::paging::paging::map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_cache_types cache){
+bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_cache_types cache){
     uint64_t pml4_index_number = pml4_index(virt);
     uint64_t pdpt_index_number = pdpt_index(virt);
     uint64_t pd_index_number = pd_index(virt);
@@ -383,7 +383,7 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
     return reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(new_info_pdpt) - KERNEL_VBASE);
 }
 
-void x86_64::paging::paging::clone_paging_info(x86_64::paging::paging& new_info){
+void x86_64::paging::context::clone_paging_info(x86_64::paging::context& new_info){
     new_info.deinit();
 
     new_info.init();
@@ -418,15 +418,15 @@ void x86_64::paging::paging::clone_paging_info(x86_64::paging::paging& new_info)
     }
 }
 
-void x86_64::paging::paging::set(){
+void x86_64::paging::context::set(){
     x86_64::paging::set_current_info(this);
 }
 
-uint64_t x86_64::paging::paging::get_paging_info(){
+uint64_t x86_64::paging::context::get_paging_info(){
     return reinterpret_cast<uint64_t>(this->paging_info);
 }
 
-uint64_t x86_64::paging::paging::get_phys(uint64_t virt){
+uint64_t x86_64::paging::context::get_phys(uint64_t virt){
     uint64_t pml4_index_number = pml4_index(virt);
     uint64_t pdpt_index_number = pdpt_index(virt);
     uint64_t pd_index_number = pd_index(virt);
@@ -452,7 +452,7 @@ uint64_t x86_64::paging::paging::get_phys(uint64_t virt){
     return -1;
 }
 
-bool x86_64::paging::paging::set_page_protection(uint64_t virt, uint64_t flags, map_page_cache_types cache){
+bool x86_64::paging::context::set_page_protection(uint64_t virt, uint64_t flags, map_page_cache_types cache){
     uint64_t pml4_index_number = pml4_index(virt);
     uint64_t pdpt_index_number = pdpt_index(virt);
     uint64_t pd_index_number = pd_index(virt);
@@ -496,7 +496,7 @@ bool x86_64::paging::paging::set_page_protection(uint64_t virt, uint64_t flags, 
     return false;
 }
 
-uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint64_t search_end_hint, size_t size){
+uint64_t x86_64::paging::context::get_free_range(uint64_t search_base_hint, uint64_t search_end_hint, size_t size){
     uintptr_t current_addr = (uintptr_t)-1;
     size_t needed_pages = misc::div_ceil(size, mm::pmm::block_size);
     size_t count = 0;
@@ -518,7 +518,7 @@ uint64_t x86_64::paging::paging::get_free_range(uint64_t search_base_hint, uint6
 
 #pragma endregion
 
-void x86_64::paging::paging::fork_address_space(proc::process::thread& new_thread){
+void x86_64::paging::context::fork_address_space(proc::process::thread& new_thread){
     mm::vmm::kernel_vmm::get_instance().clone_paging_info(new_thread.vmm);
 
     for(uint64_t i = 0; i < (x86_64::paging::paging_structures_n_entries / 2); i++){

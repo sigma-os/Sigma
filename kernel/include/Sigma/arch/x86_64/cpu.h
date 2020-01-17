@@ -19,6 +19,8 @@ namespace x86_64
         constexpr uint8_t write_through = 0x04;
         constexpr uint8_t write_back = 0x06;
 
+        constexpr uint64_t pat = write_back | (write_combining << 8) | (write_through << 16) | (uncacheable << 24);
+
         void init();
         uint64_t get_flags(uint8_t type);
     }
