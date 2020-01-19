@@ -78,7 +78,12 @@ bool x86_64::svm::init(){
     return true;
 }
 
-x86_64::svm::vcpu::vcpu(x86_64::paging::context* npt): npt(npt) {
+x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
+    ASSERT(space->type == virt::virt_types::Svm);
+
+    auto* svm_vspace = (svm::vspace*)space->ptr;
+    npt = &svm_vspace->context;
+
     vmcb_phys = mm::pmm::alloc_block(); // Since sizeof(vmcb_t) == 0x1000
     if(!vmcb_phys){
         printf("[SVM]: Failed to allocate block for vcpu vmcb\n");
@@ -195,4 +200,16 @@ void x86_64::svm::vcpu::run(){
             return;
         }
     }
+}
+
+x86_64::svm::vspace::vspace(): context{x86_64::paging::context{}} {
+	context.init();
+}
+
+x86_64::svm::vspace::~vspace(){
+	context.deinit();
+}
+
+void x86_64::svm::vspace::map(uint64_t host_phys, uint64_t guest_phys){
+	context.map_page(host_phys, guest_phys, map_page_flags_present | map_page_flags_writable | map_page_flags_user);
 }

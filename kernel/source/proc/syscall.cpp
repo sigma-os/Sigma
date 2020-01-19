@@ -165,6 +165,14 @@ static uint64_t syscall_get_phys_region(x86_64::idt::idt_registers* regs){
     return 0; // Return success
 }
 
+// ARG0: command
+// ARGN: argn
+static uint64_t syscall_vctl(x86_64::idt::idt_registers* regs){
+    return virt::vctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
+}
+
+
+
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
 struct kernel_syscall {
@@ -186,7 +194,8 @@ kernel_syscall syscalls[] = {
     {.func = syscall_block_thread, .name = "block_thread"},
     {.func = syscall_fork, .name = "fork"},
     {.func = syscall_devctl, .name = "devctl"},
-    {.func = syscall_get_phys_region, .name = "get_phys_region"}
+    {.func = syscall_get_phys_region, .name = "get_phys_region"},
+    {.func = syscall_vctl, .name = "vctl"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

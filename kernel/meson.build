@@ -42,6 +42,7 @@ main_sources = files(
     'source/proc/elf.cpp',
     'source/proc/syscall.cpp',
     'source/proc/simd.cpp',
+    'source/generic/virt.cpp',
     'source/crti.S',
     'source/crtn.S',
     'source/kernel_main.cpp')

@@ -24,6 +24,7 @@ extern "C" {
 #define SIGMA_SYSCALL_FORK            11
 #define SIGMA_SYSCALL_DEVCTL          12
 #define SIGMA_SYSCALL_GET_PHYS_REGION 13
+#define SIGMA_SYSCALL_VCTL            14
 
 uint64_t libsigma_syscall0(uint64_t number);
 uint64_t libsigma_syscall1(uint64_t number, uint64_t arg1);

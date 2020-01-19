@@ -8,6 +8,18 @@
 
 namespace misc
 {
+	class id_generator {
+		public:
+		constexpr id_generator(): next_id{0} {}
+
+		uint64_t id(){
+				return next_id++;
+		}
+
+		private:
+		uint64_t next_id;
+	};
+
     template<typename T>
     class lazy_initializer {
         public:
