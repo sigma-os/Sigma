@@ -102,6 +102,7 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
 
     vmcb->icept_vmrun = 1;
     vmcb->icept_hlt = 1; // DEBUG: Intercept hlt
+    vmcb->icept_rdtsc = 1;
 
     vmcb->guest_asid = 1; // TODO: tf is an ASID?
 
@@ -133,6 +134,7 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
 
     // Start at 0 to test
     vmcb->rip = 0x1000; // Start
+    vmcb->efer = (1 << 12); // set svme
     
     vmcb->rflags = (1 << 1); // Bit is reserved and should always be set
 
@@ -142,14 +144,18 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
 
 x86_64::svm::vcpu::~vcpu(){
     proc::simd::destroy_state(guest_simd);
-    proc::simd::destroy_state(guest_simd);
+    proc::simd::destroy_state(host_simd);
 
     mm::pmm::free_block(vmcb_phys);
 }
 
-void x86_64::svm::vcpu::run(){
+void x86_64::svm::vcpu::run(virt::vexit* vexit){
     while(true){
         asm("clgi");
+        host_state.fs_base = x86_64::msr::read(x86_64::msr::fs_base);
+        host_state.gs_base = x86_64::msr::read(x86_64::msr::gs_base);
+        host_state.gs_kernel_base = x86_64::msr::read(x86_64::msr::kernelgs_base);
+
         proc::simd::save_state(host_simd);
         proc::simd::restore_state(guest_simd);
         
@@ -157,8 +163,22 @@ void x86_64::svm::vcpu::run(){
         
         proc::simd::save_state(guest_simd);
         proc::simd::restore_state(host_simd); 
+
+        x86_64::msr::write(x86_64::msr::fs_base, host_state.fs_base);
+        x86_64::msr::write(x86_64::msr::gs_base, host_state.gs_base);
+        x86_64::msr::write(x86_64::msr::kernelgs_base, host_state.gs_kernel_base);
+
+        auto* cpu = smp::cpu::get_current_cpu();
+        
+        auto& tss_entry = cpu->gdt->get_entry_by_offset(cpu->tss_gdt_offset);
+        tss_entry.ent &= ~(0x1Full << 40);
+        tss_entry.ent |= (9ull << 40);
+        cpu->tss->load(cpu->tss_gdt_offset);
+
+        x86_64::msr::write(x86_64::msr::ia32_pat, x86_64::pat::pat);
         asm("stgi");
 
+        // TODO: Someway to see if the user wants to exit on hlt, for all these if(1)
         switch (vmcb->exitcode)
         {
         case 0x400:
@@ -182,17 +202,38 @@ void x86_64::svm::vcpu::run(){
 
             printf("      RIP: %x\n", vmcb->rip);
 
-            return;
-        case 0x6e: // rdtsc intercept
-            printf("[SVM]: Intercepted RDTSC\n");
-            vmcb->rip += 2; // Opcode: 0x0F 0x31
+            // TODO: VEXIT
+
+            asm("cli; hlt");
+            break;
+        case 0x6e:
+            vmcb->rip += 2;
+
+            if(1){
+                vexit->reason = virt::vCtlExitReasonRdtsc;
+                vexit->opcode[0] = 0x0F;
+                vexit->opcode[1] = 0x31;
+                vexit->opcode_length = 2;
+                return;
+            }
             break;
         case 0x78:
-            printf("[SVM]: Intercepted HLT\n");
-            vmcb->rip++; // Opcode 0xF4
-            return;
+            vmcb->rip++;
+
+            if(1){
+                vexit->reason = virt::vCtlExitReasonHlt;
+                vexit->opcode[0] = 0xF4;
+                vexit->opcode_length = 1;
+                return;
+            }
+            break;
         case -1:
             printf("[SVM]: Invalid VMCB state\n");
+
+            if(1){
+                vexit->reason = virt::vCtlExitReasonInvalidInternalState;
+                return;
+            }
             break;
         default:
             printf("[SVM] Unknown exitcode: %x\n", vmcb->exitcode);

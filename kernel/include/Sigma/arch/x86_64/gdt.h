@@ -53,6 +53,9 @@ namespace x86_64::gdt
             uint64_t add_tss(x86_64::tss::table *tss);
 
             uint64_t get_offset_by_index(uint64_t index);
+            x86_64::gdt::entry& get_entry_by_offset(uint64_t offset){
+                return entries[offset / 8];
+            }
 
             void update_pointer(){
                 this->pointer.update_gdtr();

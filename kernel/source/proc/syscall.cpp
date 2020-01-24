@@ -166,7 +166,7 @@ static uint64_t syscall_get_phys_region(x86_64::idt::idt_registers* regs){
 }
 
 // ARG0: command
-// ARGN: argn
+// ARG1 - N: argn
 static uint64_t syscall_vctl(x86_64::idt::idt_registers* regs){
     return virt::vctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 }
@@ -201,7 +201,7 @@ kernel_syscall syscalls[] = {
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
 
 static void syscall_handler(x86_64::idt::idt_registers* regs){
-    if(SYSCALL_GET_FUNC() > syscall_count){
+    if(SYSCALL_GET_FUNC() >= syscall_count){
         debug_printf("[SYSCALL]: Tried to access non existing syscall\n");
         SYSCALL_SET_RETURN_VALUE(1);
         return;

@@ -33,11 +33,15 @@
 #include <Sigma/proc/elf.h>
 #include <Sigma/proc/device.h>
 
+#include <Sigma/generic/virt.hpp>
+
 #include <Sigma/types/linked_list.h>
 #include <Sigma/types/minimal_array.h>
 #include <Sigma/boot_protocol.h>
 #include <config.h>
 #include <cxxabi.h>
+
+#include <Sigma/generic/user_handle.hpp>
 
 auto cpu_list = types::minimal_array<1, smp::cpu::entry>{};
 C_LINKAGE boot::boot_protocol boot_data;
@@ -76,6 +80,8 @@ C_LINKAGE void kernel_main(){
     tss.load(tss_offset);
 
     entry.tss = &tss;
+    entry.tss_gdt_offset = tss_offset;
+    entry.gdt = &gdt;
 
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
@@ -204,7 +210,9 @@ C_LINKAGE void smp_kernel_main(){
     entry.lapic = x86_64::apic::lapic();
     entry.lapic.init();
     entry.lapic_id = entry.lapic.get_id();
+    entry.gdt = &gdt;
     entry.tss = &tss;
+    entry.tss_gdt_offset = tss_offset;
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
     entry.set_gs();
 

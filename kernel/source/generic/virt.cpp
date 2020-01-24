@@ -88,12 +88,12 @@ virt::vcpu::~vcpu(){
 	}
 }
 
-void virt::vcpu::run(){
+void virt::vcpu::run(virt::vexit* vexit){
 	switch(type){
 		case virt_types::Svm: {
 			auto* svm_vcpu = (x86_64::svm::vcpu*)ptr;
 
-			svm_vcpu->run();
+			svm_vcpu->run(vexit);
 			return;
 		}
 		case virt_types::None:
@@ -107,19 +107,32 @@ uint64_t virt::vctl(uint64_t cmd, MAYBE_UNUSED_ATTRIBUTE uint64_t arg1, MAYBE_UN
 		case vCtlCreateVcpu: {
 			auto* thread = proc::process::get_current_thread();
 			auto* vspace = thread->handle_catalogue.get<handles::vspace_handle>(arg1);
-			return thread->handle_catalogue.push(new handles::vcpu_handle{&vspace->space});
+			auto vcpu_handle = thread->handle_catalogue.push(new handles::vcpu_handle{&vspace->space});
+			#ifdef LOG_SYSCALLS
+			printf("[VIRT]: vCtlCreateVcpu: vcpu: %d, vspace: %d\n", vcpu_handle, arg1);
+			#endif
+			return vcpu_handle;
 		}
 		case vCtlRunVcpu: {
 			auto* vcpu = proc::process::get_current_thread()->handle_catalogue.get<handles::vcpu_handle>(arg1);
-			vcpu->cpu.run();
+			vcpu->cpu.run((virt::vexit*)arg2);
+			#ifdef LOG_SYSCALLS
+			printf("[VIRT]: vCtlRunVcpu handle: %d, vexit: %x\n", arg1, ((virt::vexit*)arg2)->opcode[0]);
+			#endif
 			return 0;
 		}
 		case vCtlCreateVspace: {
+			#ifdef LOG_SYSCALLS
+			printf("[VIRT]: vCtlCreateVspace\n");
+			#endif
 			return proc::process::get_current_thread()->handle_catalogue.push(new handles::vspace_handle{});
 		}
-		case vCrlMapVspace: {
-			auto* vspace = proc::process::get_current_thread()->handle_catalogue.get<handles::vspace_handle>(arg1);
+		case vCtlMapVspace: {
+			#ifdef LOG_SYSCALLS
+			printf("[VIRT]: vCtlMapVspace vspace: %d, guest_base: %x, host_base: %x, size: %x\n", arg1, arg2, arg3, arg4);
+			#endif
 			auto* thread = proc::process::get_current_thread();
+			auto* vspace = thread->handle_catalogue.get<handles::vspace_handle>(arg1);
 
 			uint64_t guest_phys_base = arg2;
 			uint64_t host_virt_base = arg3;
@@ -133,7 +146,6 @@ uint64_t virt::vctl(uint64_t cmd, MAYBE_UNUSED_ATTRIBUTE uint64_t arg1, MAYBE_UN
 			}
 
 			return 0;
-			break;
 		}
 		default:
 			printf("[VIRT]: Unknown vctl command: %x", cmd);

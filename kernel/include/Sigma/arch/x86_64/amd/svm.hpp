@@ -171,7 +171,6 @@ namespace x86_64::svm
 
 	struct vm_gpr_state {
 		// Accessed from assembly, do not change offsets without changing svm_low.asm
-		uint64_t rax;
 		uint64_t rbx;
 		uint64_t rcx;
 		uint64_t rdx;
@@ -188,6 +187,10 @@ namespace x86_64::svm
 		uint64_t r15;
 	};
 
+	struct vm_host_state {
+		uint64_t fs_base, gs_base, gs_kernel_base;
+	};
+
 	constexpr uint32_t vm_cr = 0xC0010114;
 	constexpr uint32_t vm_hsave_pa = 0xC0010117;
 
@@ -197,7 +200,7 @@ namespace x86_64::svm
 		vcpu(virt::vspace* space);
 		~vcpu();
 
-		void run();
+		void run(virt::vexit* vexit);
 
 		private:
 
@@ -205,6 +208,7 @@ namespace x86_64::svm
 		vmcb_t* vmcb;
 
 		vm_gpr_state gpr_state;
+		vm_host_state host_state;
 
 		uint8_t* host_simd;
 		uint8_t* guest_simd;

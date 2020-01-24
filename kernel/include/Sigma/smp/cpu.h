@@ -3,6 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/arch/x86_64/tss.h>
+#include <Sigma/arch/x86_64/gdt.h>
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/paging.h>
 
@@ -14,11 +15,15 @@ namespace smp::cpu
 
     struct entry {
         public:
-        entry(): lapic(x86_64::apic::lapic()), lapic_id(0), tss(nullptr), pcid_context({}), self_ptr(reinterpret_cast<uint64_t>(this)){}
+        entry(): lapic(x86_64::apic::lapic()), lapic_id(0), tss(nullptr), tss_gdt_offset{0}, pcid_context({}), self_ptr(reinterpret_cast<uint64_t>(this)){}
 
         x86_64::apic::lapic lapic;
         uint32_t lapic_id;
         x86_64::tss::table* tss;
+        uint16_t tss_gdt_offset;
+
+        x86_64::gdt::gdt* gdt;
+
         x86_64::paging::pcid_cpu_context pcid_context;
         uint64_t self_ptr;
 
