@@ -26,6 +26,7 @@ namespace acpi
     constexpr uint8_t type_ioapic = 1;
     constexpr uint8_t type_interrupt_source_override = 2;
     constexpr uint8_t type_nmi_source = 3;
+    constexpr uint8_t type_lapic_address_override = 5;
     constexpr uint8_t type_x2apic = 9;
 
     struct PACKED_ATTRIBUTE madt_lapic
