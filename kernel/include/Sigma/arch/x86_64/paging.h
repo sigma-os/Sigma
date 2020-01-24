@@ -87,6 +87,7 @@ namespace x86_64::paging
 
     class pcid_context {
         public:
+        pcid_context() = default;
 
         uint16_t get_pcid();
 
@@ -112,7 +113,7 @@ namespace x86_64::paging
     
     class pcid_cpu_context {
         public:
-        pcid_cpu_context(){
+        pcid_cpu_context(): active_context{0}, next_timestamp{0}{
             for(uint16_t i = 0; i < n_pcids; i++){
                 contexts[i].pcid = i;
             }

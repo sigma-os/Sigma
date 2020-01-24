@@ -53,8 +53,7 @@ namespace x86_64
         void init();
     }
 
-    namespace tsd
-    {
+    namespace tsd {
         void init();
     }
 
