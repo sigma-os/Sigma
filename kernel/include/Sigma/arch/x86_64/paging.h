@@ -54,20 +54,21 @@ namespace x86_64::paging
     constexpr uint64_t page_entry_global = 8;
     constexpr uint64_t page_entry_no_execute = 63;
 
-    class paging  {
+    class context  {
         public:
-            paging(): paging_info(nullptr) {}
-            ~paging() {}
+            context(): paging_info(nullptr) {}
+            ~context() {}
             void init();
             void deinit();
 
             bool map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_cache_types cache = map_page_cache_types::normal);
             bool set_page_protection(uint64_t virt, uint64_t flags, map_page_cache_types cache = map_page_cache_types::normal);
             uint64_t get_phys(uint64_t virt);
+            uint64_t get_entry(uint64_t virt);
 
             void set();
 
-            void clone_paging_info(x86_64::paging::paging& new_info);
+            void clone_paging_info(x86_64::paging::context& new_info);
 
             void fork_address_space(proc::process::thread& new_thread);
 
@@ -80,28 +81,29 @@ namespace x86_64::paging
     };
 
     x86_64::paging::pml4* get_current_info();
-    void set_current_info(x86_64::paging::paging* info);
+    void set_current_info(x86_64::paging::context* info);
     void invalidate_addr(uint64_t addr);
 
     class pcid_cpu_context;
 
     class pcid_context {
         public:
+        pcid_context() = default;
 
         uint16_t get_pcid();
 
         void set_context();
 
-        void set_context(x86_64::paging::paging* context);
+        void set_context(x86_64::paging::context* context);
         bool is_active();
 
         uint64_t get_timestamp();
 
-        x86_64::paging::paging* get_context();
+        x86_64::paging::context* get_context();
 
         private:
         uint16_t pcid;
-        x86_64::paging::paging* context;
+        x86_64::paging::context* context;
 
         uint64_t timestamp;
 
@@ -112,7 +114,7 @@ namespace x86_64::paging
     
     class pcid_cpu_context {
         public:
-        pcid_cpu_context(){
+        pcid_cpu_context(): active_context{0}, next_timestamp{0}{
             for(uint16_t i = 0; i < n_pcids; i++){
                 contexts[i].pcid = i;
             }

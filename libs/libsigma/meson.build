@@ -14,7 +14,8 @@ libsigma_sources = files(
     'source/memory.c',
     'source/file.c',
     'source/ipc.c',
-    'source/device.c')
+    'source/device.c',
+    'source/virt.c')
 
 c_args = ['-std=gnu18', '-fvisibility=hidden']
 
@@ -33,7 +34,8 @@ libsigma_api_headers = files(
     'include/libsigma/memory.h',
     'include/libsigma/file.h',
     'include/libsigma/ipc.h',
-    'include/libsigma/device.h')
+    'include/libsigma/device.h',
+    'include/libsigma/virt.h')
 
 install_headers(libsigma_api_headers, subdir: 'libsigma')
 

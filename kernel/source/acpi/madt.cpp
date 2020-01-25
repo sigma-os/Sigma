@@ -114,6 +114,10 @@ void acpi::madt::parse(){
         case acpi::type_x2apic:
             this->parse_x2apic(item);
             break;
+
+        case acpi::type_lapic_address_override:
+            this->parse_lapic_address_override(item);
+            break;
         
         default:
             debug_printf("[MADT]: Unknown table type: %x\n", type);

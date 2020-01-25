@@ -18,43 +18,35 @@ static uint64_t save_size = 0;
 static uint64_t save_align = 0;
 
 
-static uint8_t* create_state(){
+uint8_t* proc::simd::create_state(){
     auto* ptr = static_cast<uint8_t*>(mm::hmm::kmalloc_a(save_size, save_align));
     if(!ptr) return nullptr;
     memcpy(static_cast<void*>(ptr), static_cast<void*>(default_state), save_size);
     return ptr;
 }
 
-void proc::simd::save_state(proc::process::thread* thread){
-    if(!thread->context.simd_state){
-        thread->context.simd_state = create_state();
-        if(!thread->context.simd_state) PANIC("Could not allocate space for thread simd state");
-    } 
-
-    #ifdef DEBUG
-    if(((uint64_t)thread->context.simd_state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd save");
-    #endif
-
-    global_save(thread->context.simd_state);
+void proc::simd::destroy_state(uint8_t* state){
+    free((void*)state);
 }
 
-void proc::simd::restore_state(proc::process::thread* thread){
-    if(!thread->context.simd_state){
-        thread->context.simd_state = create_state();
-        if(!thread->context.simd_state) PANIC("Could not allocate space for thread simd state");
-    } 
-
+void proc::simd::save_state(uint8_t* state){
     #ifdef DEBUG
-    if(((uint64_t)thread->context.simd_state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd restore");
+    if(((uint64_t)state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd save");
     #endif
 
-    global_restore(thread->context.simd_state);
+    global_save(state);
 }
 
-void proc::simd::clone_state(uint8_t** old_thread, uint8_t** new_thread){
-    *new_thread = create_state();
+void proc::simd::restore_state(uint8_t* state){
+    #ifdef DEBUG
+    if(((uint64_t)state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd restore");
+    #endif
 
-    memcpy(static_cast<void*>(*new_thread), static_cast<void*>(*old_thread), save_size);
+    global_restore(state);
+}
+
+void proc::simd::clone_state(uint8_t* old_state, uint8_t* new_state){
+    memcpy(static_cast<void*>(new_state), static_cast<void*>(old_state), save_size);
 }
 
 void proc::simd::init_simd(){

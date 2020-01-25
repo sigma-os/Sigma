@@ -2,6 +2,8 @@
 #include <Sigma/arch/x86_64/misc/misc.h>
 #include <klibc/stdio.h>
 
+#include <Sigma/arch/x86_64/amd/svm.hpp>
+
 void x86_64::smep::init(){
     if(misc::kernel_args::get_bool("nosmep")){
         debug_printf("[CPU]: Forced SMEP disabling\n");
@@ -48,8 +50,7 @@ void x86_64::pat::init(){
     uint32_t a, b, c, d;
     if(cpuid(1, a, b, c, d)){
         if(d & cpuid_bits::PAT){
-            constexpr uint64_t pat = write_back | (write_combining << 8) | (write_through << 16) | (uncacheable << 24);
-            x86_64::msr::write(x86_64::msr::ia32_pat, pat);
+            x86_64::msr::write(x86_64::msr::ia32_pat, pat::pat);
             debug_printf("[CPU]: Enabled PAT\n");
         } else {
             PANIC("PAT is not available");
@@ -193,15 +194,20 @@ void x86_64::misc_early_features_init(){
     x86_64::pat::init();
     x86_64::pcid::init();
 
-    uint32_t a1, b1, c1, d1;
-    x86_64::cpuid(1, a1, b1, c1, d1);
+    uint32_t a, b, c, d;
+    x86_64::cpuid(0, a, b, c, d);
+    if(b == signature_AMD_ebx && c == signature_AMD_ecx && d == signature_AMD_edx){
+        x86_64::svm::init();
+    }
 
-    if(c1 & cpuid_bits::XSAVE){
+    
+    x86_64::cpuid(1, a, b, c, d);
+    if(c & cpuid_bits::XSAVE){
         // xcr0 specifies what the `xsave` instruction should save, however it is also used for enabling instruction sets, e.g. AVX
         x86_64::regs::xcr0 xcr{};
         xcr.bits.fpu_mmx = 1; // Set FPU bit, since it is *always* required to be set
-        if(d1 & cpuid_bits::SSE) xcr.bits.sse = 1; // Enable SSE, is always done becuase this is long mode but check because why not
-        if(c1 & cpuid_bits::AVX) xcr.bits.avx = 1; // Enable AVX
+        if(d & cpuid_bits::SSE) xcr.bits.sse = 1; // Enable SSE, is always done becuase this is long mode but check because why not
+        if(c & cpuid_bits::AVX) xcr.bits.avx = 1; // Enable AVX
         xcr.flush();
     }
 }

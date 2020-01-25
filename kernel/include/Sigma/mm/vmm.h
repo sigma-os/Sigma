@@ -10,7 +10,7 @@ namespace mm::vmm
 {
     class kernel_vmm {
         public:
-        static x86_64::paging::paging& get_instance(){
+        static x86_64::paging::context& get_instance(){
             return _instance();
         }
 
@@ -19,7 +19,7 @@ namespace mm::vmm
 
         private:
 
-        static x86_64::paging::paging& _instance();
+        static x86_64::paging::context& _instance();
 
         kernel_vmm() = default;
     };

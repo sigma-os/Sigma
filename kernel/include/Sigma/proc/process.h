@@ -10,6 +10,7 @@
 #include <Sigma/types/vector.h>
 #include <Sigma/proc/ipc.h>
 #include <Sigma/proc/simd.h>
+#include <Sigma/generic/user_handle.hpp>
 
 namespace proc::process
 {
@@ -54,7 +55,8 @@ namespace proc::process
             new_ctx.cs = cs;
             new_ctx.fs = fs;
 
-            proc::simd::clone_state(&simd_state, &new_ctx.simd_state);
+            new_ctx.simd_state = proc::simd::create_state();
+            proc::simd::clone_state(simd_state, new_ctx.simd_state);
         }
 
         void import(x86_64::idt::idt_registers* regs){
@@ -108,7 +110,7 @@ namespace proc::process
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
                   blocking_reason(block_reason::FOREVER), \
                   privilege(proc::process::thread_privilege_level::APPLICATION), ipc_manager(proc::ipc::thread_ipc_manager()), \
-                  vmm(x86_64::paging::paging()), tid(0), thread_lock({}){}
+                  vmm(x86_64::paging::context()), tid(0), thread_lock({}) {}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
@@ -116,9 +118,11 @@ namespace proc::process
         proc::process::block_reason blocking_reason;
         proc::process::thread_privilege_level privilege;
         proc::ipc::thread_ipc_manager ipc_manager;
-        x86_64::paging::paging vmm;
+        x86_64::paging::context vmm;
         tid_t tid;
         x86_64::spinlock::mutex thread_lock;
+
+		handles::handle_catalogue handle_catalogue;
 
         void set_state(proc::process::thread_state new_state);
 

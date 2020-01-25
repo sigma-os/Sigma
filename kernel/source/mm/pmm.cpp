@@ -76,8 +76,8 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     stack_top = reinterpret_cast<rle_stack_entry*>(kernel_end);
 
-    mbd_start = boot_protocol->reserve_start;
-    mbd_end = (boot_protocol->reserve_start + boot_protocol->reserve_length);
+    mbd_start = boot_protocol->reserve_start & ~(mm::pmm::block_size - 1);
+    mbd_end = ((boot_protocol->reserve_start + boot_protocol->reserve_length) & ~(mm::pmm::block_size - 1)) + mm::pmm::block_size;
     initrd_start = boot_protocol->kernel_initrd_ptr;
     initrd_end = boot_protocol->kernel_initrd_size + initrd_start;
 
