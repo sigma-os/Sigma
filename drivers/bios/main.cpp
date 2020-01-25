@@ -16,12 +16,21 @@ int main(){
 
     vbe::init(cpu);
 
-    uint16_t mode = vbe::set_mode(1920, 1080, 32);
+    /*uint16_t mode = vbe::set_mode(1920, 1080, 32);
 
     printf("bios: VBE set mode: %04x\n", mode);
 
     auto* info = vbe::get_mode_info(mode);
 
-    printf("bios: LFB %p\n", (void*)(info->framebuffer));
+    printf("bios: LFB 0x%x\n", info->framebuffer);*/
+
+    if(!vbe::edid_supported())
+        printf("bios: EDID unsupported\n");
+
+    auto edid = vbe::get_edid_block();
+
+    auto res = vbe::get_display_native_res(edid);
+
+    printf("Native display res: %dx%d\n", res.first, res.second);
     return 0;
 }
