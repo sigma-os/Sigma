@@ -93,7 +93,7 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
     vmcb = (vmcb_t*)((uint64_t)vmcb_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     mm::vmm::kernel_vmm::get_instance().map_page((uint64_t)vmcb_phys, (uint64_t)vmcb, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);   
 
-    *vmcb = {}; // Clear vmcb
+    *vmcb = vmcb_t{}; // Clear vmcb
 
     // Setup the Nested Paging
     vmcb->np_enable = 1; // Enable Nested Paging
@@ -166,8 +166,12 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
 
     vmcb->guest_asid = 1; // TODO: tf is an ASID?
 
-    auto init_selector = []() -> x86_64::svm::vmcb_t::selector {
-        return {.selector = 0, .attrib = /*0x9300*//*((1 << 1) | (1 << 4) | (1 << 7))*/0x93, .limit = 0xFFFF, .base = 0};
+    auto init_selector = []() -> x86_64::svm::vmcb_t::segment {
+        x86_64::svm::vmcb_t::segment seg{};
+
+        seg.limit = 0xFFFF;
+        seg.attrib = 0x93;
+        return seg;
     };
 
     vmcb->ds = init_selector();
@@ -184,7 +188,10 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
     vmcb->tr.attrib = (1 << 7) | 30x8b00;*/
 
     // Correct Boot Segment + RIP
-    vmcb->cs = {.selector = 0xF000, .attrib = /*((1 << 1) | (1 << 3) | (1 << 4) | (1 << 7))*/0x9b, .limit = 0xFFFF, .base = 0xFFFF0000};
+    vmcb->cs.selector = 0xF000;
+    vmcb->cs.attrib = /*((1 << 1) | (1 << 3) | (1 << 4) | (1 << 7))*/0x9b;
+    vmcb->cs.limit = 0xFFFF;
+    vmcb->cs.base = 0xFFFF0000;
     vmcb->rip = 0x0000fff0;
 
     vmcb->efer = (1 << 12); // set svme
@@ -412,51 +419,17 @@ void x86_64::svm::vcpu::get_regs(virt::vregs* regs){
 
     regs->efer = vmcb->efer;
 
-    regs->cs.base = vmcb->cs.base;
-    regs->cs.limit = vmcb->cs.limit;
-    regs->cs.attrib = vmcb->cs.attrib;
-    regs->cs.selector = vmcb->cs.selector;
+    regs->cs = vmcb->cs;
+    regs->ds = vmcb->ds;
+    regs->es = vmcb->es;
+    regs->ss = vmcb->ss;
+    regs->fs = vmcb->fs;
+    regs->gs = vmcb->gs;
+    regs->ldtr = vmcb->ldtr;
+    regs->tr = vmcb->tr;
 
-    regs->ds.base = vmcb->ds.base;
-    regs->ds.limit = vmcb->ds.limit;
-    regs->ds.attrib = vmcb->ds.attrib;
-    regs->ds.selector = vmcb->ds.selector;
-    
-    regs->ss.base = vmcb->ss.base;
-    regs->ss.limit = vmcb->ss.limit;
-    regs->ss.attrib = vmcb->ss.attrib;
-    regs->ss.selector = vmcb->ss.selector;
-
-    regs->es.base = vmcb->es.base;
-    regs->es.limit = vmcb->es.limit;
-    regs->es.attrib = vmcb->es.attrib;
-    regs->es.selector = vmcb->es.selector;
-
-    regs->fs.base = vmcb->fs.base;
-    regs->fs.limit = vmcb->fs.limit;
-    regs->fs.attrib = vmcb->fs.attrib;
-    regs->fs.selector = vmcb->fs.selector;
-
-    regs->gs.base = vmcb->gs.base;
-    regs->gs.limit = vmcb->gs.limit;
-    regs->gs.attrib = vmcb->gs.attrib;
-    regs->gs.selector = vmcb->gs.selector;
-
-    regs->ldtr.base = vmcb->ldtr.base;
-    regs->ldtr.limit = vmcb->ldtr.limit;
-    regs->ldtr.attrib = vmcb->ldtr.attrib;
-    regs->ldtr.selector = vmcb->ldtr.selector;
-
-    regs->tr.base = vmcb->tr.base;
-    regs->tr.limit = vmcb->tr.limit;
-    regs->tr.attrib = vmcb->tr.attrib;
-    regs->tr.selector = vmcb->tr.selector;
-
-    regs->gdtr.base = vmcb->gdtr.base;
-    regs->gdtr.limit = vmcb->gdtr.limit;
-
-    regs->idtr.base = vmcb->idtr.base;
-    regs->idtr.limit = vmcb->idtr.limit;
+    regs->gdtr = vmcb->gdtr;
+    regs->idtr = vmcb->idtr;
 }
 
 void x86_64::svm::vcpu::set_regs(virt::vregs* regs){
@@ -489,51 +462,17 @@ void x86_64::svm::vcpu::set_regs(virt::vregs* regs){
 
     vmcb->efer = regs->efer;
 
-    vmcb->cs.base = regs->cs.base;
-    vmcb->cs.limit = regs->cs.limit;
-    vmcb->cs.attrib = regs->cs.attrib;
-    vmcb->cs.selector = regs->cs.selector;
+    vmcb->cs = svm::vmcb_t::segment{regs->cs};
+    vmcb->ds = svm::vmcb_t::segment{regs->ds};
+    vmcb->es = svm::vmcb_t::segment{regs->es};
+    vmcb->ss = svm::vmcb_t::segment{regs->ss};
+    vmcb->fs = svm::vmcb_t::segment{regs->fs};
+    vmcb->gs = svm::vmcb_t::segment{regs->gs};
 
-    vmcb->ds.base = regs->ds.base;
-    vmcb->ds.limit = regs->ds.limit;
-    vmcb->ds.attrib = regs->ds.attrib;
-    vmcb->ds.selector = regs->ds.selector;
-    
-    vmcb->ss.base = regs->ss.base;
-    vmcb->ss.limit = regs->ss.limit;
-    vmcb->ss.attrib = regs->ss.attrib;
-    vmcb->ss.selector = regs->ss.selector;
-
-    vmcb->es.base = regs->es.base;
-    vmcb->es.limit = regs->es.limit;
-    vmcb->es.attrib = regs->es.attrib;
-    vmcb->es.selector = regs->es.selector;
-
-    vmcb->fs.base = regs->fs.base;
-    vmcb->fs.limit = regs->fs.limit;
-    vmcb->fs.attrib = regs->fs.attrib;
-    vmcb->fs.selector = regs->fs.selector;
-
-    vmcb->gs.base = regs->gs.base;
-    vmcb->gs.limit = regs->gs.limit;
-    vmcb->gs.attrib = regs->gs.attrib;
-    vmcb->gs.selector = regs->gs.selector;
-
-    vmcb->ldtr.base = regs->ldtr.base;
-    vmcb->ldtr.limit = regs->ldtr.limit;
-    vmcb->ldtr.attrib = regs->ldtr.attrib;
-    vmcb->ldtr.selector = regs->ldtr.selector;
-
-    vmcb->tr.base = regs->tr.base;
-    vmcb->tr.limit = regs->tr.limit;
-    vmcb->tr.attrib = regs->tr.attrib;
-    vmcb->tr.selector = regs->tr.selector;
-
-    vmcb->gdtr.base = regs->gdtr.base;
-    vmcb->gdtr.limit = regs->gdtr.limit;
-
-    vmcb->idtr.base = regs->idtr.base;
-    vmcb->idtr.limit = regs->idtr.limit;
+    vmcb->ldtr = svm::vmcb_t::segment{regs->ldtr};
+    vmcb->tr = svm::vmcb_t::segment{regs->tr};
+    vmcb->gdtr = svm::vmcb_t::segment{regs->gdtr};
+    vmcb->idtr = svm::vmcb_t::segment{regs->idtr};
 }
 
 x86_64::svm::vspace::vspace(): context{x86_64::paging::context{}} {

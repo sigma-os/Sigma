@@ -9,6 +9,8 @@
 namespace x86_64::svm
 {
 	struct PACKED_ATTRIBUTE vmcb_t {
+		vmcb_t() = default;
+
 		struct {
 			uint32_t icept_cr_reads : 16;
 			uint32_t icept_cr_writes : 16;
@@ -121,24 +123,36 @@ namespace x86_64::svm
 		uint8_t reserved_12[0x320];
 
 		// Start of State Save Area
-		struct selector {
+		struct PACKED_ATTRIBUTE segment {
+			segment() = default;
+			segment(virt::vregs::selector in): selector{in.selector}, attrib{in.attrib}, limit{in.limit}, base{in.base} {}
+			segment(virt::vregs::dtable in): limit{in.limit}, base{in.base} {}
+
 			uint16_t selector;
 			uint16_t attrib;
 			uint32_t limit;
 			uint64_t base;
+
+			operator virt::vregs::selector(){
+				return virt::vregs::selector{.selector = selector, .attrib = attrib, .limit = limit, .base = base};
+			}
+
+			operator virt::vregs::dtable(){
+				return virt::vregs::dtable{.base = base, .limit = (uint16_t)limit};
+			}
 		};
 
-		selector es;
-		selector cs;
-		selector ss;
-		selector ds;
-		selector fs;
-		selector gs;
+		segment es;
+		segment cs;
+		segment ss;
+		segment ds;
+		segment fs;
+		segment gs;
 
-		selector gdtr;
-		selector ldtr;
-		selector idtr;
-		selector tr;
+		segment gdtr;
+		segment ldtr;
+		segment idtr;
+		segment tr;
 
 		uint8_t reserved_14[0x2B];
 		uint8_t cpl;
