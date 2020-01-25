@@ -62,7 +62,14 @@ namespace x86_64::svm
 			uint32_t icept_skinit : 1;
 			uint32_t icept_rdtscp : 1;
 			uint32_t icept_icebp : 1;
-			uint32_t reserved : 23;
+			uint32_t icept_wbinvd : 1;
+			uint32_t icept_monitor : 1;
+			uint32_t icept_mwait_unconditional : 1;
+			uint32_t icept_mwait_if_armed : 1;
+			uint32_t icept_xsetbv : 1;
+			uint32_t icept_rdpru : 1;
+			uint32_t icept_efer_write : 1;
+			uint32_t icept_cr_writes_after_finish : 16;
 		};
 		uint8_t reserved_1[0x28];
 		uint16_t pause_filter_threshold;
@@ -196,11 +203,16 @@ namespace x86_64::svm
 
 	bool init();
 
+	constexpr size_t msr_bitmap_size = 2; // 2 Pages
+	constexpr size_t io_bitmap_size = (UINT16_MAX / 8) / 0x1000;
+
 	struct vcpu {
 		vcpu(virt::vspace* space);
 		~vcpu();
 
 		void run(virt::vexit* vexit);
+		void get_regs(virt::vregs* regs);
+		void set_regs(virt::vregs* regs);
 
 		private:
 
@@ -209,6 +221,12 @@ namespace x86_64::svm
 
 		vm_gpr_state gpr_state;
 		vm_host_state host_state;
+
+		uint8_t* msr_bitmap;
+		uint8_t* io_bitmap;
+
+		void* msr_bitmap_phys;
+		void* io_bitmap_phys;
 
 		uint8_t* host_simd;
 		uint8_t* guest_simd;

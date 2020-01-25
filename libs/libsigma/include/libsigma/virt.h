@@ -22,6 +22,8 @@ enum {
 	vCtlExitReasonSRegRead,
 	vCtlExitReasonSRegWrite,
 	vCtlExitReasonNestedPageFault,
+	vCtlExitReasonHypercall,
+	vCtlExitReasonInterrupt,
 
 	vCtlExitReasonInvalidInternalState = -1
 };
@@ -54,11 +56,14 @@ struct vexit {
 	uint8_t opcode[15];
 	uint8_t opcode_length;
 
+	uint8_t interrupt_number;
+
 	union {
 		struct {
 			uint16_t port;
 			uint32_t value;
-			uint8_t width;
+			bool repeated;
+			bool string;
 		} port;
 		struct {
 			uint32_t number;
@@ -77,11 +82,38 @@ struct vexit {
 	};
 };
 
+struct vselector {
+	uint16_t selector;
+	uint16_t attrib;
+	uint32_t limit;
+	uint64_t base;
+};
+
+struct vdtable {
+	uint64_t base;
+	uint16_t limit;
+};
+
+struct vregs {
+	uint64_t rax, rbx, rcx, rdx, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
+	uint64_t rsp, rbp, rip, rflags;
+
+	uint64_t cr0, cr2, cr3, cr4, cr8;
+	uint64_t efer;
+
+	vselector cs, ds, ss, es, fs, gs;
+	vselector ldtr, tr;
+	vdtable gdtr, idtr;
+};
+
 enum {
 	vCtlCreateVcpu = 0,
-	vCtlRunVcpu = 1,
-	vCtlCreateVspace = 2,
-    vCtlMapVspace = 3,
+	vCtlRunVcpu,
+	vCtlGetRegs,
+	vCtlSetRegs,
+	vCtlCreateVspace,
+    vCtlMapVspace,
+	vCtlMapVspacePhys,
 };
 
 uint64_t vctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4);
