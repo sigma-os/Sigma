@@ -11,3 +11,5 @@ add_project_arguments('-Wall', '-Wextra', '-Wno-unknown-pragmas', '-fstrict-vola
 subdir('ata/')
 subdir('ahci/')
 subdir('nvme/')
+
+subdir('bios/')
