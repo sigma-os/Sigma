@@ -236,6 +236,32 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
         for(uint8_t i = 0; i < 3; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
     }
 
+    uint16_t status = x86_64::pci::read(seg, bus, device, function, 2);
+    if(status & (1 << 4)){ // Capability List valid
+        uint8_t next_ptr = x86_64::pci::read(seg, bus, device, function, 0x34, 1);
+
+        while(next_ptr){
+            uint8_t id = x86_64::pci::read(seg, bus, device, function, next_ptr, 1);
+
+            switch (id){
+            case 0x05: // Message Signaled Interrupt
+                dev->msi.supported = true;
+                dev->msi.space_offset = next_ptr;
+                break;
+
+            case 0x11: // Message Signaled Interrupt-X
+                dev->msix.supported = true;
+                dev->msix.space_offset = next_ptr;
+                break;
+            
+            default:
+                break;
+            }
+
+            next_ptr = x86_64::pci::read(seg, bus, device, function, next_ptr + 1, 1);
+        }
+    }
+
     proc::device::add_pci_device(dev);
 }
 
@@ -344,10 +370,18 @@ void x86_64::pci::parse_pci(){
 
     for(const auto& entry : pci_devices){
         if(entry.exists){
+            debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d]", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.prog_if);
+
             if(entry.has_irq)
-                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d], gsi: %d\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.prog_if, entry.gsi);
-            else
-                debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d]\n", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.prog_if);
+                debug_printf(", gsi: %d", entry.gsi);
+
+            if(entry.msi.supported)
+                debug_printf(", MSI supported");
+
+            if(entry.msix.supported)
+                debug_printf(", MSI-X supported");
+
+            debug_printf("\n");
         }
     } 
 }
@@ -554,4 +588,36 @@ static void pci_route_all_irqs(){
                 debug_printf("      Dev is not on root bus\n");
         }
     }
+}
+
+
+void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
+    uint16_t command = x86_64::pci::read(seg, bus, this->device, function, msi.space_offset + msi::msi_control_reg, 2);
+
+    msi::address addr{};
+    msi::data data{};
+
+    addr.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, 2);
+
+    if(command & msi::msi_64bit_supported)
+        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_64, 2);
+    else
+        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_32, 2);
+
+    data.vector = vector;
+    data.delivery_mode = 0;
+
+    addr.base_address = 0xFEE;
+    addr.destination_id = dest_id;
+
+    x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, addr.raw, 2);
+
+    if(command & msi::msi_64bit_supported)
+        x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_64, data.raw, 2);
+    else
+        x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_32, data.raw, 2);
+
+    command |= msi::msi_enable;
+
+    x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, command, 2);
 }

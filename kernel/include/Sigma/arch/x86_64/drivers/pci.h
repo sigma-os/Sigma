@@ -29,6 +29,45 @@ namespace acpi
 
 namespace x86_64::pci
 {
+    namespace msi
+    {
+        enum {
+            msi_control_reg = 0x2,
+            msi_addr_reg_low = 0x4,
+            msi_data_32 = 0x8,
+            msi_data_64 = 0xC,
+
+            msi_64bit_supported = (1 << 7),
+            msi_enable = (1 << 1)
+        };
+
+        union PACKED_ATTRIBUTE address {
+            struct {
+                uint32_t reserved : 2;
+                uint32_t destination_mode : 1;
+                uint32_t redirection_hint : 1;
+                uint32_t _reserved_0 : 8;
+                uint32_t destination_id : 8;
+                // must be 0xFEE
+                uint32_t base_address : 12;
+            };
+            uint32_t raw;
+        };
+
+        union PACKED_ATTRIBUTE data {
+            struct {
+                uint32_t vector : 8;
+                uint32_t delivery_mode : 3;
+                uint32_t reserved : 3;
+                uint32_t level : 1;
+                uint32_t trigger_mode : 1;
+                uint32_t reserved_0 : 16;
+            };
+            uint32_t raw;
+        };
+    } // namespace msi
+    
+
     constexpr uint16_t config_addr = 0xCF8;
     constexpr uint16_t config_data = 0xCFC;
 
@@ -69,10 +108,22 @@ namespace x86_64::pci
         lai_nsnode_t* node;
         lai_variable_t prt;
 
+        struct {
+            bool supported;
+            uint8_t space_offset;
+        } msi;
+
+        struct {
+            bool supported;
+            uint8_t space_offset;
+        } msix;
+
 
         bool has_irq;
         uint32_t gsi;
         x86_64::pci::bar bars[6];
+
+        void install_msi(uint32_t dest_id, uint8_t vector);
     };
 
     using pci_iterator = uint64_t;
