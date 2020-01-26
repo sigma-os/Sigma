@@ -612,6 +612,17 @@ void x86_64::identify_cpu(){
         if(c & AVX512VPOPCNTDQ) debug_printf("avx-512vpopcntdq ");
         if(c & RDPID) debug_printf("rdpid ");
     }
+
+    if(x86_64::cpuid(0x80000001, a, b, c, d)){
+        if(d & SYSCALL) debug_printf("syscall ");
+        if(d & NX) debug_printf("nx ");
+        if(d & FFXSR) debug_printf("fast-fxsave ");
+        if(d & PDPE1GB) debug_printf("pdpe1gb ");
+        if(d & RDTSCP) debug_printf("rdtscp ");
+        if(d & LM) debug_printf("lm ");
+        
+        if(c & SVM) debug_printf("svm ");
+    }
     debug_printf("\n");
 }
 

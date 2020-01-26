@@ -292,6 +292,7 @@ namespace x86_64
 
         /* Features in %ecx for leaf 0x80000001 */
         constexpr uint64_t LAHF_LM = 0x00000001;
+        constexpr uint64_t SVM = 0x00000004;
         constexpr uint64_t ABM = 0x00000020;
         constexpr uint64_t LZCNT = ABM; /* for gcc compat */
         constexpr uint64_t SSE4a = 0x00000040;
@@ -303,10 +304,16 @@ namespace x86_64
         constexpr uint64_t MWAITX = 0x20000000;
 
         /* Features in %edx for leaf 0x80000001 */
+        constexpr uint64_t SYSCALL = 0x800;
+        constexpr uint64_t NX = 0x100000;
         constexpr uint64_t MMXEXT = 0x00400000;
+        constexpr uint64_t FFXSR = 0x2000000;
+        constexpr uint64_t PDPE1GB = 0x4000000;
+        constexpr uint64_t RDTSCP = 0x8000000;
         constexpr uint64_t LM = 0x20000000;
         constexpr uint64_t n3DNOWP = 0x40000000;
         constexpr uint64_t n3DNOW = 0x80000000;
+                                      
 
         /* Features in %ebx for leaf 0x80000008 */
         constexpr uint64_t CLZERO = 0x00000001;
