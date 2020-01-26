@@ -147,7 +147,6 @@ void handle_request(){
 int main(){
     fs::devfs devfs{};
     devfs.init();
-    devfs.add_file("/sysout", fs::devfs::sysout_node_factory());
 
     auto loop = [&](){
         while(true) 

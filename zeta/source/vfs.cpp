@@ -4,6 +4,7 @@
 #include <string_view>
 #include <cstring>
 #include <fcntl.h>
+#include <unistd.h>
 
 using namespace fs;
 
@@ -24,7 +25,15 @@ vfs& fs::get_vfs(){
 
 thread_vfs_entry& vfs::get_thread_entry(tid_t tid){
     auto& data = this->thread_data[tid];
-    if(!data.enabled) data.init(tid);
+    if(!data.enabled){
+		data.init(tid);
+
+		int stdout = this->open(tid, "/dev/stdout", O_WRONLY);
+		dup2(tid, stdout, STDOUT_FILENO);
+
+		int stderr = this->open(tid, "/dev/stderr", O_WRONLY);
+		dup2(tid, stderr, STDERR_FILENO);
+	}
     return data;
 }
 

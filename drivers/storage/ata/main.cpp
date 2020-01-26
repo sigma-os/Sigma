@@ -6,9 +6,9 @@
 #include <iostream>
 
 int main(){
-    int fd = open("/dev/sysout", O_WRONLY);
-    dup2(fd, STDOUT_FILENO);
-    dup2(fd, STDERR_FILENO);
+    // Disable buffering for stdout and stderr so debug message show up immediately
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
 
     std::cerr << "ata: Driver is W.I.P." << std::endl;
 

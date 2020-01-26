@@ -69,7 +69,7 @@ namespace fs {
 			this->tid = tid;
 		}
 		tid_t tid;
-		int free_fd = 500; // TODO: Handle this correctly
+		int free_fd = 3; // TODO: Handle this correctly
 		std::unordered_map<int, fd_data> fd_map;
 		std::string cwd;
 		bool enabled;
