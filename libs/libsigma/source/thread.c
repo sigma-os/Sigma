@@ -13,8 +13,12 @@ void libsigma_kill(void){
               // Just to suffer
 }
 
-uint64_t libsigma_get_um_tid(void){
+tid_t libsigma_get_um_tid(void){
     return libsigma_syscall0(SIGMA_SYSCALL_GET_UM_TID);
+}
+
+tid_t libsigma_get_current_tid(void){
+    return libsigma_syscall0(SIGMA_SYSCALL_GET_CURRENT_TID);
 }
 
 int libsigma_block_thread(enum libsigma_block_reasons reason){

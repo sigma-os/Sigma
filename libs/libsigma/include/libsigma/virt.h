@@ -101,9 +101,9 @@ struct vregs {
 	uint64_t cr0, cr2, cr3, cr4, cr8;
 	uint64_t efer;
 
-	vselector cs, ds, ss, es, fs, gs;
-	vselector ldtr, tr;
-	vdtable gdtr, idtr;
+	struct vselector cs, ds, ss, es, fs, gs;
+	struct vselector ldtr, tr;
+	struct vdtable gdtr, idtr;
 };
 
 enum {

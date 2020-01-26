@@ -145,6 +145,10 @@ static uint64_t syscall_devctl(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers
     return proc::device::devctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 }
 
+static uint64_t syscall_get_current_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
+    return proc::process::get_current_tid();
+}
+
 // ARG0: Size in bytes
 // ARG1: prot
 // ARG2: flags
@@ -195,7 +199,8 @@ kernel_syscall syscalls[] = {
     {.func = syscall_fork, .name = "fork"},
     {.func = syscall_devctl, .name = "devctl"},
     {.func = syscall_get_phys_region, .name = "get_phys_region"},
-    {.func = syscall_vctl, .name = "vctl"}
+    {.func = syscall_vctl, .name = "vctl"},
+    {.func = syscall_get_current_tid, .name = "get_current_tid"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

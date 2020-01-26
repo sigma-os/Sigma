@@ -25,6 +25,7 @@ extern "C" {
 #define SIGMA_SYSCALL_DEVCTL          12
 #define SIGMA_SYSCALL_GET_PHYS_REGION 13
 #define SIGMA_SYSCALL_VCTL            14
+#define SIGMA_SYSCALL_GET_CURRENT_TID 15
 
 uint64_t libsigma_syscall0(uint64_t number);
 uint64_t libsigma_syscall1(uint64_t number, uint64_t arg1);
