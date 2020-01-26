@@ -98,12 +98,11 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
     // Setup the Nested Paging
     vmcb->np_enable = 1; // Enable Nested Paging
     vmcb->n_cr3 = (uint64_t)npt->get_paging_info() - KERNEL_VBASE;
-    vmcb->g_pat = x86_64::pat::pat;
+    vmcb->g_pat = x86_64::pat::default_pat;
 
-    vmcb->icept_exceptions |= (1 << 14) | (1 << 6) | (1 << 18) | (1 << 17) | (1 << 1);
+    vmcb->icept_exceptions |= (1 << 1) | (1 << 6) | (1 << 14) | (1 << 17) | (1 << 18);
 
-    vmcb->icept_cr_reads |= (1 << 0) | (1 << 4);
-    vmcb->icept_cr_writes |= (1 << 0) | (1 << 4) | (1 << 8);
+    vmcb->icept_cr_writes |= (1 << 8); // Intercept cr8 writes since no AVIC
 
     vmcb->icept_vmrun = 1;
     vmcb->icept_vmmcall = 1;
@@ -162,13 +161,11 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
     memset(io_bitmap, 0xFF, svm::io_bitmap_size * mm::pmm::block_size);
 
 
-
-
-    vmcb->guest_asid = 1; // TODO: tf is an ASID?
+    vmcb->guest_asid = 1;
+    vmcb->tlb_control = 1; // Flush all ASIDs every vmrun so we don't have to care about using different ASIDs
 
     auto init_selector = []() -> x86_64::svm::vmcb_t::segment {
         x86_64::svm::vmcb_t::segment seg{};
-
         seg.limit = 0xFFFF;
         seg.attrib = 0x93;
         return seg;
@@ -180,25 +177,20 @@ x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
     vmcb->gs = init_selector();
     vmcb->ss = init_selector();
     
-    vmcb->idtr.limit = 0x3ff;
+    vmcb->idtr.limit = 0x3ff; // Limit for Real Mode IVT
 
-    /*vmcb->ldtr = init_selector();
-    vmcb->tr = init_selector();
-    vmcb->ldtr.attrib = (1 << 7) | 20x8200;
-    vmcb->tr.attrib = (1 << 7) | 30x8b00;*/
-
-    // Correct Boot Segment + RIP
+    // Correct Boot Segment + RIP, Reset vector is Physical 0xFFFFFFF0
     vmcb->cs.selector = 0xF000;
-    vmcb->cs.attrib = /*((1 << 1) | (1 << 3) | (1 << 4) | (1 << 7))*/0x9b;
+    vmcb->cs.attrib = 0x9b;
     vmcb->cs.limit = 0xFFFF;
     vmcb->cs.base = 0xFFFF0000;
     vmcb->rip = 0x0000fff0;
 
-    vmcb->efer = (1 << 12); // set svme
+    vmcb->efer = (1 << 12); // EFER.SVME is required to be set
     
     vmcb->rflags = (1 << 1); // Bit is reserved and should always be set
     vmcb->dr6 = 0xFFFF0FF0;
-    vmcb->cr0 = (1 << 29) | (1 << 30) | (1 << 4); // NW, CD, ET
+    vmcb->cr0 = (1 << 29) | (1 << 30) | (1 << 4); // set cr0.{NW, CD, ET}
 
     guest_simd = proc::simd::create_state();
     host_simd = proc::simd::create_state();
@@ -209,11 +201,17 @@ x86_64::svm::vcpu::~vcpu(){
     proc::simd::destroy_state(host_simd);
 
     mm::pmm::free_block(vmcb_phys);
+    for(size_t i = 0; i < svm::msr_bitmap_size; i++)
+        mm::pmm::free_block((void*)((uintptr_t)msr_bitmap_phys + (i * mm::pmm::block_size)));
+    for(size_t i = 0; i < svm::io_bitmap_size; i++)
+        mm::pmm::free_block((void*)((uintptr_t)io_bitmap_phys + (i * mm::pmm::block_size)));
 }
 
 void x86_64::svm::vcpu::run(virt::vexit* vexit){
     while(true){
         asm("clgi");
+
+        // {FS, GS, KernelGS}Base are not stored or reloaded by vmrun, so do it ourselves
         host_state.fs_base = x86_64::msr::read(x86_64::msr::fs_base);
         host_state.gs_base = x86_64::msr::read(x86_64::msr::gs_base);
         host_state.gs_kernel_base = x86_64::msr::read(x86_64::msr::kernelgs_base);
@@ -232,100 +230,88 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
 
         auto* cpu = smp::cpu::get_current_cpu();
         
+        // Reload TSS
         auto& tss_entry = cpu->gdt->get_entry_by_offset(cpu->tss_gdt_offset);
+        // Make TSS available again
         tss_entry.ent &= ~(0x1Full << 40);
         tss_entry.ent |= (9ull << 40);
         cpu->tss->load(cpu->tss_gdt_offset);
 
-        x86_64::msr::write(x86_64::msr::ia32_pat, x86_64::pat::pat);
+        // Reload PAT
+        x86_64::msr::write(x86_64::msr::ia32_pat, x86_64::pat::sigma_pat);
         asm("stgi");
 
         // TODO: Someway to see if the user wants to exit on hlt, for all these if(1)
         switch (vmcb->exitcode)
         {
-        case 0x40 ... 0x5F: {
+        case 0x40 ... 0x5F: { // Exception[0, 31]
             uint8_t int_no = vmcb->exitcode - 0x40;
             printf("[SVM]: Interrupt, V: %x, gRIP: %x, gRSP: %x\n", int_no, vmcb->rip, vmcb->rsp);
 
-            if(1){
-                vexit->reason = virt::vCtlExitReasonInterrupt;
-                vexit->interrupt_number = int_no;
-
-                return;
-            }
-            break;
+            vexit->reason = virt::vCtlExitReasonInterrupt;
+            vexit->interrupt_number = int_no;
+            return;
         }
         
-        case 0x6e:
+        case 0x6e: // rdtsc
             vmcb->rip += 2;
 
-            if(1){
-                vexit->reason = virt::vCtlExitReasonRdtsc;
-                vexit->opcode[0] = 0x0F;
-                vexit->opcode[1] = 0x31;
-                vexit->opcode_length = 2;
-                return;
-            }
-            break;
-        case 0x78:
+            vexit->reason = virt::vCtlExitReasonRdtsc;
+            vexit->opcode[0] = 0x0F;
+            vexit->opcode[1] = 0x31;
+            vexit->opcode_length = 2;
+            return;
+        case 0x78: // hlt
             vmcb->rip++;
 
-            if(1){
-                vexit->reason = virt::vCtlExitReasonHlt;
-                vexit->opcode[0] = 0xF4;
-                vexit->opcode_length = 1;
-                return;
-            }
-            break;
-        case 0x7B: {// IO
+            vexit->reason = virt::vCtlExitReasonHlt;
+            vexit->opcode[0] = 0xF4;
+            vexit->opcode_length = 1;
+            return;
+        case 0x7B: {// Port IO
             // TODO: Not done yet
             auto old_rip = vmcb->rip;
             printf("YEET: %x vs %x\n", vmcb->rip, vmcb->exitinfo2);
             vmcb->rip = vmcb->exitinfo2; // Exitinfo2 contains the next rip
 
-            if(1){
-                vexit->reason = (vmcb->exitinfo1 & (1 << 0)) ? (virt::vCtlExitReasonPortRead) : (virt::vCtlExitReasonPortWrite);
+            vexit->reason = (vmcb->exitinfo1 & (1 << 0)) ? (virt::vCtlExitReasonPortRead) : (virt::vCtlExitReasonPortWrite);
 
-                vexit->port.port = (vmcb->exitinfo1 >> 16) & 0xFFFF;
+            vexit->port.port = (vmcb->exitinfo1 >> 16) & 0xFFFF;
                 
-                if(vmcb->exitinfo1 & (1 << 4))
-                    vexit->port.width = 8;
-                else if(vmcb->exitinfo1 & (1 << 5))
-                    vexit->port.width = 16;
-                else if(vmcb->exitinfo1 & (1 << 6))
-                    vexit->port.width = 32;
+            if(vmcb->exitinfo1 & (1 << 4))
+                vexit->port.width = 8;
+            else if(vmcb->exitinfo1 & (1 << 5))
+                vexit->port.width = 16;
+            else if(vmcb->exitinfo1 & (1 << 6))
+                vexit->port.width = 32;
                 
-                vexit->port.repeated = (vmcb->exitinfo1 & (1 << 3));
-                vexit->port.string = (vmcb->exitinfo1 & (1 << 2));
+            vexit->port.repeated = (vmcb->exitinfo1 & (1 << 3));
+            vexit->port.string = (vmcb->exitinfo1 & (1 << 2));
 
-                vexit->opcode_length = vmcb->rip - old_rip;
+            vexit->opcode_length = vmcb->rip - old_rip;
 
-                auto host_phys_rip = npt->get_phys(vmcb->cs.base + old_rip);
-                if(host_phys_rip != ~1ull){
-                    mm::vmm::kernel_vmm::get_instance().map_page(host_phys_rip, host_phys_rip + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present);
+            auto host_phys_rip = npt->get_phys(vmcb->cs.base + old_rip);
+            if(host_phys_rip != ~1ull){
+                mm::vmm::kernel_vmm::get_instance().map_page(host_phys_rip, host_phys_rip + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present);
 
-                    for(int i = 0; i < vexit->opcode_length; i++)
-                        vexit->opcode[i] = ((uint8_t*)host_phys_rip + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE)[i];
+                for(int i = 0; i < vexit->opcode_length; i++)
+                    vexit->opcode[i] = ((uint8_t*)host_phys_rip + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE)[i];
 
-                } else {
-                    PANIC("Couldn't find gRIP mapping");
-                }
-                return;
+            } else {
+                PANIC("Couldn't find gRIP mapping");
             }
-            break;
+            return;
         }
-        case 0x81: // VMMCALL
+        case 0x81: // vmmcall
             vmcb->rip += 3;
 
-            if(1){
-                vexit->reason = virt::vCtlExitReasonHypercall;
-                vexit->opcode[0] = 0x0F;
-                vexit->opcode[1] = 0x01;
-                vexit->opcode[2] = 0xD9;
-                vexit->opcode_length = 3;
-                return;
-            }
-        case 0x400: {
+            vexit->reason = virt::vCtlExitReasonHypercall;
+            vexit->opcode[0] = 0x0F;
+            vexit->opcode[1] = 0x01;
+            vexit->opcode[2] = 0xD9;
+            vexit->opcode_length = 3;
+            return;
+        case 0x400: { // Nested Page Fault
             printf("[SVM] Nested Page Fault, Faulting address: %x ", vmcb->exitinfo2);
 
             if(!(vmcb->exitinfo1 & (1 << 0)))
@@ -349,9 +335,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
             auto host_phys_rip = npt->get_phys(rip);
 
             printf("      Address Page entry: %x\n", npt->get_entry(vmcb->exitinfo2));
-
             printf("      gRIP Page entry: %x\n", npt->get_entry(rip));
-
             printf("      gRIP: [gVirtual: %x, hPhys: %x]\n      Instruction bytes: \n      ", rip, host_phys_rip);
 
             if(host_phys_rip != ~1ull){
@@ -384,7 +368,8 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
         default:
             printf("[SVM] Unknown exitcode: %x\n", vmcb->exitcode);
             
-            return;
+            asm("cli; hlt");
+            break;
         }
     }
 }

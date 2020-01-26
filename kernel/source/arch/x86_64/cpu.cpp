@@ -50,7 +50,7 @@ void x86_64::pat::init(){
     uint32_t a, b, c, d;
     if(cpuid(1, a, b, c, d)){
         if(d & cpuid_bits::PAT){
-            x86_64::msr::write(x86_64::msr::ia32_pat, pat::pat);
+            x86_64::msr::write(x86_64::msr::ia32_pat, pat::sigma_pat);
             debug_printf("[CPU]: Enabled PAT\n");
         } else {
             PANIC("PAT is not available");
