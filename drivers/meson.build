@@ -8,8 +8,6 @@ default_include_dirs = [libdriver_include_dir]
 
 add_project_arguments('-Wall', '-Wextra', '-Wno-unknown-pragmas', '-fstrict-volatile-bitfields', language: 'cpp')
 
-subdir('ata/')
-subdir('ahci/')
-subdir('nvme/')
+subdir('storage/')
 
-subdir('bios/')
+subdir('video/')

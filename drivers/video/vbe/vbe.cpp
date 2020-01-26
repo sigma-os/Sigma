@@ -21,11 +21,11 @@ bool vbe::init(rm_cpu& vcpu){
     cpu->intn(0x10, regs);
 
     if(regs.eax != 0x4F || regs.eflags & (1 << 0)){
-        printf("bios: VBE unsupported\n");
+        printf("vbe: VBE unsupported\n");
         return false;
     }
         
-    printf("bios: Detected VBE Support\n\tSignature: %.4s\n\tRevision: %d.%d\n\tTotal Memory: %dKB\n", info->sig, info->major_ver, info->minor_ver, info->total_mem * 64);
+    printf("vbe: Detected VBE Support\n\tSignature: %.4s\n\tRevision: %d.%d\n\tTotal Memory: %dKB\n", info->sig, info->major_ver, info->minor_ver, info->total_mem * 64);
 
     auto print_bios_string = [](const char* prefix, vbe_far_ptr ptr){
         // Real mode segment:offset pair
@@ -63,7 +63,7 @@ bool vbe::init(rm_cpu& vcpu){
 
         cpu->intn(0x10, regs);
         if(regs.eax != 0x4F || regs.eflags & (1 << 0)){
-            printf("bios: Failed to find mode info for VBE mode 0x%04x\n", mode);
+            printf("vbe: Failed to find mode info for VBE mode 0x%04x\n", mode);
             continue;
         }
 
@@ -92,7 +92,7 @@ uint16_t vbe::set_mode(uint16_t width, uint16_t height, uint8_t bpp){
     }
     
     if(mode_to_set == 0){
-        printf("bios: Couldn't find matching mode for %dx%d %d bpp", width, height, bpp);
+        printf("vbe: Couldn't find matching mode for %dx%d %d bpp", width, height, bpp);
         return -1;
     }
 
@@ -102,7 +102,7 @@ uint16_t vbe::set_mode(uint16_t width, uint16_t height, uint8_t bpp){
 
     cpu->intn(0x10, regs);
     if(regs.eax != 0x4F || regs.eflags & (1 << 0))
-        printf("bios: Failed to set video mode 0x%04x\n", mode_to_set);
+        printf("vbe: Failed to set video mode 0x%04x\n", mode_to_set);
 
     return mode_to_set;
 }
@@ -128,7 +128,7 @@ bool vbe::edid_supported(){
     if((regs.eax & 0xFFFF) != 0x4F || regs.eflags & (1 << 0))
         return false;
 
-    printf("bios: VBE/DDC Supported, Approx time to retrieve EDID Block: %ds%s\n", (regs.ebx >> 8) & 0xFF, (regs.ebx & (1 << 2)) ? ", Screen blanked during data transfer" : "");
+    printf("vbe: VBE/DDC Supported, Approx time to retrieve EDID Block: %ds%s\n", (regs.ebx >> 8) & 0xFF, (regs.ebx & (1 << 2)) ? ", Screen blanked during data transfer" : "");
 
     return true;
 }
@@ -153,7 +153,7 @@ vbe::edid_block vbe::get_edid_block(){
         check += ((uint8_t*)edid)[i];
 
     if(check != 0)
-        printf("bios: EDID Checksum failed\n");
+        printf("vbe: EDID Checksum failed\n");
 
     return *edid;
 }
