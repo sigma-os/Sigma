@@ -186,21 +186,26 @@ struct kernel_syscall {
 
 kernel_syscall syscalls[] = {
     {.func = syscall_early_klog, .name = "early_klog"},
+
     {.func = syscall_set_fsbase, .name = "set_fsbase"},
     {.func = syscall_kill, .name = "kill"},
+    {.func = syscall_fork, .name = "fork"},
+    {.func = syscall_get_current_tid, .name = "get_current_tid"},
+    {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
+    {.func = syscall_block_thread, .name = "block_thread"},
+
     {.func = syscall_vm_map, .name = "vm_map"},
+    {.func = syscall_get_phys_region, .name = "get_phys_region"},
+
     {.func = syscall_initrd_read, .name = "initrd_read"},
     {.func = syscall_initrd_get_size, .name = "initrd_get_size"},
+
     {.func = syscall_send_message, .name = "ipc_send"},
     {.func = syscall_receive_message, .name = "ipc_receive"},
     {.func = syscall_get_message_size, .name = "ipc_get_message_size"},
-    {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
-    {.func = syscall_block_thread, .name = "block_thread"},
-    {.func = syscall_fork, .name = "fork"},
+
     {.func = syscall_devctl, .name = "devctl"},
-    {.func = syscall_get_phys_region, .name = "get_phys_region"},
     {.func = syscall_vctl, .name = "vctl"},
-    {.func = syscall_get_current_tid, .name = "get_current_tid"}
 };
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Zeta/vfs.h>
-#include <libsigma/klog.h>
+#include <libsigma/sys.h>
 #include <cstring>
 #include <string>
 #include <unordered_map>

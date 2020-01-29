@@ -2,7 +2,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <libsigma/device.h>
+#include <libsigma/sys.h>
 #include <iostream>
 
 int main(){
@@ -12,21 +12,21 @@ int main(){
 
     std::cerr << "ata: Driver is W.I.P." << std::endl;
 
-    auto device_descriptor = devctl(DEVCTL_CMD_FIND_PCI_CLASS, 0x1, 0x1, 0, 0);
+    auto device_descriptor = devctl(devCtlFindPciClass, 0x1, 0x1, 0, 0);
     if(device_descriptor == -1){
         std::cout << "ata: Couldn't find IDE controller" << std::endl;
         return 0;
     }
 
-    if(devctl(DEVCTL_CMD_CLAIM, device_descriptor, 0, 0, 0) == -1){
+    if(devctl(devCtlClaim, device_descriptor, 0, 0, 0) == -1){
         std::cout << "ata: Failed to claim controller" << std::endl;
     }
 
     libsigma_resource_region_t regions[4] = {};
-    devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 0, (uint64_t)&regions[0], 0);
-    devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 1, (uint64_t)&regions[1], 0);
-    devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 2, (uint64_t)&regions[2], 0);
-    devctl(DEVCTL_CMD_GET_RESOURCE_REGION, device_descriptor, 3, (uint64_t)&regions[3], 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, 0, (uint64_t)&regions[0], 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, 1, (uint64_t)&regions[1], 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, 2, (uint64_t)&regions[2], 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, 3, (uint64_t)&regions[3], 0);
 
     std::pair<uint16_t, uint16_t> ata1_base = ata::isa_ata1_base;
 

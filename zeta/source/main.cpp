@@ -1,6 +1,4 @@
-#include <libsigma/klog.h>
-#include <libsigma/ipc.h>
-#include <libsigma/thread.h>
+#include <libsigma/sys.h>
 #include <protocols/zeta-std.hpp>
 #include <memory>
 #include <iostream>

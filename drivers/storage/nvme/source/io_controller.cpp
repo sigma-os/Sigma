@@ -1,6 +1,6 @@
 #include <nvme/io_controller.hpp>
 
-#include <libsigma/memory.h>
+#include <libsigma/sys.h>
 #include <iostream>
 #include <sstream>
 #include <sys/mman.h>

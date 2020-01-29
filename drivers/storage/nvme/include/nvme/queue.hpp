@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <libsigma/memory.h>
+#include <libsigma/sys.h>
 #include <libdriver/bit.hpp>
 
 #include <nvme/common.hpp>

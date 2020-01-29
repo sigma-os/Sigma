@@ -9,12 +9,7 @@ libsigma_includes = include_directories('include')
 
 libsigma_sources = files(
     'source/syscall.c',
-    'source/klog.c',
-    'source/thread.c',
-    'source/memory.c',
-    'source/file.c',
-    'source/ipc.c',
-    'source/device.c',
+    'source/sys.c',
     'source/virt.c')
 
 c_args = ['-std=gnu18', '-fvisibility=hidden']
@@ -28,13 +23,8 @@ endif
 if headers_only
 
 libsigma_api_headers = files(
-    'include/libsigma/klog.h',
+    'include/libsigma/sys.h',
     'include/libsigma/syscall.h',
-    'include/libsigma/thread.h',
-    'include/libsigma/memory.h',
-    'include/libsigma/file.h',
-    'include/libsigma/ipc.h',
-    'include/libsigma/device.h',
     'include/libsigma/virt.h')
 
 install_headers(libsigma_api_headers, subdir: 'libsigma')

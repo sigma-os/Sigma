@@ -1,7 +1,7 @@
 #include "ahci.hpp"
 #include <libdriver/bit.hpp>
 
-#include <libsigma/memory.h>
+#include <libsigma/sys.h>
 #include <iostream>
 #include <sys/mman.h>
 #include <assert.h>

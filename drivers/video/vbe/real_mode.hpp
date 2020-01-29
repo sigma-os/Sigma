@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sys/mman.h>
-#include <libsigma/memory.h>
+#include <libsigma/sys.h>
 #include <libsigma/virt.h>
 #include <stdint.h>
 #include <stdio.h>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <libsigma/device.h>
+#include <libsigma/sys.h>
 #include <vector>
 #include <unordered_map>
 

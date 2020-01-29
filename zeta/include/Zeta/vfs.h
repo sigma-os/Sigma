@@ -9,7 +9,7 @@
 #include <Zeta/singleton.h>
 #include <functional>
 
-#include <libsigma/thread.h>
+#include <libsigma/sys.h>
 
 namespace fs {
 
