@@ -38,7 +38,7 @@ namespace x86_64::pci
             msi_data_64 = 0xC,
 
             msi_64bit_supported = (1 << 7),
-            msi_enable = (1 << 1)
+            msi_enable = (1 << 0)
         };
 
         union PACKED_ATTRIBUTE address {

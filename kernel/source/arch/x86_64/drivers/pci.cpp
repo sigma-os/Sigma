@@ -637,17 +637,20 @@ static void pci_route_all_irqs(){
 
 
 void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
-    uint16_t command = x86_64::pci::read(seg, bus, this->device, function, msi.space_offset + msi::msi_control_reg, 2);
+    ASSERT(this->msi.supported);
+    ASSERT(this->msi.space_offset);
+
+    uint16_t command = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, 2);
 
     msi::address addr{};
     msi::data data{};
 
-    addr.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, 2);
+    addr.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, 4);
 
     if(command & msi::msi_64bit_supported)
-        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_64, 2);
+        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_64, 4);
     else
-        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_32, 2);
+        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_32, 4);
 
     data.vector = vector;
     data.delivery_mode = 0;
@@ -655,12 +658,12 @@ void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
     addr.base_address = 0xFEE;
     addr.destination_id = dest_id;
 
-    x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, addr.raw, 2);
+    x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, addr.raw, 4);
 
     if(command & msi::msi_64bit_supported)
-        x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_64, data.raw, 2);
+        x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_64, data.raw, 4);
     else
-        x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_32, data.raw, 2);
+        x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_32, data.raw, 4);
 
     command |= msi::msi_enable;
 
