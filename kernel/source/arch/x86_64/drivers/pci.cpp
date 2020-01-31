@@ -244,6 +244,48 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
             uint8_t id = x86_64::pci::read(seg, bus, device, function, next_ptr, 1);
 
             switch (id){
+            case 0x02: { // AGP
+                dev->agp.supported = true;
+
+                dev->agp.minor_ver = x86_64::pci::read(seg, bus, device, function, next_ptr + 2, 1) & 0xFF;
+                dev->agp.major_ver = (x86_64::pci::read(seg, bus, device, function, next_ptr + 2, 1) >> 4) & 0xFF;
+                
+                auto status = x86_64::pci::read(seg, bus, device, function, next_ptr + 4, 4);
+
+                auto command = x86_64::pci::read(seg, bus, device, function, next_ptr + 8, 4);
+                command |= (1 << 8); // AGP Enable
+
+                // Card running in AGP3 mode
+                if(status & (1 << 3)){
+                    if(status & (1 << 1)) {
+                        dev->agp.speed_multiplier = 8;
+
+                        command |= (1 << 1); // Set x8 multiplier
+                    } else if(status & (1 << 0)){
+                        dev->agp.speed_multiplier = 4;
+
+                        command |= (1 << 0); // Set x2 multiplier
+                    }
+                    
+                    command |= (1 << 9); // SideBand addressing enable, required on AGP3
+                } else {
+                    if(status & (1 << 1)) {
+                        dev->agp.speed_multiplier = 2;
+
+                        command |= (1 << 1); // Set 2x multiplier
+                    } else if(status & (1 << 2)) {
+                        dev->agp.speed_multiplier = 4;
+
+                        command |= (1 << 2); // Set 4x multiplier
+                    }
+
+                    if(status & (1 << 9))
+                        command |= (1 << 9); // SideBand addressing supported, so enable
+                }
+
+                x86_64::pci::write(seg, bus, device, function, next_ptr + 8, command, 4);
+                break;
+            }
             case 0x05: // Message Signaled Interrupt
                 dev->msi.supported = true;
                 dev->msi.space_offset = next_ptr;
@@ -380,6 +422,9 @@ void x86_64::pci::parse_pci(){
 
             if(entry.msix.supported)
                 debug_printf(", MSI-X supported");
+
+            if(entry.agp.supported)
+                debug_printf(", AGP %d.%d Speed multiplier %dx", entry.agp.major_ver, entry.agp.minor_ver, entry.agp.speed_multiplier);
 
             debug_printf("\n");
         }

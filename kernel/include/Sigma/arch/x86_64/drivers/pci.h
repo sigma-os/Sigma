@@ -118,6 +118,12 @@ namespace x86_64::pci
             uint8_t space_offset;
         } msix;
 
+        struct {
+            bool supported;
+            uint8_t minor_ver, major_ver;
+            uint8_t speed_multiplier;
+        } agp;
+
 
         bool has_irq;
         uint32_t gsi;
