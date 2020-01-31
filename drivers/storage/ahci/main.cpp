@@ -23,7 +23,7 @@ int main(){
     }
 
     libsigma_resource_region_t region = {};
-    devctl(devCtlGetResourceRegion, device_descriptor, 5, (uint64_t)&region, 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, resourceRegionOriginPciBar, 5, (uint64_t)&region);
 
     ahci::controller controller{region.base, region.len};
     while(1)

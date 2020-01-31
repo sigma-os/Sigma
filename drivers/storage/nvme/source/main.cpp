@@ -23,7 +23,7 @@ int main(){
     }
 
     libsigma_resource_region_t region = {};
-    devctl(devCtlGetResourceRegion, device_descriptor, 0, (uint64_t)&region, 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, resourceRegionOriginPciBar, 0, (uint64_t)&region);
 
     nvme::io_controller controller{region};
     while(1)

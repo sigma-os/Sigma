@@ -23,10 +23,10 @@ int main(){
     }
 
     libsigma_resource_region_t regions[4] = {};
-    devctl(devCtlGetResourceRegion, device_descriptor, 0, (uint64_t)&regions[0], 0);
-    devctl(devCtlGetResourceRegion, device_descriptor, 1, (uint64_t)&regions[1], 0);
-    devctl(devCtlGetResourceRegion, device_descriptor, 2, (uint64_t)&regions[2], 0);
-    devctl(devCtlGetResourceRegion, device_descriptor, 3, (uint64_t)&regions[3], 0);
+    devctl(devCtlGetResourceRegion, device_descriptor, resourceRegionOriginPciBar, 0, (uint64_t)&regions[0]);
+    devctl(devCtlGetResourceRegion, device_descriptor, resourceRegionOriginPciBar, 1, (uint64_t)&regions[1]);
+    devctl(devCtlGetResourceRegion, device_descriptor, resourceRegionOriginPciBar, 2, (uint64_t)&regions[2]);
+    devctl(devCtlGetResourceRegion, device_descriptor, resourceRegionOriginPciBar, 3, (uint64_t)&regions[3]);
 
     std::pair<uint16_t, uint16_t> ata1_base = ata::isa_ata1_base;
 

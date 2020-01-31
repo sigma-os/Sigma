@@ -34,18 +34,23 @@ namespace proc::device {
             x86_64::pci::device* device;
         } pci_contact;
 
-        
-
         struct resource_region { 
-            static constexpr uint8_t type_mmio = 0;
-            static constexpr uint8_t type_io = 1;
-            static constexpr uint8_t type_invalid = 0xFF;       
+            enum {
+                typeMmio = 0,
+                typeIo,
+
+                typeInvalid = -1
+            };
+
+            enum {
+                originPciBar,
+            };
             uint8_t type;
-            uintptr_t base;
-            size_t len;
+            uint64_t origin;
+            uint64_t base;
+            uint64_t len;
         };
         
-        types::vector<resource_region> resources;
         size_t index;
         tid_t driver;
 
@@ -70,7 +75,7 @@ namespace proc::device {
     device_descriptor find_acpi_node(lai_nsnode_t* node);
     device_descriptor find_pci_node(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function);
     device_descriptor find_pci_class_node(uint8_t class_code, uint8_t subclass_code, uint8_t prog_if, uint64_t index);
-    bool get_resource_region(device_descriptor dev, uint8_t index, device::resource_region* data);
+    bool get_resource_region(device_descriptor dev, uint64_t origin, uint8_t index, device::resource_region* data);
 
     constexpr uint64_t devctl_cmd_nop = 0;
     constexpr uint64_t devctl_cmd_claim = 1;

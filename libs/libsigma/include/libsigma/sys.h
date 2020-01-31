@@ -25,7 +25,7 @@ enum {
 };
 
 enum {
-    resourceRegionRequestPciBar = 0,
+    resourceRegionOriginPciBar = 0,
 
     resourceRegionTypeMmio = 0,
     resourceRegionTypeIo = 1,
@@ -34,8 +34,9 @@ enum {
 
 typedef struct libsigma_resource_region { 
     uint8_t type;
-    uintptr_t base;
-    size_t len;
+    uint64_t origin;
+    uint64_t base;
+    uint64_t len;
 } libsigma_resource_region_t;
 
 uint64_t devctl(uint64_t command, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4);
