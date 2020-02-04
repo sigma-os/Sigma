@@ -78,8 +78,8 @@ bool x86_64::svm::init(){
     return true;
 }
 
-x86_64::svm::vcpu::vcpu(virt::vspace* space): gpr_state({}) {
-    ASSERT(space->type == virt::virt_types::Svm);
+x86_64::svm::vcpu::vcpu(generic::virt::vspace* space): gpr_state({}) {
+    ASSERT(space->type == generic::virt::virt_types::Svm);
 
     auto* svm_vspace = (svm::vspace*)space->ptr;
     npt = &svm_vspace->context;
@@ -207,7 +207,7 @@ x86_64::svm::vcpu::~vcpu(){
         mm::pmm::free_block((void*)((uintptr_t)io_bitmap_phys + (i * mm::pmm::block_size)));
 }
 
-void x86_64::svm::vcpu::run(virt::vexit* vexit){
+void x86_64::svm::vcpu::run(generic::virt::vexit* vexit){
     while(true){
         asm("clgi");
 
@@ -248,7 +248,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
             uint8_t int_no = vmcb->exitcode - 0x40;
             printf("[SVM]: Interrupt, V: %x, gRIP: %x, gRSP: %x\n", int_no, vmcb->rip, vmcb->rsp);
 
-            vexit->reason = virt::vCtlExitReasonInterrupt;
+            vexit->reason = generic::virt::vCtlExitReasonInterrupt;
             vexit->interrupt_number = int_no;
             return;
         }
@@ -256,7 +256,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
         case 0x6e: // rdtsc
             vmcb->rip += 2;
 
-            vexit->reason = virt::vCtlExitReasonRdtsc;
+            vexit->reason = generic::virt::vCtlExitReasonRdtsc;
             vexit->opcode[0] = 0x0F;
             vexit->opcode[1] = 0x31;
             vexit->opcode_length = 2;
@@ -264,7 +264,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
         case 0x78: // hlt
             vmcb->rip++;
 
-            vexit->reason = virt::vCtlExitReasonHlt;
+            vexit->reason = generic::virt::vCtlExitReasonHlt;
             vexit->opcode[0] = 0xF4;
             vexit->opcode_length = 1;
             return;
@@ -274,7 +274,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
             printf("YEET: %x vs %x\n", vmcb->rip, vmcb->exitinfo2);
             vmcb->rip = vmcb->exitinfo2; // Exitinfo2 contains the next rip
 
-            vexit->reason = (vmcb->exitinfo1 & (1 << 0)) ? (virt::vCtlExitReasonPortRead) : (virt::vCtlExitReasonPortWrite);
+            vexit->reason = (vmcb->exitinfo1 & (1 << 0)) ? (generic::virt::vCtlExitReasonPortRead) : (generic::virt::vCtlExitReasonPortWrite);
 
             vexit->port.port = (vmcb->exitinfo1 >> 16) & 0xFFFF;
                 
@@ -305,7 +305,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
         case 0x81: // vmmcall
             vmcb->rip += 3;
 
-            vexit->reason = virt::vCtlExitReasonHypercall;
+            vexit->reason = generic::virt::vCtlExitReasonHypercall;
             vexit->opcode[0] = 0x0F;
             vexit->opcode[1] = 0x01;
             vexit->opcode[2] = 0xD9;
@@ -361,7 +361,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
             printf("[SVM]: Invalid VMCB state\n");
 
             if(1){
-                vexit->reason = virt::vCtlExitReasonInvalidInternalState;
+                vexit->reason = generic::virt::vCtlExitReasonInvalidInternalState;
                 return;
             }
             break;
@@ -374,7 +374,7 @@ void x86_64::svm::vcpu::run(virt::vexit* vexit){
     }
 }
 
-void x86_64::svm::vcpu::get_regs(virt::vregs* regs){
+void x86_64::svm::vcpu::get_regs(generic::virt::vregs* regs){
     regs->rax = vmcb->rax;
 
     regs->rbx = gpr_state.rbx;
@@ -417,7 +417,7 @@ void x86_64::svm::vcpu::get_regs(virt::vregs* regs){
     regs->idtr = vmcb->idtr;
 }
 
-void x86_64::svm::vcpu::set_regs(virt::vregs* regs){
+void x86_64::svm::vcpu::set_regs(generic::virt::vregs* regs){
     vmcb->rax = regs->rax;
 
     gpr_state.rbx = regs->rbx;

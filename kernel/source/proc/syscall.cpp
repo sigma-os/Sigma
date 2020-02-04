@@ -3,7 +3,7 @@
 #include <Sigma/proc/initrd.h>
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/arch/x86_64/cpu.h>
-#include <Sigma/proc/device.h>
+#include <Sigma/generic/device.h>
 #include <atomic>
 
 #define SYSCALL_GET_FUNC() (regs->rax)
@@ -155,7 +155,7 @@ static uint64_t syscall_fork(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* 
 // ARG0: Command
 // ARG1 - N: Optional args to devctl
 static uint64_t syscall_devctl(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
-    return proc::device::devctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4(), regs);
+    return generic::device::devctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4(), regs);
 }
 
 static uint64_t syscall_get_current_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
@@ -185,7 +185,7 @@ static uint64_t syscall_get_phys_region(x86_64::idt::idt_registers* regs){
 // ARG0: command
 // ARG1 - N: argn
 static uint64_t syscall_vctl(x86_64::idt::idt_registers* regs){
-    return virt::vctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
+    return generic::virt::vctl(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), SYSCALL_GET_ARG3(), SYSCALL_GET_ARG4());
 }
 
 

@@ -352,7 +352,7 @@ proc::process::thread* proc::process::get_current_thread(){
     return get_current_managed_cpu()->current_thread;
 }
 
-void proc::process::block_thread(tid_t tid, events::event* event, x86_64::idt::idt_registers* regs){
+void proc::process::block_thread(tid_t tid, generic::event* event, x86_64::idt::idt_registers* regs){
     thread_for_tid(tid)->block(event, regs);
 }
 
@@ -439,7 +439,7 @@ void proc::process::thread::set_state(proc::process::thread_state new_state){
     this->state = new_state;
 }
 
-void proc::process::thread::block(events::event* await, x86_64::idt::idt_registers* regs){
+void proc::process::thread::block(generic::event* await, x86_64::idt::idt_registers* regs){
     this->thread_lock.lock();
     this->event = await;
     this->state = proc::process::thread_state::BLOCKED;

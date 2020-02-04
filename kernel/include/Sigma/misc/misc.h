@@ -8,6 +8,10 @@
 
 namespace misc
 {
+    struct uuid {
+        std::byte data[16];
+    };
+    
 	class id_generator {
 		public:
 		constexpr id_generator(): next_id{0} {}

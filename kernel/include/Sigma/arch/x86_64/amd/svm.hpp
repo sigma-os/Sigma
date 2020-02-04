@@ -125,20 +125,20 @@ namespace x86_64::svm
 		// Start of State Save Area
 		struct PACKED_ATTRIBUTE segment {
 			segment() = default;
-			segment(virt::vregs::selector in): selector{in.selector}, attrib{in.attrib}, limit{in.limit}, base{in.base} {}
-			segment(virt::vregs::dtable in): limit{in.limit}, base{in.base} {}
+			segment(generic::virt::vregs::selector in): selector{in.selector}, attrib{in.attrib}, limit{in.limit}, base{in.base} {}
+			segment(generic::virt::vregs::dtable in): limit{in.limit}, base{in.base} {}
 
 			uint16_t selector;
 			uint16_t attrib;
 			uint32_t limit;
 			uint64_t base;
 
-			operator virt::vregs::selector(){
-				return virt::vregs::selector{.selector = selector, .attrib = attrib, .limit = limit, .base = base};
+			operator generic::virt::vregs::selector(){
+				return generic::virt::vregs::selector{.selector = selector, .attrib = attrib, .limit = limit, .base = base};
 			}
 
-			operator virt::vregs::dtable(){
-				return virt::vregs::dtable{.base = base, .limit = (uint16_t)limit};
+			operator generic::virt::vregs::dtable(){
+				return generic::virt::vregs::dtable{.base = base, .limit = (uint16_t)limit};
 			}
 		};
 
@@ -221,12 +221,12 @@ namespace x86_64::svm
 	constexpr size_t io_bitmap_size = (UINT16_MAX / 8) / 0x1000;
 
 	struct vcpu {
-		vcpu(virt::vspace* space);
+		vcpu(generic::virt::vspace* space);
 		~vcpu();
 
-		void run(virt::vexit* vexit);
-		void get_regs(virt::vregs* regs);
-		void set_regs(virt::vregs* regs);
+		void run(generic::virt::vexit* vexit);
+		void get_regs(generic::virt::vregs* regs);
+		void set_regs(generic::virt::vregs* regs);
 
 		private:
 

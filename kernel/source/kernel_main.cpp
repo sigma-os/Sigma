@@ -31,8 +31,8 @@
 #include <Sigma/proc/process.h>
 #include <Sigma/proc/syscall.h>
 #include <Sigma/proc/elf.h>
-#include <Sigma/proc/device.h>
 
+#include <Sigma/generic/device.h>
 #include <Sigma/generic/virt.hpp>
 
 #include <Sigma/types/linked_list.h>
@@ -117,7 +117,7 @@ C_LINKAGE void kernel_main(){
 
     auto cpus = types::linked_list<smp::cpu_entry>();
 
-    proc::device::init();
+    generic::device::init();
 
     acpi::init(boot_protocol);
     acpi::madt madt = acpi::madt();
@@ -160,7 +160,7 @@ C_LINKAGE void kernel_main(){
 
     proc::process::init_multitasking(madt);
 
-    proc::device::print_list();
+    generic::device::print_list();
 
     smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
     (void)(smp);

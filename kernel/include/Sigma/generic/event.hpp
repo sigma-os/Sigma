@@ -4,7 +4,7 @@
 #include <Sigma/common.h>
 #include <atomic>
 
-namespace events
+namespace generic
 {
     class event {
         public:
@@ -25,7 +25,7 @@ namespace events
         private:
         std::atomic<size_t> count;
     };
-} // namespace events
+} // namespace generic
 
 
 

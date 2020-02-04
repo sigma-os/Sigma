@@ -9,7 +9,7 @@
 
 #include <Sigma/generic/event.hpp>
 
-namespace handles
+namespace generic::handles
 {
 	enum class handle_type {VCpu, VSpace, Irq};
 
@@ -21,11 +21,11 @@ namespace handles
 	};
 
 	struct vcpu_handle : public handle {
-		vcpu_handle(virt::vspace* space): handle{handle_type::VCpu}, cpu{space} {}
+		vcpu_handle(generic::virt::vspace* space): handle{handle_type::VCpu}, cpu{space} {}
 		
 		static constexpr handle_type default_type = handle_type::VCpu;
 
-		virt::vcpu cpu;
+		generic::virt::vcpu cpu;
 	};
 
 	struct vspace_handle : public handle {
@@ -33,7 +33,7 @@ namespace handles
 	
 		static constexpr handle_type default_type = handle_type::VSpace;
 
-		virt::vspace space;
+		generic::virt::vspace space;
 	};
 
 	struct irq_handle : public handle {
@@ -42,7 +42,7 @@ namespace handles
 		static constexpr handle_type default_type = handle_type::Irq;
 
 		uint8_t vector;
-		events::event event;
+		generic::event event;
 	};
 
 	class handle_catalogue {

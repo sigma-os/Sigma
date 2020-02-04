@@ -1,5 +1,5 @@
-#ifndef SIGMA_PROC_DEVICE_H
-#define SIGMA_PROC_DEVICE_H
+#ifndef SIGMA_GENERIC_DEVICE_H
+#define SIGMA_GENERIC_DEVICE_H
 
 #include <Sigma/common.h>
 #include <Sigma/types/vector.h>
@@ -7,14 +7,10 @@
 #include <lai/core.h>
 #include <Sigma/arch/x86_64/drivers/pci.h>
 
-namespace proc::device {
-    struct uuid {
-        std::byte data[16];
-    };
-
+namespace generic::device {
     struct device {
         const char* name;
-        uuid id;
+        misc::uuid id;
 
         struct {
             uint64_t acpi : 1;

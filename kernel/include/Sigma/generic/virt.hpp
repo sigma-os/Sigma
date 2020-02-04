@@ -7,7 +7,7 @@
 #include <Sigma/types/vector.h>
 #include <klibcxx/utility.hpp>
 
-namespace virt {
+namespace generic::virt {
 	enum {
 		vCtlExitReasonHlt = 0,
 		vCtlExitReasonRdtsc,
@@ -130,7 +130,7 @@ namespace virt {
 		vcpu(vspace* space);
 		~vcpu();
 
-		void run(virt::vexit* vexit);
+		void run(generic::virt::vexit* vexit);
 		void get_regs(vregs* regs);
 		void set_regs(vregs* regs);
 

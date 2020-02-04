@@ -120,14 +120,14 @@ namespace proc::process
         tid_t tid;
         x86_64::spinlock::mutex thread_lock;
 
-        events::event* event;
+        generic::event* event;
 
-		handles::handle_catalogue handle_catalogue;
+		generic::handles::handle_catalogue handle_catalogue;
 
         void set_state(proc::process::thread_state new_state);
 
 
-        void block(events::event* await, x86_64::idt::idt_registers* regs);
+        void block(generic::event* await, x86_64::idt::idt_registers* regs);
         void wake();
         bool is_blocked();
 
@@ -188,7 +188,7 @@ namespace proc::process
 
 
     // Blocking
-    void block_thread(tid_t tid, events::event* event, x86_64::idt::idt_registers* regs);
+    void block_thread(tid_t tid, generic::event* event, x86_64::idt::idt_registers* regs);
     void wake_thread(tid_t tid);
     bool is_blocked(tid_t tid);
     

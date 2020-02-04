@@ -5,16 +5,16 @@
 #include <Sigma/generic/user_handle.hpp>
 #include <Sigma/proc/process.h>
 
-virt::virt_types get_type(){
+generic::virt::virt_types get_type(){
 	auto* cpu = smp::cpu::get_current_cpu();
 
 	if(cpu->features.svm)
-		return virt::virt_types::Svm;
+		return generic::virt::virt_types::Svm;
 	else
-		return virt::virt_types::None;
+		return generic::virt::virt_types::None;
 }
 
-virt::vspace::vspace(){
+generic::virt::vspace::vspace(){
 	type = get_type();
 	switch(type){
 		case virt_types::Svm: {
@@ -28,7 +28,7 @@ virt::vspace::vspace(){
 	}
 }
 
-virt::vspace::~vspace(){
+generic::virt::vspace::~vspace(){
 	switch(type){
 		case virt_types::Svm: {
 			if(ptr){
@@ -43,7 +43,7 @@ virt::vspace::~vspace(){
 	}
 }
 
-void virt::vspace::map(uint64_t host_phys, uint64_t guest_phys){
+void generic::virt::vspace::map(uint64_t host_phys, uint64_t guest_phys){
 	switch(type){
 		case virt_types::Svm: {
 			auto* svm_vspace = (x86_64::svm::vspace*)ptr;
@@ -58,7 +58,7 @@ void virt::vspace::map(uint64_t host_phys, uint64_t guest_phys){
 }
 
 
-virt::vcpu::vcpu(vspace* space){
+generic::virt::vcpu::vcpu(vspace* space){
 	type = get_type();
 	switch(type){
 		case virt_types::Svm: {
@@ -72,7 +72,7 @@ virt::vcpu::vcpu(vspace* space){
 	}
 }
 
-virt::vcpu::~vcpu(){
+generic::virt::vcpu::~vcpu(){
 	switch(type){
 		case virt_types::Svm: {
 			if(ptr){
@@ -88,7 +88,7 @@ virt::vcpu::~vcpu(){
 	}
 }
 
-void virt::vcpu::run(virt::vexit* vexit){
+void generic::virt::vcpu::run(generic::virt::vexit* vexit){
 	switch(type){
 		case virt_types::Svm: {
 			auto* svm_vcpu = (x86_64::svm::vcpu*)ptr;
@@ -102,7 +102,7 @@ void virt::vcpu::run(virt::vexit* vexit){
 	}
 }
 
-void virt::vcpu::get_regs(virt::vregs* regs){
+void generic::virt::vcpu::get_regs(generic::virt::vregs* regs){
 	switch(type){
 		case virt_types::Svm: {
 			auto* svm_vcpu = (x86_64::svm::vcpu*)ptr;
@@ -116,7 +116,7 @@ void virt::vcpu::get_regs(virt::vregs* regs){
 	}
 }
 
-void virt::vcpu::set_regs(virt::vregs* regs){
+void generic::virt::vcpu::set_regs(generic::virt::vregs* regs){
 	switch(type){
 		case virt_types::Svm: {
 			auto* svm_vcpu = (x86_64::svm::vcpu*)ptr;
@@ -130,7 +130,7 @@ void virt::vcpu::set_regs(virt::vregs* regs){
 	}
 }
 
-uint64_t virt::vctl(uint64_t cmd, MAYBE_UNUSED_ATTRIBUTE uint64_t arg1, MAYBE_UNUSED_ATTRIBUTE uint64_t arg2, MAYBE_UNUSED_ATTRIBUTE uint64_t arg3, MAYBE_UNUSED_ATTRIBUTE uint64_t arg4){
+uint64_t generic::virt::vctl(uint64_t cmd, MAYBE_UNUSED_ATTRIBUTE uint64_t arg1, MAYBE_UNUSED_ATTRIBUTE uint64_t arg2, MAYBE_UNUSED_ATTRIBUTE uint64_t arg3, MAYBE_UNUSED_ATTRIBUTE uint64_t arg4){
 	switch(cmd){
 		case vCtlCreateVcpu: {
 			auto* thread = proc::process::get_current_thread();
@@ -146,15 +146,15 @@ uint64_t virt::vctl(uint64_t cmd, MAYBE_UNUSED_ATTRIBUTE uint64_t arg1, MAYBE_UN
 			printf("[VIRT]: vCtlRunVcpu handle: %d, vexit: %x\n", arg1, arg2);
 			#endif
 			auto* vcpu = proc::process::get_current_thread()->handle_catalogue.get<handles::vcpu_handle>(arg1);
-			vcpu->cpu.run((virt::vexit*)arg2);
+			vcpu->cpu.run((generic::virt::vexit*)arg2);
 			return 0;
 		}
 		case vCtlGetRegs: {
-			proc::process::get_current_thread()->handle_catalogue.get<handles::vcpu_handle>(arg1)->cpu.get_regs((virt::vregs*)arg2);
+			proc::process::get_current_thread()->handle_catalogue.get<handles::vcpu_handle>(arg1)->cpu.get_regs((generic::virt::vregs*)arg2);
 			return 0;
 		}
 		case vCtlSetRegs: {
-			proc::process::get_current_thread()->handle_catalogue.get<handles::vcpu_handle>(arg1)->cpu.set_regs((virt::vregs*)arg2);
+			proc::process::get_current_thread()->handle_catalogue.get<handles::vcpu_handle>(arg1)->cpu.set_regs((generic::virt::vregs*)arg2);
 			return 0;
 		}
 		case vCtlCreateVspace: {

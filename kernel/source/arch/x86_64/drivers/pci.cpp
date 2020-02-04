@@ -1,5 +1,5 @@
 #include <Sigma/arch/x86_64/drivers/pci.h>
-#include <Sigma/proc/device.h>
+#include <Sigma/generic/device.h>
 
 static uint32_t legacy_read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
 static void legacy_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
@@ -304,7 +304,7 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
         }
     }
 
-    proc::device::add_pci_device(dev);
+    generic::device::add_pci_device(dev);
 }
 
 static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device, x86_64::pci::device* parent){

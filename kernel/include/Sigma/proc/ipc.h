@@ -102,7 +102,7 @@ namespace proc::ipc {
 		// Sync
 		void receive_message_sync(tid_t& origin, size_t& size, uint8_t* data);
 
-		events::event event;
+		generic::event event;
 	private:
 		uint8_t* msg_buffer;
 		size_t current_buffer_size;
