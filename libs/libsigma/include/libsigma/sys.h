@@ -21,7 +21,9 @@ enum {
     devCtlClaim = 1,
     devCtlFindPci = 2,
     devCtlFindPciClass = 3,
-    devCtlGetResourceRegion = 4
+    devCtlGetResourceRegion = 4,
+    devCtlEnableIrq = 5,
+    devCtlWaitOnIrq = 6
 };
 
 enum {

@@ -7,9 +7,11 @@
 
 #include <klibcxx/utility.hpp>
 
+#include <Sigma/generic/event.hpp>
+
 namespace handles
 {
-	enum class handle_type {VCpu, VSpace};
+	enum class handle_type {VCpu, VSpace, Irq};
 
 	struct handle {
 		handle(handle_type type): type{type} {}
@@ -32,7 +34,15 @@ namespace handles
 		static constexpr handle_type default_type = handle_type::VSpace;
 
 		virt::vspace space;
+	};
 
+	struct irq_handle : public handle {
+		irq_handle(uint8_t vector): handle{handle_type::Irq}, vector{vector}, event{} {}
+
+		static constexpr handle_type default_type = handle_type::Irq;
+
+		uint8_t vector;
+		events::event event;
 	};
 
 	class handle_catalogue {
