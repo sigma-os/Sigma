@@ -69,8 +69,6 @@ namespace x86_64::idt
         uint64_t rip, cs, rflags, rsp, ss;
     };
 
-    using idt_function = void (*)(idt_registers*);
-
     constexpr uint8_t normal_ist_index = 0;
     constexpr uint8_t double_fault_ist_index = 1;
     constexpr uint8_t page_fault_ist_index = 2;
@@ -90,20 +88,21 @@ namespace x86_64::idt
         void init();
     };
 
+    uint8_t get_free_vector();
 
-    void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f);
-    void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq);
-    void register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq, bool should_iret);
+    struct handler {
+        using idt_function = void (*)(idt_registers*, void*);
+        uint16_t vector;
+        idt_function callback;
+        void* userptr = nullptr;
+        bool is_irq = false, should_iret = false;
+    };
+
+    void register_interrupt_handler(handler h);
 
     void register_irq_status(uint16_t n, bool is_irq);
 
     void register_generic_handlers();
-
-    struct handler {
-        x86_64::idt::idt_function callback;
-        bool is_irq, should_iret;
-    };
-
 } // x86_64::idt
 
 

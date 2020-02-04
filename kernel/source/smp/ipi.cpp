@@ -19,7 +19,7 @@ void smp::ipi::send_shootdown(uint64_t address, uint64_t length){
 
 
 
-static void shootdown_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+static void shootdown_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBUTE void* userptr) {
 	for(uint64_t offset = 0; offset < shootdown_length; offset += mm::pmm::block_size) {
 		x86_64::paging::invalidate_addr(shootdown_addr + offset);
 	}
@@ -37,13 +37,13 @@ void smp::ipi::send_ping(){
     smp::cpu::get_current_cpu()->lapic.send_ipi_raw(0, ((1 << 19) | (1 << 18) | smp::ipi::ping_ipi_vector)); // All excluding self
 }
 
-static void ping_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+static void ping_ipi(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBUTE void* userptr) {
 	debug_printf("[IPI]: Pong from cpu: %x\n", smp::cpu::get_current_cpu()->lapic_id);
 }
 
 #pragma endregion
 
 void smp::ipi::init_ipi(){
-    register_interrupt_handler(smp::ipi::ping_ipi_vector, ping_ipi, true);
-    register_interrupt_handler(smp::ipi::shootdown_ipi_vector, shootdown_ipi, true);
+    x86_64::idt::register_interrupt_handler({.vector = smp::ipi::ping_ipi_vector, .callback = ping_ipi, .is_irq = true});
+    x86_64::idt::register_interrupt_handler({.vector = smp::ipi::shootdown_ipi_vector, .callback = shootdown_ipi, .is_irq = true});
 }

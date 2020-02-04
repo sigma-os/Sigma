@@ -233,7 +233,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
     acpi::init_ec();
 }
 
-static void acpi_sci_handler(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+static void acpi_sci_handler(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBUTE void* userptr) {
 	uint16_t event = lai_get_sci_event();
 	if(event & ACPI_POWER_BUTTON) {
 		debug_printf("[ACPI]: Requested ACPI shutdown at tsc: %x\n", x86_64::read_tsc());
@@ -255,7 +255,7 @@ void acpi::init_sci(acpi::madt& madt){
         x86_64::apic::ioapic::set_entry(sci_int, (sci_int + 0x20), x86_64::apic::ioapic_delivery_modes::FIXED, x86_64::apic::ioapic_destination_modes::PHYSICAL, ((1 << 13) | (1 << 15)), smp::cpu::get_current_cpu()->lapic_id); // Target the BSP
     }
 
-    x86_64::idt::register_interrupt_handler((sci_int + 0x20), acpi_sci_handler, true);
+    x86_64::idt::register_interrupt_handler({.vector = (uint16_t)(sci_int + 0x20), .callback = acpi_sci_handler, .is_irq = true});
     x86_64::apic::ioapic::unmask_irq(sci_int);
 
     lai_enable_acpi(1); // argument is interrupt mode, 1 = APIC, 0 = PIC, 2 = SAPIC, SAPIC doesn't even exist on x86_64 only on IA64(Itanium)    

@@ -1,4 +1,6 @@
 #include <Sigma/arch/x86_64/idt.h>
+#include <Sigma/proc/syscall.h>
+#include <Sigma/proc/process.h>
 x86_64::idt::handler handlers[x86_64::idt::idt_max_entries] = {};
 
 struct {
@@ -39,7 +41,7 @@ struct {
     {.mnemonic = "-", .message = "Reserved"},
 };
 
-static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers){
+static void sigma_page_fault_handler(x86_64::idt::idt_registers* registers, MAYBE_UNUSED_ATTRIBUTE void* userptr){
     uint64_t cr2;
     asm("mov %%cr2, %0" : "=r"(cr2));
 
@@ -92,33 +94,35 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
         debug_printf("    RSI: %x, RDI: %x, RSP: %x, RBP: %x\n", registers->rsi, registers->rdi, registers->rsp, registers->rbp);
         debug_printf("    R8: %x, R9: %x, R10: %x, R11: %x\n", registers->r8, registers->r9, registers->r10, registers->r11);
         debug_printf("    R12: %x, R12: %x, R13: %x, R14: %x\n", registers->r12, registers->r13, registers->r13, registers->r14);
-        debug_printf("    R15: %x\n", registers->r15);
+        debug_printf("    R15: %x, CS: %x, DS: %x, SS: %x\n", registers->r15, registers->cs, registers->ds, registers->ss);
+
+        if(proc::process::get_current_thread()->state == proc::process::thread_state::RUNNING)
+            debug_printf("    Current TID: %x\n", proc::process::get_current_tid());
     }
-    
+
     if(handlers[n].callback)
-        handlers[n].callback(registers);
+        handlers[n].callback(registers, handlers[n].userptr);
 
     // It is an IRQ so send an EOI
     if(handlers[n].is_irq) 
         cpu->lapic.send_eoi();
 
-    if(!handlers[n].should_iret) 
-        while(1);
+    if(!handlers[n].should_iret && !handlers[n].is_irq) 
+        while(1)
+            ;
 }
 
-void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq){
-    if (handlers[n].callback != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n].callback, (uint64_t)f);
-    handlers[n] = {.callback = f, .is_irq = is_irq, .should_iret = true};
+uint8_t x86_64::idt::get_free_vector(){
+    for(uint8_t i = 246; i > 0; i--){
+        if(!handlers[i].callback)
+            return i;
+    }
+
+    return -1;
 }
 
-void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f){
-    if (handlers[n].callback != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n].callback, (uint64_t)f);
-    handlers[n] = {.callback = f, .is_irq = false, .should_iret = false};
-}
-
-void x86_64::idt::register_interrupt_handler(uint16_t n, x86_64::idt::idt_function f, bool is_irq, bool should_iret){
-    if (handlers[n].callback != nullptr) printf("[IDT]: Overwriting IDT entry %i, containing %x with %x\n", n, (uint64_t)handlers[n].callback, (uint64_t)f);
-    handlers[n] = {.callback = f, .is_irq = is_irq, .should_iret = should_iret};
+void x86_64::idt::register_interrupt_handler(x86_64::idt::handler h){
+    handlers[h.vector] = h;
 }
 
 void x86_64::idt::register_irq_status(uint16_t n, bool is_irq){
@@ -129,7 +133,7 @@ void x86_64::idt::register_irq_status(uint16_t n, bool is_irq){
 void x86_64::idt::register_generic_handlers(){
     for(uint16_t i = 0; i < x86_64::idt::idt_max_entries; i++) handlers[i] = {};
 
-    register_interrupt_handler(14, sigma_page_fault_handler);
+    register_interrupt_handler({.vector = 14, .callback = sigma_page_fault_handler});
 }
 
 
@@ -155,7 +159,8 @@ x86_64::idt::idt_entry::idt_entry(void* function, uint16_t selector, bool presen
 
     
 
-    if(present) bitops<uint16_t>::bit_set(flags, idt_entry_option_present);
+    if(present) 
+        bitops<uint16_t>::bit_set(flags, idt_entry_option_present);
 
     this->options = flags;
 }

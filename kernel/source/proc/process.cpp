@@ -185,7 +185,7 @@ static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cp
 		; // proc_idle modifies the stack, it's dangerous, don't return ever
 }
 
-static void timer_handler(x86_64::idt::idt_registers* regs){
+static void timer_handler(x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBUTE void* userptr){
     scheduler_mutex.lock();
     auto* cpu = proc::process::get_current_managed_cpu();
     if(cpu == nullptr){
@@ -233,7 +233,7 @@ void proc::process::init_multitasking(acpi::madt& madt){
     kernel_thread->state = proc::process::thread_state::BLOCKED;
     kernel_thread->blocking_reason = proc::process::block_reason::FOREVER;
 
-    x86_64::idt::register_interrupt_handler(proc::process::cpu_quantum_interrupt_vector, timer_handler, true);
+    x86_64::idt::register_interrupt_handler({.vector = proc::process::cpu_quantum_interrupt_vector, .callback = timer_handler, .is_irq = true});
     proc::simd::init_simd();
 }
 
@@ -434,7 +434,7 @@ void proc::process::thread::block(proc::process::block_reason reason, x86_64::id
     this->blocking_reason = reason;
     this->state = proc::process::thread_state::BLOCKED;
     this->thread_lock.unlock();
-    timer_handler(regs); // Switch out of the thread
+    timer_handler(regs, nullptr); // Switch out of the thread
 }
 
 void proc::process::thread::wake(){

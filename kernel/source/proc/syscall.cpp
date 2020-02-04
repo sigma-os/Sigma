@@ -210,7 +210,7 @@ kernel_syscall syscalls[] = {
 
 constexpr size_t syscall_count = (sizeof(syscalls) / sizeof(kernel_syscall));
 
-static void syscall_handler(x86_64::idt::idt_registers* regs){
+static void syscall_handler(x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBUTE void* userptr){
     if(SYSCALL_GET_FUNC() >= syscall_count){
         debug_printf("[SYSCALL]: Tried to access non existing syscall\n");
         SYSCALL_SET_RETURN_VALUE(1);
@@ -245,7 +245,7 @@ void proc::syscall::init_syscall(){
         x86_64::msr::write(proc::syscall::sfmask_msr, 0); // Keep all RFLAGS bits as is
     }*/
 
-    x86_64::idt::register_interrupt_handler(proc::syscall::syscall_isr_number, syscall_handler, false, true);
+    x86_64::idt::register_interrupt_handler({.vector = proc::syscall::syscall_isr_number, .callback = syscall_handler, .should_iret = true});
 }
 
 void proc::syscall::set_user_manager_tid(tid_t tid){
