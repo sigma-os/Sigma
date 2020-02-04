@@ -89,6 +89,24 @@ namespace misc
     constexpr size_t min(size_t a, size_t b){
         return (a < b) ? a : b;
     }
+
+    constexpr uint64_t compile_time_prng(uint64_t r, uint64_t seed, uint64_t iterations){
+	    /*
+         * Xn = rXn-1(1 - Xn-1)
+	     * is chaotic for most values of r
+         * See: https://en.wikipedia.org/wiki/Logistic_map
+         *      https://www.youtube.com/watch?v=ovJcsL7vyrk
+         */
+
+	    auto iterate = [](uint64_t r, uint64_t x) -> uint64_t { return r * x * (1 - x); };
+
+	    uint64_t x = seed;
+
+	    for(uint64_t i = 0; i < iterations; i++)
+		    x = iterate(r, x);
+
+	    return x;
+    }
 } // namespace misc
 
 #endif

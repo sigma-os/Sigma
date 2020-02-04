@@ -81,7 +81,7 @@ extra_warning_flags = ['-Wreorder', '-Wno-unknown-pragmas', '-Wduplicated-cond',
                        '-Wlogical-op', '-Werror']
 
 flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding', '-mno-red-zone',
-                  '-nostdlib', '-mcmodel=kernel', '-fno-stack-protector', '-fno-omit-frame-pointer', '-g', '-O2',
+                  '-nostdlib', '-mcmodel=kernel', '-fstack-protector', '-fno-omit-frame-pointer', '-g', '-O2',
                   '-mno-mmx', '-mno-sse', '-mno-sse2', '-mno-sse3', '-mno-sse4', '-mno-sse4.1', '-mno-sse4.2', '-mno-sse4a']
 if get_option('sigma_compile_ubsan')
     flags_c_common +=  ['-fsanitize=undefined', '-DSIGMA_UBSAN']

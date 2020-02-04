@@ -27,6 +27,17 @@ void debug::trace_stack(){
 	#endif
 }
 
+// TODO: Instead of a set x value use another compile time source
+uintptr_t __stack_chk_guard = misc::compile_time_prng(43243, 0xC6AF8B7718FFF628, 8243423);
+ 
+NORETURN_ATTRIBUTE void __stack_chk_fail()
+{
+	PANIC("Stack smashing detected");
+
+	while(1)
+		;
+}
+
 #if defined(SIGMA_UBSAN)
 using namespace __ubsan;
 
