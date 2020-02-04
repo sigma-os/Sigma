@@ -640,12 +640,16 @@ void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
     ASSERT(this->msi.supported);
     ASSERT(this->msi.space_offset);
 
+    // ACPI indicates that we shouldn't enable MSIs, probably want to handle this gracefully
+    ASSERT(!(acpi::get_arch_boot_flags() & (1 << acpi::iapc_boot_arch_msi_not_supported)));
+
     msi::address addr{};
     msi::data data{};
     msi::control control{};
 
     control.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, 2);
 
+    // Assert the number of IRQs field is sane
     ASSERT((1 << control.mmc) < 32);
 
     addr.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, 2);

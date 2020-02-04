@@ -59,32 +59,6 @@ namespace proc::process
             new_ctx.simd_state = proc::simd::create_state();
             proc::simd::clone_state(simd_state, new_ctx.simd_state);
         }
-
-        void import(x86_64::idt::idt_registers* regs){
-            rax = regs->rax;
-            rbx = regs->rbx;
-            rcx = regs->rcx;
-            rdx = regs->rdx;
-            rsi = regs->rsi;
-            rdi = regs->rdi;
-            rbp = regs->rbp;
-            rsp = regs->rsp;
-
-            r8 = regs->r8;
-            r9 = regs->r9;
-            r10 = regs->r10;
-            r11 = regs->r11;
-            r12 = regs->r12;
-            r13 = regs->r13;
-            r14 = regs->r14;
-            r15 = regs->r15;
-
-            rip = regs->rip;
-            rflags = regs->rflags;
-            ss = regs->ss;
-            ds = regs->ds;
-            cs = regs->cs;
-        }
     };
 
     struct thread_resources {

@@ -11,15 +11,16 @@ namespace generic
         event(): count{0} {}
 
         void trigger(){
-            count.store(1);
+            count.fetch_add(1);
         }
 
         bool has_triggered(){
-            uint64_t val = 1;
+            uint64_t val = 0;
             if(count.compare_exchange_strong(val, 0))
-                return true;
-            else
                 return false;
+
+            count.fetch_sub(1);
+            return true;
         }
 
         private:
