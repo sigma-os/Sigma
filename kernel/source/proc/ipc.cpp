@@ -58,7 +58,7 @@ bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_
 
 	this->current_unread_messages_count++;
 	
-	proc::process::wake_if_blocked(tid, proc::process::block_reason::WAITING_FOR_IPC);
+	this->event.trigger();
 
 	return true;
 }

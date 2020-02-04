@@ -11,6 +11,7 @@
 #include <Sigma/proc/ipc.h>
 #include <Sigma/proc/simd.h>
 #include <Sigma/generic/user_handle.hpp>
+#include <Sigma/generic/event.hpp>
 
 namespace proc::process
 {
@@ -101,35 +102,34 @@ namespace proc::process
         uint64_t stack_bottom;
     };
 
-    enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED};
-    enum class block_reason {FOREVER = 0, WAITING_FOR_IPC};
+    enum class thread_state {DISABLED, IDLE, RUNNING, BLOCKED, SILENT};
     enum class thread_privilege_level {APPLICATION = 0, DRIVER = 1, KERNEL = 2};
 
     struct thread {
         thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
                   image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
-                  blocking_reason(block_reason::FOREVER), \
                   privilege(proc::process::thread_privilege_level::APPLICATION), ipc_manager(proc::ipc::thread_ipc_manager()), \
                   vmm(x86_64::paging::context()), tid(0), thread_lock({}) {}
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
         proc::process::thread_state state;
-        proc::process::block_reason blocking_reason;
         proc::process::thread_privilege_level privilege;
         proc::ipc::thread_ipc_manager ipc_manager;
         x86_64::paging::context vmm;
         tid_t tid;
         x86_64::spinlock::mutex thread_lock;
 
+        events::event* event;
+
 		handles::handle_catalogue handle_catalogue;
 
         void set_state(proc::process::thread_state new_state);
 
 
-        void block(proc::process::block_reason reason, x86_64::idt::idt_registers* regs);
+        void block(events::event* await, x86_64::idt::idt_registers* regs);
         void wake();
-        bool is_blocked(proc::process::block_reason reason);
+        bool is_blocked();
 
 
         // Internal Thread Modifying functions
@@ -188,10 +188,9 @@ namespace proc::process
 
 
     // Blocking
-    void block_thread(tid_t tid, proc::process::block_reason reason, x86_64::idt::idt_registers* regs);
+    void block_thread(tid_t tid, events::event* event, x86_64::idt::idt_registers* regs);
     void wake_thread(tid_t tid);
-    bool is_blocked(tid_t tid, proc::process::block_reason reason);
-    void wake_if_blocked(tid_t tid, proc::process::block_reason reason);
+    bool is_blocked(tid_t tid);
     
     // General Management
     tid_t fork(x86_64::idt::idt_registers* regs);

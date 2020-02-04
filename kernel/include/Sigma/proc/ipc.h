@@ -7,6 +7,8 @@
 
 #include <Sigma/types/vector.h>
 
+#include <Sigma/generic/event.hpp>
+
 namespace proc::ipc {
 	constexpr uint16_t ipc_message_header_magic_low = 0xBEEF;
 	constexpr uint16_t ipc_message_header_magic_high = 0xC0DE;
@@ -99,6 +101,8 @@ namespace proc::ipc {
 
 		// Sync
 		void receive_message_sync(tid_t& origin, size_t& size, uint8_t* data);
+
+		events::event event;
 	private:
 		uint8_t* msg_buffer;
 		size_t current_buffer_size;
@@ -106,6 +110,8 @@ namespace proc::ipc {
 		uint64_t current_unread_messages_count;
 		tid_t tid;
 		x86_64::spinlock::mutex lock;
+
+		
 	};
 }
 

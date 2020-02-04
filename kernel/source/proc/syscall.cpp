@@ -131,7 +131,20 @@ static uint64_t syscall_get_um_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_regis
 
 // ARG0: Reason
 static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
-    proc::process::get_current_thread()->block(static_cast<proc::process::block_reason>(SYSCALL_GET_ARG0()), regs);
+    auto* thread = proc::process::get_current_thread();
+
+    // Keep updated with libsigma/sys.h
+    enum {
+        blockForever = 0,
+        blockWaitForIpc
+    };
+
+    if(SYSCALL_GET_ARG0() == blockForever)
+        thread->set_state(proc::process::thread_state::SILENT);
+    else if(SYSCALL_GET_ARG0() == blockWaitForIpc)
+        thread->block(&thread->ipc_manager.event, regs);
+    else
+        printf("[SYSCALL]: Unknown block reason: %x", SYSCALL_GET_ARG0());
     return 0;
 }
 
