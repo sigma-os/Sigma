@@ -41,12 +41,25 @@ namespace x86_64::pci
             msi_enable = (1 << 0)
         };
 
+        union PACKED_ATTRIBUTE control {
+            struct {
+                uint16_t msie : 1;
+                uint16_t mmc : 3;
+                uint16_t mme : 3;
+                uint16_t c64 : 1;
+                uint16_t pvm : 1;
+                uint16_t reserved : 6;
+            };
+            uint16_t raw;
+        };
+        static_assert(sizeof(control) == 2);
+
         union PACKED_ATTRIBUTE address {
             struct {
                 uint32_t reserved : 2;
                 uint32_t destination_mode : 1;
                 uint32_t redirection_hint : 1;
-                uint32_t _reserved_0 : 8;
+                uint32_t reserved_0 : 8;
                 uint32_t destination_id : 8;
                 // must be 0xFEE
                 uint32_t base_address : 12;

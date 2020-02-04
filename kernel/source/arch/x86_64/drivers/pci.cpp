@@ -640,17 +640,20 @@ void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
     ASSERT(this->msi.supported);
     ASSERT(this->msi.space_offset);
 
-    uint16_t command = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, 2);
-
     msi::address addr{};
     msi::data data{};
+    msi::control control{};
 
-    addr.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, 4);
+    control.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, 2);
 
-    if(command & msi::msi_64bit_supported)
-        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_64, 4);
+    ASSERT((1 << control.mmc) < 32);
+
+    addr.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, 2);
+
+    if(control.c64)
+        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_64, 2);
     else
-        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_32, 4);
+        data.raw = x86_64::pci::read(seg, bus, device, function, msi.space_offset + msi::msi_data_32, 2);
 
     data.vector = vector;
     data.delivery_mode = 0;
@@ -660,12 +663,13 @@ void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
 
     x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_addr_reg_low, addr.raw, 4);
 
-    if(command & msi::msi_64bit_supported)
+    if(control.c64)
         x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_64, data.raw, 4);
     else
         x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_data_32, data.raw, 4);
 
-    command |= msi::msi_enable;
+    control.msie = 1;
+    control.mme = 0; // Only enable 1 IRQ
 
-    x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, command, 2);
+    x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, control.raw, 2);
 }
