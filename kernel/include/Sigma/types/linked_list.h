@@ -13,7 +13,9 @@ namespace types
             template<typename entry_T>
             struct linked_list_entry {
                 public:
-                    linked_list_entry(): item(entry_T()), prev(nullptr), next(nullptr) {}
+                    template<typename... Args>
+                    linked_list_entry(Args&&... args): item{entry_T{std::forward<Args>(args)...}}, prev{nullptr}, next{nullptr} {}
+
                     entry_T item;
                     linked_list_entry<entry_T>* prev;
                     linked_list_entry<entry_T>* next;
@@ -47,7 +49,7 @@ namespace types
 
             T* push_back(T entry){
                 std::lock_guard guard{this->mutex};
-                auto* new_entry = new linked_list_entry<T>;
+                auto* new_entry = new linked_list_entry<T>{};
 
                 new_entry->item = entry;
                 new_entry->next = nullptr;
@@ -68,9 +70,33 @@ namespace types
                 return &(new_entry->item);
             }
 
+
+            template<typename... Args>
+            T* emplace_back(Args&&... args){
+                std::lock_guard guard{this->mutex};
+                auto* new_entry = new linked_list_entry<T>{std::forward<Args>(args)...};
+
+                new_entry->next = nullptr;
+
+                
+                if(this->_length == 0){
+                    this->head = new_entry;
+                    this->tail = new_entry;
+                    new_entry->prev = nullptr;
+                    this->_length++;
+                    return &(new_entry->item);
+                }
+
+                this->tail->next = new_entry;
+                new_entry->prev = this->tail;
+                this->tail = new_entry;
+                this->_length++;
+                return &(new_entry->item);
+            }
+
             T* empty_entry(){
                 std::lock_guard guard{this->mutex};
-                auto* new_entry = new linked_list_entry<T>;
+                auto* new_entry = new linked_list_entry<T>{};
                 
                 new_entry->next = nullptr;
 
