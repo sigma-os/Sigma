@@ -96,8 +96,9 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
         debug_printf("    R12: %x, R12: %x, R13: %x, R14: %x\n", registers->r12, registers->r13, registers->r13, registers->r14);
         debug_printf("    R15: %x, CS: %x, DS: %x, SS: %x\n", registers->r15, registers->cs, registers->ds, registers->ss);
 
-        if(proc::process::get_current_thread()->state == proc::process::thread_state::RUNNING)
-            debug_printf("    Current TID: %x\n", proc::process::get_current_tid());
+        if(auto* thread = proc::process::get_current_thread(); thread)
+            if(thread->state == proc::process::thread_state::RUNNING)
+                debug_printf("    Current TID: %x\n", proc::process::get_current_tid());
     }
 
     if(handlers[n].callback)
