@@ -206,6 +206,7 @@ C_LINKAGE void smp_kernel_main(){
     idt.init();
 
     auto& entry = cpu_list.empty_entry();
+    entry.set_gs();
 
     entry.lapic = x86_64::apic::lapic();
     entry.lapic.init();
@@ -214,7 +215,6 @@ C_LINKAGE void smp_kernel_main(){
     entry.tss = &tss;
     entry.tss_gdt_offset = tss_offset;
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
-    entry.set_gs();
 
     x86_64::misc_early_features_init();
 

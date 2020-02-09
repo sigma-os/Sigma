@@ -9,6 +9,8 @@ main_sources = files(
     'source/acpi/madt.cpp',
     'source/acpi/laihost.cpp',
     'source/arch/x86_64/amd/svm.cpp',
+    'source/arch/x86_64/intel/vt-d.cpp',
+    'source/arch/x86_64/intel/sl_paging.cpp',
     'source/arch/x86_64/drivers/apic.cpp',
     'source/arch/x86_64/drivers/hpet.cpp',
     'source/arch/x86_64/drivers/pic.cpp',

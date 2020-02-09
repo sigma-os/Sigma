@@ -39,6 +39,7 @@ void x86_64::apic::lapic::init(){
     if(cpuid(1, a, b, c, d)){
         if(c & x86_64::cpuid_bits::x2APIC && !misc::kernel_args::get_bool("nox2apic")){
             this->x2apic = true;
+            smp::cpu::get_current_cpu()->features.x2apic = 1;
             bitops<uint64_t>::bit_set(apic_base_msr, 10); // Set x2APIC bit
         } else {
             mm::vmm::kernel_vmm::get_instance().map_page(base, (base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute, map_page_cache_types::uncacheable);

@@ -32,6 +32,7 @@ namespace smp::cpu
             uint64_t invpcid : 1;
             uint64_t smap : 1;
 			uint64_t svm : 1;
+            uint64_t x2apic : 1;
         } features;
 
         void set_gs(){
