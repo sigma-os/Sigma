@@ -4,6 +4,65 @@
 
 #include <Sigma/generic/device.h>
 
+#pragma region device_context_table
+
+x86_64::vt_d::device_context_table::device_context_table(types::bitmap* domain_id_map): domain_id_map{domain_id_map} {
+    this->root_phys = (uint64_t)mm::pmm::alloc_block();
+    mm::vmm::kernel_vmm::get_instance().map_page(this->root_phys, this->root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
+
+    this->root = (root_table*)(this->root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    memset((void*)this->root, 0, 0x100);
+}
+
+x86_64::vt_d::device_context_table::~device_context_table(){
+    mm::pmm::free_block((void*)this->root_phys);
+}
+
+x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(uint8_t bus, uint8_t dev, uint8_t func){
+    uint16_t sid = (bus << 8) | ((dev << 3) & 0x3F) | (func & 0x7);
+
+    auto* root_entry = &this->root->entries[bus];
+    if(!root_entry->present){
+        root_entry->present = 1;
+
+        uint64_t phys = (uint64_t)mm::pmm::alloc_block();
+        uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
+
+        mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
+        memset_aligned_4k((void*)virt, virt);
+
+        root_entry->context_table_ptr = phys;
+    }
+
+    auto& context_table = *(vt_d::context_table*)(root_entry->context_table_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    uint8_t context_table_index = ((bus << 3) & 0x3F) | (func & 0x7);
+    auto* context_table_entry = &context_table.entries[context_table_index];
+
+    if(!context_table_entry->present){
+        context_table_entry->present = 1;
+        context_table_entry->translation_type = 0; // Just use legacy translation
+        context_table_entry->address_width = 0b010; // 4 Level deep page walk
+
+        auto domain_id = this->domain_id_map->get_free_bit();
+        ASSERT(domain_id != ~1ull);
+        context_table_entry->domain_id = domain_id;
+
+        auto* context = new sl_paging::context{};
+        this->sl_map.push_back(sid, context);
+
+        context_table_entry->second_level_page_translation_ptr = context->get_ptr();
+    }
+
+    return *this->sl_map[sid];
+    
+}
+
+uint64_t x86_64::vt_d::device_context_table::get_phys(){
+    return this->root_phys;
+}
+
+#pragma endregion
+
 #pragma region dma_remapping_engine
 
 x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remapping_def* def){
@@ -43,15 +102,22 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     debug_printf("         - Fault recording registers: %d\n", this->n_fault_recording_regs);
     this->fault_recording_regs = (fault_recording_reg*)(((uintptr_t)this->regs) + (16 * ((cap >> 24) & 0x3FF)));
 
-    this->root_phys = (uint64_t)mm::pmm::alloc_block();
-    mm::vmm::kernel_vmm::get_instance().map_page(root_phys, root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
-    this->root = (root_table*)(root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-    memset((void*)this->root, 0, 0x1000);
+    // (cap & 0x7) is a representation of the amount of bits of domain ids that the controller supports
+    // 0b000 = 4 bits, 0b001 = 6bits, etc; So 2x + 4 will give us the correct amount of bits
+    // then just pow2 that to find the total number
+    this->n_domain_ids = 1 << (2 * (cap & 0x7) + 4);
+    debug_printf("         - Number of Domain Ids: %d\n", this->n_domain_ids);
+
+    this->domain_ids = types::bitmap{this->n_domain_ids};
+
+    this->domain_ids.set(0); // Reserve domain id 0, is only really required if cap.CM is set, but not worth the hassle
 
     debug_printf("         Installing Root Table...");
 
+    this->root_table = device_context_table{&this->domain_ids};
+
     auto root_addr = dma_remapping_engine_regs::root_table_address_t{.raw = 0};
-    root_addr.address = this->root_phys;
+    root_addr.address = this->root_table.get_phys();
     root_addr.translation_type = 0; // Use legacy mode, we don't support scalable mode yet
     this->regs->root_table_address = root_addr.raw;
 
@@ -163,7 +229,10 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     
     this->regs->fault_event_control &= ~(1 << 31);
 
-    debug_printf("Done\n");
+    auto& translation = this->root_table.get_translation(0, 3, 0);
+
+    for(uint64_t i = 0; i < 0x2000; i += 0x1000)
+        translation.map(i, i, sl_paging::mapSlPageRead | sl_paging::mapSlPageWrite);
 }
 
 #pragma endregion

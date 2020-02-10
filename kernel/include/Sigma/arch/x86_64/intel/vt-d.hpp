@@ -5,6 +5,9 @@
 #include <Sigma/acpi/acpi.h>
 #include <Sigma/types/vector.h>
 
+#include <Sigma/arch/x86_64/intel/sl_paging.hpp>
+#include <Sigma/types/hash_map.hpp>
+#include <Sigma/types/bitmap.hpp>
 
 namespace x86_64::vt_d
 {
@@ -92,7 +95,7 @@ namespace x86_64::vt_d
     }
 
     struct PACKED_ATTRIBUTE root_table {
-        struct {
+        struct PACKED_ATTRIBUTE {
             uint64_t present : 1;
             uint64_t reserved : 11;
             uint64_t context_table_ptr : 52;
@@ -103,7 +106,7 @@ namespace x86_64::vt_d
     };
 
     struct PACKED_ATTRIBUTE context_table {
-        struct {
+        struct PACKED_ATTRIBUTE {
             uint64_t present : 1;
             uint64_t fault_processing_disable : 1;
             uint64_t translation_type : 2;
@@ -216,6 +219,31 @@ namespace x86_64::vt_d
         uint64_t reserved_8;
     };
 
+    class device_context_table {
+        public:
+        device_context_table() = default;
+        device_context_table(types::bitmap* domain_id_map);
+        ~device_context_table();
+
+        uint64_t get_phys();
+
+        sl_paging::context& get_translation(uint8_t bus, uint8_t dev, uint8_t func);
+
+        private:
+        volatile root_table* root;
+        uint64_t root_phys;
+
+        struct hasher {
+            using hash_result = uint16_t;
+            hash_result operator()(uint16_t sid){
+                return sid;
+            }
+        };
+
+        types::bitmap* domain_id_map;
+        types::hash_map<uint16_t, sl_paging::context*, hasher> sl_map;
+    };
+
     class dma_remapping_engine {
         public:
         dma_remapping_engine() = default;
@@ -224,13 +252,14 @@ namespace x86_64::vt_d
         volatile dma_remapping_engine_regs* regs;
         acpi_table::dma_remapping_def* def;
 
-        volatile root_table* root;
-        uint64_t root_phys;
+        device_context_table root_table;
 
         volatile fault_recording_reg* fault_recording_regs;
 
         size_t n_fault_recording_regs;
+        size_t n_domain_ids;
 
+        types::bitmap domain_ids;
     };
 
     class iommu {
