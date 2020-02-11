@@ -16,6 +16,7 @@ Look in [sigma-os/bootstrap](https://github.com/sigma-os/bootstrap)
 - Dynamically linked userland backed by [mlibc](https://www.github.com/managarm/mlibc)
 - Modern disk drivers (AHCI, NVMe)
 - Virtualization (AMD-V only for now)
+- Protection against malicious drivers with IOMMU (VT-d only for now)
  
 ## Notes
 
