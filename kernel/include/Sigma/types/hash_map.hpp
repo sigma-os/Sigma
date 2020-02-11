@@ -4,22 +4,34 @@
 #include <Sigma/common.h>
 #include <Sigma/types/linked_list.h>
 #include <klibcxx/utility.hpp>
+#include <Sigma/arch/x86_64/misc/spinlock.h>
 
 namespace types
 {   
+    template<typename T>
+    struct nop_hasher {
+        using hash_result = T;
+
+        hash_result operator()(T item){
+            return item;
+        }
+    };
+
     // TODO: Seriously, this is the best hash_map you can think of, just, make something doable, not this monstrosity
-    template<typename Key, typename Value, typename Hash>
+    template<typename Key, typename Value, typename Hasher>
     class hash_map {
         public:
         hash_map(): hasher{} {}
 
         void push_back(Key key, Value value){
+            std::lock_guard guard{this->lock};
             auto hash = this->hasher(key);
 
             this->list.push_back({hash, value});
         }
 
         Value& operator[](Key key){
+            std::lock_guard guard{this->lock};
             auto hash = this->hasher(key);
 
             for(auto& entry : list)
@@ -32,11 +44,13 @@ namespace types
         }
 
         private:
-        using entry = std::pair<typename Hash::hash_result, Value>;
+        using entry = std::pair<typename Hasher::hash_result, Value>;
 
         types::linked_list<entry> list;
 
-        Hash hasher;
+        Hasher hasher;
+
+        x86_64::spinlock::mutex lock;
     };
 } // namespace types
 

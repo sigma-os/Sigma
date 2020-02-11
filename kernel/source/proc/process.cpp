@@ -1,5 +1,7 @@
 #include <Sigma/proc/process.h>
 #include <Sigma/types/queue.h>
+#include <Sigma/arch/x86_64/intel/vt-d.hpp>
+#include <Sigma/generic/device.h>
 
 auto thread_list = types::linked_list<proc::process::thread>();
 static uint64_t current_thread_list_offset = 0;
@@ -516,6 +518,21 @@ void* proc::process::thread::map_anonymous(size_t size, void *virt_base, void* p
             this->vmm.map_page(reinterpret_cast<uint64_t>(block), virt, map_flags);
             memset_aligned_4k((void*)virt, 0);
         } else {
+            // If requested to map a raw phys address also map it into the devices virtual space
+            // TODO: Abstract for AMD IOMMU
+            auto& iommu = x86_64::vt_d::get_global_iommu();
+            auto& list = generic::device::get_device_list();
+            if(iommu.is_active()){
+                for(auto& device : list){
+                    if(device.driver == this->tid){
+                        auto& pci = *device.pci_contact.device;
+                        auto& translation = iommu.get_translation(pci.seg, pci.bus, pci.device, pci.function);
+                        translation.map(phys, phys, x86_64::sl_paging::mapSlPageRead | x86_64::sl_paging::mapSlPageWrite);
+                    }
+                }
+            }
+                
+
             this->vmm.map_page(phys, virt, map_flags);
         }
     }
@@ -553,6 +570,20 @@ bool proc::process::thread::get_phys_region(size_t size, int prot, int flags, ph
     region->physical_addr = (uint64_t)phys_addr;
     region->virtual_addr = (uint64_t)virt_addr;
     region->size = size;
+
+    // If requested to map a raw phys address also map it into the devices virtual space
+    // TODO: Abstract for AMD IOMMU
+    auto& iommu = x86_64::vt_d::get_global_iommu();
+    auto& list = generic::device::get_device_list();
+    if(iommu.is_active()){
+        for(auto& device : list){
+            if(device.driver == this->tid){
+                auto& pci = *device.pci_contact.device;
+                auto& translation = iommu.get_translation(pci.seg, pci.bus, pci.device, pci.function);
+                translation.map(phys, phys, x86_64::sl_paging::mapSlPageRead | x86_64::sl_paging::mapSlPageWrite);
+            }
+        }
+    }
 
     return true;
 }

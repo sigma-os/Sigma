@@ -4,6 +4,16 @@
 
 #include <Sigma/generic/device.h>
 
+static misc::lazy_initializer<x86_64::vt_d::iommu> global_iommu;
+
+
+x86_64::vt_d::iommu& x86_64::vt_d::get_global_iommu(){
+    if(!global_iommu)
+        global_iommu.init();
+
+    return *global_iommu;
+}
+
 #pragma region device_context_table
 
 x86_64::vt_d::device_context_table::device_context_table(types::bitmap* domain_id_map): domain_id_map{domain_id_map} {
@@ -11,15 +21,18 @@ x86_64::vt_d::device_context_table::device_context_table(types::bitmap* domain_i
     mm::vmm::kernel_vmm::get_instance().map_page(this->root_phys, this->root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
 
     this->root = (root_table*)(this->root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-    memset((void*)this->root, 0, 0x100);
+    memset_aligned_4k((void*)this->root, 0);
 }
 
 x86_64::vt_d::device_context_table::~device_context_table(){
-    mm::pmm::free_block((void*)this->root_phys);
+    // TODO: Free resources
 }
 
 x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(uint8_t bus, uint8_t dev, uint8_t func){
-    uint16_t sid = (bus << 8) | ((dev << 3) & 0x3F) | (func & 0x7);
+    source_id sid{};
+    sid.bus = bus;
+    sid.dev = dev;
+    sid.func = func;
 
     auto* root_entry = &this->root->entries[bus];
     if(!root_entry->present){
@@ -29,13 +42,13 @@ x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(
         uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
 
         mm::vmm::kernel_vmm::get_instance().map_page(phys, virt, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
-        memset_aligned_4k((void*)virt, virt);
+        memset_aligned_4k((void*)virt, 0);
 
-        root_entry->context_table_ptr = phys;
+        root_entry->context_table_ptr = (phys >> 12);
     }
 
-    auto& context_table = *(vt_d::context_table*)(root_entry->context_table_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-    uint8_t context_table_index = ((bus << 3) & 0x3F) | (func & 0x7);
+    auto& context_table = *(vt_d::context_table*)((root_entry->context_table_ptr << 12) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    uint8_t context_table_index = sid.raw & 0xFF;
     auto* context_table_entry = &context_table.entries[context_table_index];
 
     if(!context_table_entry->present){
@@ -48,13 +61,12 @@ x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(
         context_table_entry->domain_id = domain_id;
 
         auto* context = new sl_paging::context{};
-        this->sl_map.push_back(sid, context);
+        this->sl_map.push_back(sid.raw, context);
 
-        context_table_entry->second_level_page_translation_ptr = context->get_ptr();
+        context_table_entry->second_level_page_translation_ptr = (context->get_ptr() >> 12);
     }
 
-    return *this->sl_map[sid];
-    
+    return *this->sl_map[sid.raw];
 }
 
 uint64_t x86_64::vt_d::device_context_table::get_phys(){
@@ -65,7 +77,7 @@ uint64_t x86_64::vt_d::device_context_table::get_phys(){
 
 #pragma region dma_remapping_engine
 
-x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remapping_def* def){
+x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remapping_def* def): pci_segment{def->segment_number} {
     this->def = def;
 
     mm::vmm::kernel_vmm::get_instance().map_page(def->register_base, def->register_base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
@@ -98,6 +110,21 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     else
         debug_printf("         - 8 bit APIC ids\n");
 
+    debug_printf("         - ");
+    if(((cap >> 8) & 0x1F) & (1 << 1))
+        debug_printf("3;");
+    if(((cap >> 8) & 0x1F) & (1 << 2))
+        debug_printf("4;");
+    if(((cap >> 8) & 0x1F) & (1 << 3))
+        debug_printf("5;");
+    debug_printf(" Level Page Walks supported\n");
+
+    // Make sure HW supports 4 level page tables
+    if(!(((cap >> 8) & 0x1F) & (1 << 2))){
+        debug_printf("[VT-d]: Need 4 level paging support");
+        return;
+    }
+
     this->n_fault_recording_regs = ((cap >> 40) & 0xFF) + 1;
     debug_printf("         - Fault recording registers: %d\n", this->n_fault_recording_regs);
     this->fault_recording_regs = (fault_recording_reg*)(((uintptr_t)this->regs) + (16 * ((cap >> 24) & 0x3FF)));
@@ -117,7 +144,7 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     this->root_table = device_context_table{&this->domain_ids};
 
     auto root_addr = dma_remapping_engine_regs::root_table_address_t{.raw = 0};
-    root_addr.address = this->root_table.get_phys();
+    root_addr.address = (this->root_table.get_phys() >> 12);
     root_addr.translation_type = 0; // Use legacy mode, we don't support scalable mode yet
     this->regs->root_table_address = root_addr.raw;
 
@@ -129,17 +156,17 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
 
     debug_printf("Done\n");
 
-    asm("" : : : "memory");
+    asm("mfence" : : : "memory");
 
-    //debug_printf("         Enabling translation...");
-    //this->regs->global_command |= (1 << 31);
+    debug_printf("         Enabling translation...");
+    this->regs->global_command |= (1 << 31);
 
-    //while(!(this->regs->global_status & (1 << 31)))
-    //    ;
+    while(!(this->regs->global_status & (1 << 31)))
+        ;
 
-    //debug_printf("Done\n");
+    debug_printf("Done\n");
 
-    asm("" : : : "memory");
+    asm("mfence" : : : "memory");
 
     debug_printf("         Setting up and unmasking IRQ...");
 
@@ -168,82 +195,96 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     this->regs->fault_event_upper_address = high_address.raw;
 
 
-    x86_64::idt::register_interrupt_handler({.vector = vector, .callback = +[](x86_64::idt::idt_registers* regs, void* userptr){
+    x86_64::idt::register_interrupt_handler({.vector = vector, .callback = +[](MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs, void* userptr){
         auto& self = *(dma_remapping_engine*)userptr;
-        
-        auto& fault = self.fault_recording_regs[0];
 
-        printf("[VT-d]: Error occurred, RIP: %x\n", regs->rip);
+        for(size_t i = 0; i < self.n_fault_recording_regs; i++){
+            auto& fault = self.fault_recording_regs[i];
 
-        if(fault.fault){
-        
-            uint8_t type = fault.type_bit_1 | (fault.type_bit_2 << 1);
-            switch (type)
-            {
-            case 0:
-                printf("        Type: Write Request\n");
-                break;
-            case 1:
-                printf("        Type: Read Request\n");
-                break;
-            case 2:
-                printf("        Type: Page Request\n");
-                break;
-            case 3:
-                printf("        Type: AtomicOp Request\n");
-                break;
-            default:
-                break;
-            }
+            if(fault.fault){
+                printf("[VT-d]: Error at index %d occurred\n", i);
+                uint8_t type = fault.type_bit_1 | (fault.type_bit_2 << 1);
+                switch (type)
+                {
+                case 0:
+                    printf("        Type: Write Request\n");
+                    break;
+                case 1:
+                    printf("        Type: Read Request\n");
+                    break;
+                case 2:
+                    printf("        Type: Page Request\n");
+                    break;
+                case 3:
+                    printf("        Type: AtomicOp Request\n");
+                    break;
+                default:
+                    break;
+                }
 
-            printf("        SID: %x, [%d:%d:%d:%d]\n", fault.sid, self.def->segment_number, (fault.sid >> 8) & 0xFF, (fault.sid >> 3) & 0x3F, fault.sid & 0x7);
+                source_id sid{.raw = (uint16_t)fault.sid};
+                printf("        SID: %x, [seg: %d, bus: %d, dev: %d, func: %d]\n", fault.sid, self.def->segment_number, sid.bus, sid.dev, sid.func);
 
-            if(fault.supervisor)
-                printf("        Supervisor access\n");
-            else
-                printf("        User access\n");
+                if(fault.supervisor)
+                    printf("        Supervisor access\n");
+                else
+                    printf("        User access\n");
 
-            if(fault.execute)
-                printf("        Execute access\n");
+                if(fault.execute)
+                    printf("        Execute access\n");
 
-            printf("        Fault address: %x\n", (fault.fault_info << 12));
+                printf("        IO virtual address: %x\n", (fault.fault_info << 12));
             
-
-            switch (fault.reason)
-            {
-
-            case 0x8:
-                printf("[VT-d]: Root table entry access error");
-                break;
-            default:
-                printf("[VT-d]: Unknown fault reason: %x\n", fault.reason);
-                break;
+                switch (fault.reason)
+                {
+                case 0x2:
+                    printf("        Reason: The Present (P) field in context-entry used to process a request is 0.\n");
+                    break;
+                case 0x3:
+                    printf("        Reason: Invalid programming of a context-entry used to process a request.\n");
+                    break;
+                case 0x5:
+                    printf("        Reason: a Write or AtomicOp request encountered lack of write permission.");
+                    break;
+                case 0x7:
+                    printf("        Reason: a hardware attempt to access a second-level paging entry (SL-PML4E, SL-PDPE, SL-PDE, or SL-PTE) referenced through the address (ADDR) field in a preceding second-level paging entry resulted in an error.");
+                    break;
+                case 0x8:
+                    printf("        Reason: A hardware attempt to access a root-entry referenced through the Root-Table Address field in the Root-entry Table Address Register resulted in an error.");
+                    break;
+                case 0x9:
+                    printf("        Reason: A hardware attempt to access a context-entry referenced through the CTP field in a root-entry resulted in an error.\n");
+                    break;
+                case 0xA:
+                    printf("        Reason: Non-zero reserved field in a root-entry with Present (P) field set.\n");
+                    break;
+                default:
+                    printf("        Unknown fault reason: %x\n", fault.reason);
+                    break;
+                }
             }
-
         }
         
-        
-        while(1)
-            asm("pause");
+        asm("cli; hlt");
     }, .userptr = (void*)this, .is_irq = true});
     
+    // Clear IRQ Mask
     this->regs->fault_event_control &= ~(1 << 31);
 
-    auto& translation = this->root_table.get_translation(0, 3, 0);
-
-    for(uint64_t i = 0; i < 0x2000; i += 0x1000)
-        translation.map(i, i, sl_paging::mapSlPageRead | sl_paging::mapSlPageWrite);
+    debug_printf("Done\n");
 }
 
 #pragma endregion
 
 #pragma region iommu
 
-x86_64::vt_d::iommu::iommu(){
+x86_64::vt_d::iommu::iommu(): active{false} {
     using namespace acpi_table;
     table = (dmar*)acpi::get_table("DMAR");
     if(!table)
         return;
+
+    smp::cpu::get_current_cpu()->features.vt_d = 1;
 
     debug_printf("[VT-d]: DMAR found\n");
     debug_printf("        - DMA Address Width: %d\n", table->host_dma_address_width + 1);
@@ -298,6 +339,19 @@ x86_64::vt_d::iommu::iommu(){
 
         offset += *(type + 1);
     }
+
+    this->active = true;
+}
+
+x86_64::sl_paging::context& x86_64::vt_d::iommu::get_translation(uint16_t seg, uint8_t bus, uint8_t dev, uint8_t func){
+    for(auto& entry : this->engines)
+        if(entry.pci_segment == seg)
+            return entry.root_table.get_translation(bus, dev, func);
+
+    PANIC("Couldn't find iommu for segment");
+
+    while(1)
+        ;
 }
 
 #pragma endregion

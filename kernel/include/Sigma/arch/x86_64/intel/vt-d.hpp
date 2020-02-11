@@ -219,6 +219,16 @@ namespace x86_64::vt_d
         uint64_t reserved_8;
     };
 
+    union PACKED_ATTRIBUTE source_id {
+        struct {
+            uint16_t func : 3;
+            uint16_t dev : 5;
+            uint16_t bus : 8;
+        };
+        uint16_t raw;
+    };
+    static_assert(sizeof(source_id) == 2);
+
     class device_context_table {
         public:
         device_context_table() = default;
@@ -233,15 +243,8 @@ namespace x86_64::vt_d
         volatile root_table* root;
         uint64_t root_phys;
 
-        struct hasher {
-            using hash_result = uint16_t;
-            hash_result operator()(uint16_t sid){
-                return sid;
-            }
-        };
-
         types::bitmap* domain_id_map;
-        types::hash_map<uint16_t, sl_paging::context*, hasher> sl_map;
+        types::hash_map<uint16_t, sl_paging::context*, types::nop_hasher<uint16_t>> sl_map;
     };
 
     class dma_remapping_engine {
@@ -249,15 +252,19 @@ namespace x86_64::vt_d
         dma_remapping_engine() = default;
         dma_remapping_engine(acpi_table::dma_remapping_def* def);
 
+        device_context_table root_table;
+
+        uint16_t pci_segment;
+        size_t n_fault_recording_regs;
+        size_t n_domain_ids;
+
+        private:
         volatile dma_remapping_engine_regs* regs;
         acpi_table::dma_remapping_def* def;
 
-        device_context_table root_table;
-
         volatile fault_recording_reg* fault_recording_regs;
 
-        size_t n_fault_recording_regs;
-        size_t n_domain_ids;
+        
 
         types::bitmap domain_ids;
     };
@@ -266,11 +273,18 @@ namespace x86_64::vt_d
         public:
         iommu();
 
+        sl_paging::context& get_translation(uint16_t seg, uint8_t bus, uint8_t dev, uint8_t func);
+        bool is_active(){
+            return active;
+        }
+
         private:
         acpi_table::dmar* table;
-
+        bool active;
         types::linked_list<dma_remapping_engine> engines;
     };
+
+    iommu& get_global_iommu();
 } // namespace x86_64::vt_d
 
 

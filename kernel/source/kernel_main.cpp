@@ -40,7 +40,7 @@
 #include <Sigma/boot_protocol.h>
 #include <config.h>
 #include <cxxabi.h>
-
+#include <Sigma/arch/x86_64/intel/vt-d.hpp>
 #include <Sigma/generic/user_handle.hpp>
 
 auto cpu_list = types::minimal_array<1, smp::cpu::entry>{};
@@ -175,7 +175,7 @@ C_LINKAGE void kernel_main(){
     proc::syscall::set_user_manager_tid(thread->tid);
 
     proc::process::thread* blockdev = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/nvme", &blockdev, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load nvme\n");
+    if(!proc::elf::start_elf_executable("/usr/bin/ahci", &blockdev, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load nvme\n");
 
     /*proc::process::create_kernel_thread(+[](){
         // TODO: Initialize ACPI kernel thread and PCI kernel thread

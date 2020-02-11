@@ -26,22 +26,21 @@ x86_64::sl_paging::context::~context(){
         auto& pml4_e = this->root->entries[pml4_i];
 
         if(pml4_e.r){
-            auto pml3_phys = pml4_e.addr;
+            auto pml3_phys = (pml4_e.addr << 12);
             auto pml3_virt = pml3_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
             auto& pml3 = *(sl_pml3*)pml3_virt;
 
             for(size_t pml3_i = 0; pml3_i < 512; pml3_i++){
                 auto& pml3_e = pml3[pml3_i];
                 if(pml3_e.r){
-                    auto pml2_phys = pml3_e.addr;
-
+                    auto pml2_phys = (pml3_e.addr << 12);
                     auto pml2_virt = pml2_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
                     auto& pml2 = *(sl_pml3*)pml2_virt;
 
                     for(size_t pml2_i = 0; pml2_i < 512; pml2_i++){
                         auto& pml2_e = pml2[pml2_i];
                         if(pml2_e.r){
-                            delete_table(pml2_e.addr);
+                            delete_table(pml2_e.addr << 12);
                         }
                     }
 
@@ -57,44 +56,44 @@ x86_64::sl_paging::context::~context(){
 }
 
 void x86_64::sl_paging::context::map(uint64_t pa, uint64_t iova, uint64_t flags){
-    uint64_t pml4_i = (pa >> 39) & 0x1FF;
-    uint64_t pml3_i = (pa >> 30) & 0x1FF;
-    uint64_t pml2_i = (pa >> 21) & 0x1FF;
-    uint64_t pml1_i = (pa >> 12) & 0x1FF;
+    uint64_t pml4_i = (iova >> 39) & 0x1FF;
+    uint64_t pml3_i = (iova >> 30) & 0x1FF;
+    uint64_t pml2_i = (iova >> 21) & 0x1FF;
+    uint64_t pml1_i = (iova >> 12) & 0x1FF;
 
     auto& pml4_e = this->root->entries[pml4_i];
     if(!pml4_e.r){
         const auto [pml3_phys, _] = create_table();
-        pml4_e.addr = pml3_phys;
+        pml4_e.addr = (pml3_phys >> 12);
         pml4_e.r = 1;
         pml4_e.w = 1;
     }
 
-    auto& pml3 = *(sl_pml3*)(pml4_e.addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    auto& pml3 = *(sl_pml3*)((pml4_e.addr << 12) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     auto& pml3_e = pml3[pml3_i];
     if(!pml3_e.r){
         const auto [pml2_phys, _] = create_table();
-        pml3_e.addr = pml2_phys;
+        pml3_e.addr = (pml2_phys >> 12);
         pml3_e.r = 1;
         pml3_e.w = 1;
     }
 
-    auto& pml2 = *(sl_pml2*)(pml3_e.addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    auto& pml2 = *(sl_pml2*)((pml3_e.addr << 12) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     auto& pml2_e = pml2[pml2_i];
     if(!pml2_e.r){
         const auto [pml1_phys, _] = create_table();
-        pml2_e.addr = pml1_phys;
+        pml2_e.addr = (pml1_phys >> 12);
         pml2_e.r = 1;
         pml2_e.w = 1;
     }
 
-    auto& pml1 = *(sl_pml1*)(pml2_e.addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+    auto& pml1 = *(sl_pml1*)((pml2_e.addr << 12) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     auto& pml1_e = pml1[pml1_i];
 
     pml1_e.r = (flags & mapSlPageRead) ? 1 : 0;
     pml1_e.w = (flags & mapSlPageWrite) ? 1 : 0;
     pml1_e.x = (flags & mapSlPageExecute) ? 1 : 0;
-    pml1_e.frame = iova;
+    pml1_e.frame = (pa >> 12);
 }
 
 uint64_t x86_64::sl_paging::context::get_ptr(){
