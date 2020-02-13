@@ -232,7 +232,7 @@ namespace x86_64::vt_d
     class device_context_table {
         public:
         device_context_table() = default;
-        device_context_table(types::bitmap* domain_id_map);
+        device_context_table(types::bitmap* domain_id_map, uint8_t secondary_page_levels);
         ~device_context_table();
 
         uint64_t get_phys();
@@ -240,10 +240,12 @@ namespace x86_64::vt_d
         sl_paging::context& get_translation(uint8_t bus, uint8_t dev, uint8_t func);
 
         private:
+        types::bitmap* domain_id_map;
+
+        uint8_t secondary_page_levels;
         volatile root_table* root;
         uint64_t root_phys;
 
-        types::bitmap* domain_id_map;
         types::hash_map<uint16_t, sl_paging::context*, types::nop_hasher<uint16_t>> sl_map;
     };
 
@@ -259,6 +261,7 @@ namespace x86_64::vt_d
         size_t n_domain_ids;
 
         private:
+        uint8_t secondary_page_levels;
         volatile dma_remapping_engine_regs* regs;
         acpi_table::dma_remapping_def* def;
 

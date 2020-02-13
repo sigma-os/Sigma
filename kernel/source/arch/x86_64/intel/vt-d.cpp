@@ -16,7 +16,7 @@ x86_64::vt_d::iommu& x86_64::vt_d::get_global_iommu(){
 
 #pragma region device_context_table
 
-x86_64::vt_d::device_context_table::device_context_table(types::bitmap* domain_id_map): domain_id_map{domain_id_map} {
+x86_64::vt_d::device_context_table::device_context_table(types::bitmap* domain_id_map, uint8_t secondary_page_levels): domain_id_map{domain_id_map}, secondary_page_levels{secondary_page_levels} {
     this->root_phys = (uint64_t)mm::pmm::alloc_block();
     mm::vmm::kernel_vmm::get_instance().map_page(this->root_phys, this->root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
 
@@ -54,13 +54,14 @@ x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(
     if(!context_table_entry->present){
         context_table_entry->present = 1;
         context_table_entry->translation_type = 0; // Just use legacy translation
-        context_table_entry->address_width = 0b010; // 4 Level deep page walk
+        // 3 level = 0b001, 4 level = 0b010 and so on, so n - 2 gives us the correct number
+        context_table_entry->address_width = (this->secondary_page_levels - 2);
 
         auto domain_id = this->domain_id_map->get_free_bit();
         ASSERT(domain_id != ~1ull);
         context_table_entry->domain_id = domain_id;
 
-        auto* context = new sl_paging::context{};
+        auto* context = new sl_paging::context{this->secondary_page_levels};
         this->sl_map.push_back(sid.raw, context);
 
         context_table_entry->second_level_page_translation_ptr = (context->get_ptr() >> 12);
@@ -111,19 +112,20 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
         debug_printf("         - 8 bit APIC ids\n");
 
     debug_printf("         - ");
-    if(((cap >> 8) & 0x1F) & (1 << 1))
+    if(((cap >> 8) & 0x1F) & (1 << 1)){
         debug_printf("3;");
-    if(((cap >> 8) & 0x1F) & (1 << 2))
-        debug_printf("4;");
-    if(((cap >> 8) & 0x1F) & (1 << 3))
-        debug_printf("5;");
-    debug_printf(" Level Page Walks supported\n");
-
-    // Make sure HW supports 4 level page tables
-    if(!(((cap >> 8) & 0x1F) & (1 << 2))){
-        debug_printf("[VT-d]: Need 4 level paging support");
-        return;
+        this->secondary_page_levels = 3;
     }
+    if(((cap >> 8) & 0x1F) & (1 << 2)){
+        debug_printf("4;");
+        this->secondary_page_levels = 4;
+    }
+    if(((cap >> 8) & 0x1F) & (1 << 3)){
+        debug_printf("5;");
+        this->secondary_page_levels = 5;   
+    }
+    debug_printf(" Level Page Walks supported\n");
+    ASSERT(this->secondary_page_levels != 0 && "[VT-d]: No secondary page levels supported");
 
     this->n_fault_recording_regs = ((cap >> 40) & 0xFF) + 1;
     debug_printf("         - Fault recording registers: %d\n", this->n_fault_recording_regs);
@@ -139,9 +141,17 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
 
     this->domain_ids.set(0); // Reserve domain id 0, is only really required if cap.CM is set, but not worth the hassle
 
+    debug_printf("         Disabling translation...");
+    this->regs->global_command &= ~(1 << 31);
+
+    while(this->regs->global_status & (1 << 31))
+        ;
+
+    debug_printf("Done\n");
+
     debug_printf("         Installing Root Table...");
 
-    this->root_table = device_context_table{&this->domain_ids};
+    this->root_table = device_context_table{&this->domain_ids, this->secondary_page_levels};
 
     auto root_addr = dma_remapping_engine_regs::root_table_address_t{.raw = 0};
     root_addr.address = (this->root_table.get_phys() >> 12);
@@ -237,6 +247,9 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
             
                 switch (fault.reason)
                 {
+                case 0x1:
+                    printf("        Reason: The Present (P) field in root-entry used to process a request is 0.\n");
+                    break;
                 case 0x2:
                     printf("        Reason: The Present (P) field in context-entry used to process a request is 0.\n");
                     break;
@@ -333,7 +346,7 @@ x86_64::vt_d::iommu::iommu(): active{false} {
         }
         
         default:
-            debug_printf("         - Unknown DMAR entry type: %d", *type);
+            debug_printf("         - Unknown DMAR entry type: %d\n", *type);
             break;
         }
 

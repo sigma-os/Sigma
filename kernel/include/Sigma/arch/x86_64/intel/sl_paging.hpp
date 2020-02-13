@@ -5,7 +5,7 @@
 
 namespace x86_64::sl_paging
 {
-    union PACKED_ATTRIBUTE sl_pml4e {
+    union PACKED_ATTRIBUTE sl_pmle {
         struct {
             uint64_t r : 1;
             uint64_t w : 1;
@@ -19,66 +19,16 @@ namespace x86_64::sl_paging
         };
         uint64_t raw;
     };
-    static_assert(sizeof(sl_pml4e) == 8);
+    static_assert(sizeof(sl_pmle) == 8);
 
-    struct PACKED_ATTRIBUTE sl_pml4 {
-        sl_pml4e entries[512];
+    struct PACKED_ATTRIBUTE sl_pml {
+        sl_pmle entries[512];
 
-        sl_pml4e& operator[](int i){
+        sl_pmle& operator[](int i){
             return entries[i];
         }
     };
-    static_assert(sizeof(sl_pml4) == 0x1000);
-
-    union PACKED_ATTRIBUTE sl_pml3e {
-        struct {
-            uint64_t r : 1;
-            uint64_t w : 1;
-            uint64_t x : 1;
-
-            uint64_t reserved : 5;
-            uint64_t accessed : 1;
-            uint64_t reserved_0 : 3;
-            uint64_t addr : 40;
-            uint64_t reserved_1 : 12;
-        };
-        uint64_t raw;
-    };
-    static_assert(sizeof(sl_pml3e) == 8);
-
-    struct PACKED_ATTRIBUTE sl_pml3 {
-        sl_pml3e entries[512];
-
-        sl_pml3e& operator[](int i){
-            return entries[i];
-        }
-    };
-    static_assert(sizeof(sl_pml3) == 0x1000);
-
-    union PACKED_ATTRIBUTE sl_pml2e {
-        struct {
-            uint64_t r : 1;
-            uint64_t w : 1;
-            uint64_t x : 1;
-
-            uint64_t reserved : 5;
-            uint64_t accessed : 1;
-            uint64_t reserved_0 : 3;
-            uint64_t addr : 40;
-            uint64_t reserved_1 : 12;
-        };
-        uint64_t raw;
-    };
-    static_assert(sizeof(sl_pml2e) == 8);
-
-    struct PACKED_ATTRIBUTE sl_pml2 {
-        sl_pml2e entries[512];
-
-        sl_pml2e& operator[](int i){
-            return entries[i];
-        }
-    };
-    static_assert(sizeof(sl_pml2) == 0x1000);
+    static_assert(sizeof(sl_pml) == 0x1000);
 
     union PACKED_ATTRIBUTE sl_pml1e {
         struct {
@@ -120,7 +70,7 @@ namespace x86_64::sl_paging
 
     class context {
         public:
-        context();
+        context(uint8_t level);
         ~context();
 
         void map(uint64_t pa, uint64_t iova, uint64_t flags);
@@ -128,7 +78,7 @@ namespace x86_64::sl_paging
         uint64_t get_ptr();
 
         private:
-        sl_pml4* root;
+        uint8_t level;
         uint64_t phys_root;
     };
 } // namespace x86_64::sl_paging
