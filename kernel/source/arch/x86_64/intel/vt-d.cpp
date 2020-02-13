@@ -16,7 +16,7 @@ x86_64::vt_d::iommu& x86_64::vt_d::get_global_iommu(){
 
 #pragma region device_context_table
 
-x86_64::vt_d::device_context_table::device_context_table(types::bitmap* domain_id_map, uint8_t secondary_page_levels): domain_id_map{domain_id_map}, secondary_page_levels{secondary_page_levels} {
+x86_64::vt_d::device_context_table::device_context_table(x86_64::vt_d::dma_remapping_engine* engine): engine{engine} {
     this->root_phys = (uint64_t)mm::pmm::alloc_block();
     mm::vmm::kernel_vmm::get_instance().map_page(this->root_phys, this->root_phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
 
@@ -36,8 +36,6 @@ x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(
 
     auto* root_entry = &this->root->entries[bus];
     if(!root_entry->present){
-        root_entry->present = 1;
-
         uint64_t phys = (uint64_t)mm::pmm::alloc_block();
         uint64_t virt = phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
 
@@ -45,6 +43,7 @@ x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(
         memset_aligned_4k((void*)virt, 0);
 
         root_entry->context_table_ptr = (phys >> 12);
+        root_entry->present = 1;
     }
 
     auto& context_table = *(vt_d::context_table*)((root_entry->context_table_ptr << 12) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
@@ -52,19 +51,19 @@ x86_64::sl_paging::context& x86_64::vt_d::device_context_table::get_translation(
     auto* context_table_entry = &context_table.entries[context_table_index];
 
     if(!context_table_entry->present){
-        context_table_entry->present = 1;
         context_table_entry->translation_type = 0; // Just use legacy translation
         // 3 level = 0b001, 4 level = 0b010 and so on, so n - 2 gives us the correct number
-        context_table_entry->address_width = (this->secondary_page_levels - 2);
+        context_table_entry->address_width = (this->engine->secondary_page_levels - 2);
 
-        auto domain_id = this->domain_id_map->get_free_bit();
+        auto domain_id = this->engine->domain_ids.get_free_bit();
         ASSERT(domain_id != ~1ull);
         context_table_entry->domain_id = domain_id;
 
-        auto* context = new sl_paging::context{this->secondary_page_levels};
+        auto* context = new sl_paging::context{this->engine->secondary_page_levels};
         this->sl_map.push_back(sid.raw, context);
 
         context_table_entry->second_level_page_translation_ptr = (context->get_ptr() >> 12);
+        context_table_entry->present = 1;
     }
 
     return *this->sl_map[sid.raw];
@@ -130,6 +129,7 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     this->n_fault_recording_regs = ((cap >> 40) & 0xFF) + 1;
     debug_printf("         - Fault recording registers: %d\n", this->n_fault_recording_regs);
     this->fault_recording_regs = (fault_recording_reg*)(((uintptr_t)this->regs) + (16 * ((cap >> 24) & 0x3FF)));
+    this->iotlb_regs = (iotlb_reg*)(((uintptr_t)this->regs) + (16 * ((extended_cap >> 8) & 0x3FF)));
 
     // (cap & 0x7) is a representation of the amount of bits of domain ids that the controller supports
     // 0b000 = 4 bits, 0b001 = 6bits, etc; So 2x + 4 will give us the correct amount of bits
@@ -141,21 +141,15 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
 
     this->domain_ids.set(0); // Reserve domain id 0, is only really required if cap.CM is set, but not worth the hassle
 
-    debug_printf("         Disabling translation...");
-    this->regs->global_command &= ~(1 << 31);
-
-    while(this->regs->global_status & (1 << 31))
-        ;
-
-    debug_printf("Done\n");
-
     debug_printf("         Installing Root Table...");
 
-    this->root_table = device_context_table{&this->domain_ids, this->secondary_page_levels};
+    this->root_table = device_context_table{this};
 
     auto root_addr = dma_remapping_engine_regs::root_table_address_t{.raw = 0};
     root_addr.address = (this->root_table.get_phys() >> 12);
     root_addr.translation_type = 0; // Use legacy mode, we don't support scalable mode yet
+
+    this->wbflush();
     this->regs->root_table_address = root_addr.raw;
 
     this->regs->global_command |= (1 << 30); // Ask hw to update root table ptr
@@ -164,12 +158,15 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     while(!(this->regs->global_status & (1 << 30)))
         ;
 
+    this->invalidate_global_context();
+    this->invalidate_iotlb();
+
     debug_printf("Done\n");
 
     asm("mfence" : : : "memory");
 
     debug_printf("         Enabling translation...");
-    this->regs->global_command |= (1 << 31);
+    this->regs->global_command = (1 << 31);
 
     while(!(this->regs->global_status & (1 << 31)))
         ;
@@ -287,6 +284,38 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     debug_printf("Done\n");
 }
 
+void x86_64::vt_d::dma_remapping_engine::wbflush(){
+    if(this->regs->capabilites & (1 << 4)){ // Flushing supported
+        this->regs->global_command = (1 << 27);
+
+        while(this->regs->global_status & (1 << 27))
+            ;
+    }
+}
+
+void x86_64::vt_d::dma_remapping_engine::invalidate_global_context(){
+    this->regs->context_command = (1ull << 63) | (1ull << 61); // Global invalidation
+
+    // Wait for completion
+    while(this->regs->context_command & (1ull << 63));
+}
+
+void x86_64::vt_d::dma_remapping_engine::invalidate_iotlb(){
+    this->wbflush();
+    iotlb_reg::iotlb_command cmd{};
+
+    cmd.drain_reads = 1;
+    cmd.drain_writes = 1;
+    cmd.invalidate = 1;
+    cmd.request_granularity = 1; // Global invalidation
+
+    this->iotlb_regs->command = cmd.raw;
+
+    // Wait for completion
+    while(this->iotlb_regs->command & (1ull << 63))
+        ;
+}
+
 #pragma endregion
 
 #pragma region iommu
@@ -342,6 +371,14 @@ x86_64::vt_d::iommu::iommu(): active{false} {
 
             this->engines.emplace_back(remap);
 
+            break;
+        }
+        case reserved_mem_region_id: {
+            auto* mem = (reserved_mem_region*)type;
+
+            debug_printf("        - Reserved Memory Region\n");
+            debug_printf("          PCI Segment Number: %d\n", mem->segment_number);
+            debug_printf("          Region: %x -> %x\n", mem->region_base, mem->region_limit);
             break;
         }
         

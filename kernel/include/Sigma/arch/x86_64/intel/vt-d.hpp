@@ -139,6 +139,37 @@ namespace x86_64::vt_d
     };
     static_assert(sizeof(fault_recording_reg) == 16);
 
+    struct PACKED_ATTRIBUTE iotlb_reg {
+        union PACKED_ATTRIBUTE iotlb_addr {
+            struct {
+                uint64_t address_mask : 6;
+                uint64_t invalidation_hint : 1;
+                uint64_t reserved : 5;
+                uint64_t addr : 52;
+            };
+            uint64_t raw;
+        };
+        static_assert(sizeof(iotlb_addr) == 8);
+        uint64_t addr;
+        union PACKED_ATTRIBUTE iotlb_command {
+            struct {
+                uint64_t reserved : 32;
+                uint64_t domain_id : 16;
+                uint64_t drain_writes : 1;
+                uint64_t drain_reads : 1;
+                uint64_t reserved_0 : 7;
+                uint64_t invalidation_granularity : 2;
+                uint64_t reserved_1 : 1;
+                uint64_t request_granularity : 2;
+                uint64_t reserved_2 : 1;
+                uint64_t invalidate : 1;
+            };
+            uint64_t raw;
+        };
+        static_assert(sizeof(iotlb_command) == 8);
+        uint64_t command;
+    };
+
     struct PACKED_ATTRIBUTE dma_remapping_engine_regs {
         uint32_t version;
         uint32_t reserved;
@@ -229,10 +260,12 @@ namespace x86_64::vt_d
     };
     static_assert(sizeof(source_id) == 2);
 
+    class dma_remapping_engine;
+
     class device_context_table {
         public:
         device_context_table() = default;
-        device_context_table(types::bitmap* domain_id_map, uint8_t secondary_page_levels);
+        device_context_table(dma_remapping_engine* engine);
         ~device_context_table();
 
         uint64_t get_phys();
@@ -240,13 +273,14 @@ namespace x86_64::vt_d
         sl_paging::context& get_translation(uint8_t bus, uint8_t dev, uint8_t func);
 
         private:
-        types::bitmap* domain_id_map;
+        dma_remapping_engine* engine;
 
-        uint8_t secondary_page_levels;
         volatile root_table* root;
         uint64_t root_phys;
 
         types::hash_map<uint16_t, sl_paging::context*, types::nop_hasher<uint16_t>> sl_map;
+
+        friend class dma_remapping_engine;
     };
 
     class dma_remapping_engine {
@@ -261,15 +295,20 @@ namespace x86_64::vt_d
         size_t n_domain_ids;
 
         private:
+        void wbflush();
+        void invalidate_global_context();
+        void invalidate_iotlb();
+
         uint8_t secondary_page_levels;
         volatile dma_remapping_engine_regs* regs;
         acpi_table::dma_remapping_def* def;
 
         volatile fault_recording_reg* fault_recording_regs;
-
-        
+        volatile iotlb_reg* iotlb_regs;
 
         types::bitmap domain_ids;
+
+        friend class device_context_table;
     };
 
     class iommu {
