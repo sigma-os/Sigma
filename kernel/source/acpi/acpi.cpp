@@ -116,14 +116,12 @@ acpi::table* acpi::get_table(const char* signature){
 }
 
 uint16_t acpi::get_arch_boot_flags(){
-    auto* fadt = reinterpret_cast<acpi::fadt*>(reinterpret_cast<uint64_t>(acpi::get_table(acpi::fadt_signature)) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-
-    uint16_t flags = 0;
+    auto* fadt = reinterpret_cast<acpi::fadt*>(acpi::get_table(acpi::fadt_signature));
 
     #if defined(ARCH_X86_64)
-    flags = fadt->iapc_boot_arch;
+    uint16_t flags = fadt->iapc_boot_arch;
     #elif defined(ARCH_ARM)
-    flags = fadt->arm_boot_arch;
+    uint16_t flags = fadt->arm_boot_arch;
     #endif
 
     return flags;
