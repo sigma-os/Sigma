@@ -9,5 +9,6 @@ default_include_dirs = [libdriver_include_dir]
 add_project_arguments('-Wall', '-Wextra', '-Wno-unknown-pragmas', '-fstrict-volatile-bitfields', language: 'cpp')
 
 subdir('storage/')
-
 subdir('video/')
+
+subdir('usb/')
