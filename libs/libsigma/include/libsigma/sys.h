@@ -23,7 +23,9 @@ enum {
     devCtlFindPciClass = 3,
     devCtlGetResourceRegion = 4,
     devCtlEnableIrq = 5,
-    devCtlWaitOnIrq = 6
+    devCtlWaitOnIrq = 6,
+    devCtlReadPci = 7,
+    devCtlWritePci = 8,
 };
 
 enum {

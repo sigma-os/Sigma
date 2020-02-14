@@ -76,6 +76,8 @@ namespace generic::device {
     constexpr uint64_t devctl_cmd_get_resource_region = 4;
     constexpr uint64_t devctl_cmd_enable_irq = 5;
     constexpr uint64_t devctl_cmd_wait_on_irq = 6;
+    constexpr uint64_t devctl_cmd_read_pci = 7;
+    constexpr uint64_t devctl_cmd_write_pci = 8;
 
     uint64_t devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, x86_64::idt::idt_registers* regs);
 }

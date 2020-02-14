@@ -150,6 +150,20 @@ uint64_t generic::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uin
         break;
     }
 
+    case generic::device::devctl_cmd_read_pci: {
+        auto& device = device_list->operator[](arg1);
+        auto& pci_dev = *device.pci_contact.device;
+        ret = x86_64::pci::read(pci_dev.seg, pci_dev.bus, pci_dev.device, pci_dev.function, arg2, arg3);
+        break;
+    }
+
+    case generic::device::devctl_cmd_write_pci: {
+        auto& device = device_list->operator[](arg1);
+        auto& pci_dev = *device.pci_contact.device;
+        x86_64::pci::write(pci_dev.seg, pci_dev.bus, pci_dev.device, pci_dev.function, arg2, arg4, arg3);
+        break;
+    }
+
     default:
         debug_printf("[DEVICE]: Unknown command: %x\n", cmd);
         break;
