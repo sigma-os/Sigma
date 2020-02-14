@@ -254,13 +254,16 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
                     printf("        Reason: Invalid programming of a context-entry used to process a request.\n");
                     break;
                 case 0x5:
-                    printf("        Reason: a Write or AtomicOp request encountered lack of write permission.");
+                    printf("        Reason: A Write or AtomicOp request encountered lack of write permission.\n");
+                    break;
+                case 0x6:
+                    printf("        Reason: A Read or AtomicOp request encountered lack of read permission.\n");
                     break;
                 case 0x7:
-                    printf("        Reason: a hardware attempt to access a second-level paging entry (SL-PML4E, SL-PDPE, SL-PDE, or SL-PTE) referenced through the address (ADDR) field in a preceding second-level paging entry resulted in an error.");
+                    printf("        Reason: a hardware attempt to access a second-level paging entry (SL-PML4E, SL-PDPE, SL-PDE, or SL-PTE) referenced through the address (ADDR) field in a preceding second-level paging entry resulted in an error.\n");
                     break;
                 case 0x8:
-                    printf("        Reason: A hardware attempt to access a root-entry referenced through the Root-Table Address field in the Root-entry Table Address Register resulted in an error.");
+                    printf("        Reason: A hardware attempt to access a root-entry referenced through the Root-Table Address field in the Root-entry Table Address Register resulted in an error.\n");
                     break;
                 case 0x9:
                     printf("        Reason: A hardware attempt to access a context-entry referenced through the CTP field in a root-entry resulted in an error.\n");
