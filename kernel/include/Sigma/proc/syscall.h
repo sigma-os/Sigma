@@ -18,8 +18,6 @@ namespace proc::syscall
     constexpr uint8_t syscall_isr_number = 249;
 
     void init_syscall();
-
-    void set_user_manager_tid(tid_t tid);
 } // namespace proc::syscall
 
 

@@ -125,7 +125,7 @@ static bool check_elf_executable(proc::elf::Elf64_Ehdr* program_header){
     return true;
 }
 
-bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige){
+bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige, tid_t vfs_server){
     proc::elf::Elf64_Ehdr program_header{};
     if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(&program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
         printf("[ELF]: Couldn't load file: %s\n", initrd_filename);
@@ -186,6 +186,8 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                 push(0); // Align stack
                 push(0); // Null
                 push(0); // Null data
+                push(vfs_server);
+                push(0x1000); // AT_VFS server
                 push(aux.at_phdr);
                 push(3); // ph_hdr
                 push(aux.at_phent);

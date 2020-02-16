@@ -50,7 +50,6 @@ size_t libsigma_initrd_get_file_size(const char* filename);
 
 int libsigma_set_fsbase(uint64_t fs);
 void libsigma_kill(void);
-tid_t libsigma_get_um_tid(void);
 uint64_t libsigma_fork(void);
 
 tid_t libsigma_get_current_tid(void);

@@ -124,11 +124,6 @@ static uint64_t syscall_get_message_size(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt
 	return proc::process::get_message_size();
 }
 
-static std::atomic<tid_t> um_tid = 0;
-static uint64_t syscall_get_um_tid(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
-	return um_tid;
-}
-
 // ARG0: Reason
 static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
     auto* thread = proc::process::get_current_thread();
@@ -204,7 +199,6 @@ kernel_syscall syscalls[] = {
     {.func = syscall_kill, .name = "kill"},
     {.func = syscall_fork, .name = "fork"},
     {.func = syscall_get_current_tid, .name = "get_current_tid"},
-    {.func = syscall_get_um_tid, .name = "get_user_manager_tid"},
     {.func = syscall_block_thread, .name = "block_thread"},
 
     {.func = syscall_vm_map, .name = "vm_map"},
@@ -259,8 +253,4 @@ void proc::syscall::init_syscall(){
     }*/
 
     x86_64::idt::register_interrupt_handler({.vector = proc::syscall::syscall_isr_number, .callback = syscall_handler, .should_iret = true});
-}
-
-void proc::syscall::set_user_manager_tid(tid_t tid){
-    um_tid = tid;
 }

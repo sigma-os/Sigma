@@ -54,10 +54,6 @@ void libsigma_kill(void){
               // Just to suffer
 }
 
-tid_t libsigma_get_um_tid(void){
-    return libsigma_syscall0(sigmaSyscallGetUmTid);
-}
-
 tid_t libsigma_get_current_tid(void){
     return libsigma_syscall0(sigmaSyscallGetCurrentTid);
 }

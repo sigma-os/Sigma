@@ -19,7 +19,6 @@ enum {
     sigmaSyscallKill,
     sigmaSyscallFork,
     sigmaSyscallGetCurrentTid,
-    sigmaSyscallGetUmTid,
     sigmaSyscallBlockThread,
 
     sigmaSyscallVmMap,
