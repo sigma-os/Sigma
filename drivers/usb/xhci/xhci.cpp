@@ -497,7 +497,7 @@ void xhci::controller::init_ports(){
             usb::string_unicode_descriptor str_desc{};
 
             this->send_control(i, p, (uint8_t*)&str_desc, 0);
-            printf("%s: ", str);
+            printf("%s", str);
             for(int i = 0; i < (str_desc.length - 2) / 2; i++)
                 printf("%c", str_desc.str[i]);
             printf("\n");
