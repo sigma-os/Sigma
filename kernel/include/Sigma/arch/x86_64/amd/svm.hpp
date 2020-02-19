@@ -6,6 +6,8 @@
 
 #include <Sigma/generic/virt.hpp>
 
+#include <klibcxx/mutex.hpp>
+
 namespace x86_64::svm
 {
 	struct PACKED_ATTRIBUTE vmcb_t {
@@ -229,6 +231,7 @@ namespace x86_64::svm
 		void set_regs(generic::virt::vregs* regs);
 
 		private:
+		std::mutex lock;
 
 		void* vmcb_phys;
 		vmcb_t* vmcb;
@@ -256,6 +259,7 @@ namespace x86_64::svm
 		void map(uint64_t host_phys, uint64_t guest_phys);
 
 		private:
+		std::mutex lock;
 		x86_64::paging::context context;
 
 		friend struct vcpu;

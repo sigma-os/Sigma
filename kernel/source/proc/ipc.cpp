@@ -66,7 +66,8 @@ bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_
 bool thread_ipc_manager::receive_message(tid_t* origin, size_t* size, uint8_t* data)
 {
 	std::lock_guard guard{this->lock};
-	if (this->current_unread_messages_count == 0) return false; // No new messages
+	if (this->current_unread_messages_count == 0) 
+		return false; // No new messages
 
 	ipc_message_footer* footer = reinterpret_cast<ipc_message_footer*>(this->msg_buffer + this->current_offset - sizeof(ipc_message_footer));
 	if(!footer->check_magic()){

@@ -2,6 +2,8 @@
 #include <Sigma/proc/process.h>
 #include <Sigma/generic/user_handle.hpp>
 
+#include <klibcxx/mutex.hpp>
+
 misc::lazy_initializer<types::vector<generic::device::device>> device_list;
 
 types::vector<generic::device::device>& generic::device::get_device_list(){
@@ -77,7 +79,10 @@ static bool get_resource_region(generic::device::device_descriptor dev, uint64_t
     return true;
 }
 
+static std::mutex devctl_lock{};
+
 uint64_t generic::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, x86_64::idt::idt_registers* regs){
+    std::lock_guard lock{devctl_lock};
     uint64_t ret = UINT64_MAX;
     switch (cmd)
     {

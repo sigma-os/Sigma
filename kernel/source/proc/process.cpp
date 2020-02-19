@@ -276,13 +276,13 @@ void proc::process::init_cpu(){
 static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip,
 												uint64_t cr3, proc::process::thread_privilege_level privilege,
 												proc::process::thread_state state) {
+    thread->state = state;
 	thread->ipc_manager.init(thread->tid);
 	thread->context = proc::process::thread_context(); // Start with a clean slate, make sure
 													   // no data leaks to the next thread
 	thread->context.rip = reinterpret_cast<uint64_t>(rip);
 	thread->context.cr3 = cr3;
 	thread->context.rsp = stack;
-	thread->state = state;
 	thread->context.rflags = ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
 													// Bit 9 is IF, Interrupt flag, Force enable this
 												    // so timer interrupts arrive
@@ -438,6 +438,7 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
 #pragma region proc::process::thread
 
 void proc::process::thread::set_state(proc::process::thread_state new_state){
+    std::lock_guard guard{this->thread_lock};
     this->state = new_state;
 }
 
@@ -464,7 +465,8 @@ void proc::process::thread::expand_thread_stack(size_t pages){
     std::lock_guard guard{this->thread_lock};
     for(uint64_t i = 0; i < pages; i++){
         void* phys = mm::pmm::alloc_block();
-        if(phys == nullptr) PANIC("Couldn't allocate extra pages for thread stack");
+        if(phys == nullptr)
+            PANIC("Couldn't allocate extra pages for thread stack");
         this->resources.frames.push_back(reinterpret_cast<uint64_t>(phys));
         
         this->image.stack_bottom -= mm::pmm::block_size;
@@ -474,12 +476,8 @@ void proc::process::thread::expand_thread_stack(size_t pages){
 }
 
 void proc::process::thread::set_fsbase(uint64_t fs){
-    if(!misc::is_canonical(fs)) PANIC("Tried to set non canonical FS for thread");
-    auto* thread = get_current_thread();
-    if(thread == nullptr){
-        PANIC("Tried to modify nullptr thread?");
-        return;
-    }
+    if(!misc::is_canonical(fs))
+        PANIC("Tried to set non canonical FS for thread");
 
     std::lock_guard guard{this->thread_lock};
 
@@ -551,6 +549,7 @@ bool proc::process::thread::get_phys_region(size_t size, int prot, int flags, ph
             uintptr_t cur_phys = phys + (mm::pmm::block_size * i);
             mm::pmm::free_block((void*)cur_phys);
         }
+        this->thread_lock.unlock();
         return false;
     }
 

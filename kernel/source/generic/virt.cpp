@@ -5,6 +5,8 @@
 #include <Sigma/generic/user_handle.hpp>
 #include <Sigma/proc/process.h>
 
+#include <klibcxx/mutex.hpp>
+
 generic::virt::virt_types get_type(){
 	auto* cpu = smp::cpu::get_current_cpu();
 
@@ -130,7 +132,10 @@ void generic::virt::vcpu::set_regs(generic::virt::vregs* regs){
 	}
 }
 
+static std::mutex vctl_lock{};
+
 uint64_t generic::virt::vctl(uint64_t cmd, MAYBE_UNUSED_ATTRIBUTE uint64_t arg1, MAYBE_UNUSED_ATTRIBUTE uint64_t arg2, MAYBE_UNUSED_ATTRIBUTE uint64_t arg3, MAYBE_UNUSED_ATTRIBUTE uint64_t arg4){
+	std::lock_guard lock{vctl_lock};
 	switch(cmd){
 		case vCtlCreateVcpu: {
 			auto* thread = proc::process::get_current_thread();

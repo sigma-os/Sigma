@@ -197,6 +197,7 @@ x86_64::svm::vcpu::vcpu(generic::virt::vspace* space): gpr_state({}) {
 }
 
 x86_64::svm::vcpu::~vcpu(){
+    std::lock_guard lock{this->lock};
     proc::simd::destroy_state(guest_simd);
     proc::simd::destroy_state(host_simd);
 
@@ -208,6 +209,7 @@ x86_64::svm::vcpu::~vcpu(){
 }
 
 void x86_64::svm::vcpu::run(generic::virt::vexit* vexit){
+    std::lock_guard lock{this->lock};
     while(true){
         asm("clgi");
 
@@ -375,6 +377,7 @@ void x86_64::svm::vcpu::run(generic::virt::vexit* vexit){
 }
 
 void x86_64::svm::vcpu::get_regs(generic::virt::vregs* regs){
+    std::lock_guard lock{this->lock};
     regs->rax = vmcb->rax;
 
     regs->rbx = gpr_state.rbx;
@@ -418,6 +421,7 @@ void x86_64::svm::vcpu::get_regs(generic::virt::vregs* regs){
 }
 
 void x86_64::svm::vcpu::set_regs(generic::virt::vregs* regs){
+    std::lock_guard lock{this->lock};
     vmcb->rax = regs->rax;
 
     gpr_state.rbx = regs->rbx;
@@ -465,9 +469,11 @@ x86_64::svm::vspace::vspace(): context{x86_64::paging::context{}} {
 }
 
 x86_64::svm::vspace::~vspace(){
+    std::lock_guard lock{this->lock};
 	context.deinit();
 }
 
 void x86_64::svm::vspace::map(uint64_t host_phys, uint64_t guest_phys){
+    std::lock_guard lock{this->lock};
 	context.map_page(host_phys, guest_phys, map_page_flags_present | map_page_flags_writable | map_page_flags_user);
 }

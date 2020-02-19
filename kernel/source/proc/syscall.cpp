@@ -171,7 +171,7 @@ static uint64_t syscall_get_phys_region(x86_64::idt::idt_registers* regs){
     
     auto ret = proc::process::get_current_thread()->get_phys_region(SYSCALL_GET_ARG0(), SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2(), (proc::process::thread::phys_region*)SYSCALL_GET_ARG3());
         
-    if(ret == false)
+    if(!ret)
         return 1;
 
     return 0; // Return success

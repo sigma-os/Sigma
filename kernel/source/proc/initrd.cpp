@@ -2,7 +2,7 @@
 #include <klibc/stdio.h>
 #include <Sigma/misc/misc.h>
 #include <Sigma/types/vector.h>
-#include <klibcxx/algorithm.hpp>
+#include <klibcxx/mutex.hpp>
 
 static misc::lazy_initializer<types::vector<proc::initrd::tar_header*>> headers;
 
@@ -17,7 +17,11 @@ static uint64_t get_header_number(const char* in){
     return size;
 }
 
+static std::mutex initrd_lock{};
+
 void proc::initrd::init(uint64_t address, uint64_t size){
+    std::lock_guard lock{initrd_lock};
+    
     headers.init();
     for(uint64_t i = 0; i < size; i++){
         auto* header = reinterpret_cast<proc::initrd::tar_header*>(address);
@@ -36,6 +40,7 @@ bool proc::initrd::read_file(const char* file_name, uint8_t* buf, uint64_t offse
     if((size + offset) > proc::initrd::get_size(file_name) + 1)
         return false; // Yeah lol no, that would be a bit *too* easy wouldn't it
 
+    std::lock_guard lock{initrd_lock};
     for(auto* header : *headers){
         if(strcmp(header->filename, file_name) == 0){
             // Found it
@@ -50,6 +55,7 @@ bool proc::initrd::read_file(const char* file_name, uint8_t* buf, uint64_t offse
 }
 
 size_t proc::initrd::get_size(const char* file_name){
+    std::lock_guard lock{initrd_lock};
     for(auto* header : *headers){
         if(strcmp(header->filename, file_name) == 0){
             return get_header_number(header->size);

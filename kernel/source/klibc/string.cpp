@@ -67,11 +67,13 @@ int strcmp(const char s1[], const char s2[]) {
 }
 
 void* memset_aligned_4k(void* dest, int c){
-    asm("rep stosl" : : "a"(c), "D"((uint64_t)dest), "c"(1024) : "memory");
+    //asm("rep stosl" : : "a"(c), "D"((uint64_t)dest), "c"(1024) : "memory");
+    memset(dest, c, 0x1000);
     return dest;
 }
 
 void* memcpy_aligned_4k(void* dest, void* src){
-    asm("rep movsd" : : "S"((uint64_t)src), "D"((uint64_t)dest), "c"(1024) : "memory");
+    //asm("rep movsd" : : "S"((uint64_t)src), "D"((uint64_t)dest), "c"(1024) : "memory");
+    memcpy(dest, src, 0x1000);
     return dest;
 }
