@@ -160,7 +160,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
 
             new_thread->context.rsp = new_thread->image.stack_top;
             new_thread->context.rbp = new_thread->context.rsp;
-            new_thread->context.cr3 = (new_thread->vmm.get_paging_info() - KERNEL_VBASE);
+            new_thread->context.cr3 = (new_thread->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
             if(ld_path == nullptr){
                 // Static Executable, No Dynamic loader

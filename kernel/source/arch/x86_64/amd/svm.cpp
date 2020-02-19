@@ -97,7 +97,7 @@ x86_64::svm::vcpu::vcpu(generic::virt::vspace* space): gpr_state({}) {
 
     // Setup the Nested Paging
     vmcb->np_enable = 1; // Enable Nested Paging
-    vmcb->n_cr3 = (uint64_t)npt->get_paging_info() - KERNEL_VBASE;
+    vmcb->n_cr3 = (uint64_t)npt->get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
     vmcb->g_pat = x86_64::pat::default_pat;
 
     vmcb->icept_exceptions |= (1 << 1) | (1 << 6) | (1 << 14) | (1 << 17) | (1 << 18);

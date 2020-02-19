@@ -55,8 +55,10 @@ no_long_mode:
 .data
 .align 0x1000
 p4_table:
+	.quad p3_table - KERNEL_VMA + 3 # 510
+	.fill 255,8,0
 	.quad p3_table - KERNEL_VMA + 3
-	.fill 510,8,0
+	.fill 254,8,0
 	.quad p3_table - KERNEL_VMA + 3
 
 p3_table:

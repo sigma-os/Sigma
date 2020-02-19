@@ -131,7 +131,7 @@ void invalidate_pcid(uint16_t pcid){
 	    uint64_t type = 1;
         asm("invpcid %1, %0" : : "r"(type), "m"(pcid_descriptor) : "memory");
     } else {
-        uint64_t kernel_phys = reinterpret_cast<uint64_t>(mm::vmm::kernel_vmm::get_instance().get_paging_info()) - KERNEL_VBASE;
+        uint64_t kernel_phys = reinterpret_cast<uint64_t>(mm::vmm::kernel_vmm::get_instance().get_paging_info()) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
         x86_64::emulate_invpcid(kernel_phys, pcid);
     }
 }
@@ -146,7 +146,7 @@ uint64_t x86_64::paging::pcid_context::get_timestamp(){
 }
 
 void x86_64::paging::pcid_context::set_context(){
-    uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_VBASE;
+    uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
     uint64_t cr3 = table_phys | this->pcid;
     if(smp::cpu::entry::get_cpu()->features.pcid)
         bitops<uint64_t>::bit_set(cr3, 63); // Do not invalidate the PCID
@@ -162,7 +162,7 @@ void x86_64::paging::pcid_context::set_context(x86_64::paging::context* context)
     this->context = context;
     // TODO: TLB shootdown
 
-    uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_VBASE;
+    uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
     uint64_t cr3 = table_phys | this->pcid; // Invalidate PCID
     asm volatile ("mov %0, %%cr3" : : "r"(cr3) : "memory");
 
@@ -185,7 +185,7 @@ x86_64::paging::context* x86_64::paging::pcid_context::get_context(){
 void x86_64::paging::context::init(){
     if(this->paging_info != nullptr) this->deinit();
 
-    this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+    this->paging_info = reinterpret_cast<x86_64::paging::pml4*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     memset_aligned_4k(reinterpret_cast<void*>(this->paging_info), 0);
 }
 
@@ -208,7 +208,7 @@ static void clean_pdpt(x86_64::paging::pdpt* pdpt){
 
         if(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
             if(!(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_huge))){ // Not a huge page
-                uint64_t pd_addr = ((pd_entry & 0x000FFFFFFFFFF000) + KERNEL_VBASE);
+                uint64_t pd_addr = ((pd_entry & 0x000FFFFFFFFFF000) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
                 clean_pd(reinterpret_cast<x86_64::paging::pd*>(pd_addr));
 
                 mm::pmm::free_block(reinterpret_cast<void*>(pd_entry & 0x000FFFFFFFFFF000));
@@ -225,7 +225,7 @@ void x86_64::paging::context::deinit(){
 
         if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
             if(!(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_huge))){ // Not a huge page
-                uint64_t pdpt_addr = ((pdpt_entry & 0x000FFFFFFFFFF000) + KERNEL_VBASE);
+                uint64_t pdpt_addr = ((pdpt_entry & 0x000FFFFFFFFFF000) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
                 clean_pdpt(reinterpret_cast<x86_64::paging::pdpt*>(pdpt_addr));
 
                 mm::pmm::free_block(reinterpret_cast<void*>(pdpt_entry & 0x000FFFFFFFFFF000));
@@ -233,7 +233,7 @@ void x86_64::paging::context::deinit(){
         }
     }
 
-    mm::pmm::free_block(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_VBASE));
+    mm::pmm::free_block(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(this->paging_info) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE));
 }   
 
 bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t flags, map_page_cache_types cache){
@@ -260,7 +260,7 @@ bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t fl
         // PML4 entry not present create one
         uint64_t new_pml4_entry = 0;
         uint64_t pdpt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-        memset_aligned_4k(reinterpret_cast<void*>(pdpt + KERNEL_VBASE), 0);
+        memset_aligned_4k(reinterpret_cast<void*>(pdpt + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), 0);
         set_frame(new_pml4_entry, pdpt);
         bitops<uint64_t>::bit_set(new_pml4_entry, page_entry_present);
         bitops<uint64_t>::bit_set(new_pml4_entry, page_entry_writeable);
@@ -270,13 +270,13 @@ bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t fl
         pml4_entry = new_pml4_entry;
     }
     
-    auto* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(pml4_entry) + KERNEL_VBASE);
+    auto* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(pml4_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
     if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
         // PDPT entry not present create one
         uint64_t new_pdpt_entry = 0;
         uint64_t pd = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-        memset_aligned_4k(reinterpret_cast<void*>(pd + KERNEL_VBASE), 0);
+        memset_aligned_4k(reinterpret_cast<void*>(pd + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), 0);
         set_frame(new_pdpt_entry, pd);
         bitops<uint64_t>::bit_set(new_pdpt_entry, page_entry_present);
         bitops<uint64_t>::bit_set(new_pdpt_entry, page_entry_writeable);
@@ -286,13 +286,13 @@ bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t fl
         pdpt_entry = new_pdpt_entry;
     }
 
-    auto* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt_entry) + KERNEL_VBASE);
+    auto* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     uint64_t pd_entry = pd->entries[pd_index_number];
     if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
         // PD entry not present create one
         uint64_t new_pd_entry = 0;
         uint64_t pt = reinterpret_cast<uint64_t>(mm::pmm::alloc_block());
-        memset_aligned_4k(reinterpret_cast<void*>(pt + KERNEL_VBASE), 0);
+        memset_aligned_4k(reinterpret_cast<void*>(pt + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), 0);
         set_frame(new_pd_entry, pt);
         bitops<uint64_t>::bit_set(new_pd_entry, page_entry_present);
         bitops<uint64_t>::bit_set(new_pd_entry, page_entry_writeable);
@@ -302,7 +302,7 @@ bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t fl
         pd_entry = new_pd_entry;
     }
 
-    auto* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd_entry) + KERNEL_VBASE);
+    auto* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
     uint64_t pt_entry = 0;
     set_frame(pt_entry, phys);
@@ -317,18 +317,18 @@ bool x86_64::paging::context::map_page(uint64_t phys, uint64_t virt, uint64_t fl
 }
 
 static x86_64::paging::pt* clone_pt(x86_64::paging::pt* pt){
-    x86_64::paging::pt* new_info_pt = reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+    x86_64::paging::pt* new_info_pt = reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     memset_aligned_4k(static_cast<void*>(new_info_pt), 0);
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
         new_info_pt->entries[i] = pt->entries[i]; // Just copy it over
     }
 
-    return reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(new_info_pt) - KERNEL_VBASE);
+    return reinterpret_cast<x86_64::paging::pt*>(reinterpret_cast<uint64_t>(new_info_pt) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 }
 
 static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
-    x86_64::paging::pd* new_info_pd = reinterpret_cast<x86_64::paging::pd*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+    x86_64::paging::pd* new_info_pd = reinterpret_cast<x86_64::paging::pd*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     memset_aligned_4k(static_cast<void*>(new_info_pd), 0);
 
     for(uint64_t i = 0; i < x86_64::paging::paging_structures_n_entries; i++){
@@ -339,7 +339,7 @@ static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
         if(bitops<uint64_t>::bit_test(pd_entry_flags, x86_64::paging::page_entry_present)){
             if(!bitops<uint64_t>::bit_test(pd_entry_flags, x86_64::paging::page_entry_huge)){
                 // Present and not huge, copy PT
-                uint64_t pd = reinterpret_cast<uint64_t>(clone_pt(reinterpret_cast<x86_64::paging::pt*>(get_frame(old_pd_entry) + KERNEL_VBASE)));
+                uint64_t pd = reinterpret_cast<uint64_t>(clone_pt(reinterpret_cast<x86_64::paging::pt*>(get_frame(old_pd_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE)));
 
                 uint64_t new_entry = 0;
                 set_frame(new_entry, pd);
@@ -353,11 +353,11 @@ static x86_64::paging::pd* clone_pd(x86_64::paging::pd* pd){
 
     }
 
-    return reinterpret_cast<x86_64::paging::pd*>(reinterpret_cast<uint64_t>(new_info_pd) - KERNEL_VBASE);
+    return reinterpret_cast<x86_64::paging::pd*>(reinterpret_cast<uint64_t>(new_info_pd) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 }
 
 static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
-    x86_64::paging::pdpt* new_info_pdpt = reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+    x86_64::paging::pdpt* new_info_pdpt = reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     memset_aligned_4k(static_cast<void*>(new_info_pdpt), 0);
 
 
@@ -368,7 +368,7 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
         if(bitops<uint64_t>::bit_test(pdpt_entry_flags, x86_64::paging::page_entry_present)){
             if(!bitops<uint64_t>::bit_test(pdpt_entry_flags, x86_64::paging::page_entry_huge)){
                 // Present and not huge, copy PD
-                uint64_t pd = reinterpret_cast<uint64_t>(clone_pd(reinterpret_cast<x86_64::paging::pd*>(get_frame(old_pdpt_entry) + KERNEL_VBASE)));
+                uint64_t pd = reinterpret_cast<uint64_t>(clone_pd(reinterpret_cast<x86_64::paging::pd*>(get_frame(old_pdpt_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE)));
 
                 uint64_t new_entry = 0;
                 set_frame(new_entry, pd);
@@ -381,7 +381,7 @@ static x86_64::paging::pdpt* clone_pdpt(x86_64::paging::pdpt* pdpt){
         }
     }
 
-    return reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(new_info_pdpt) - KERNEL_VBASE);
+    return reinterpret_cast<x86_64::paging::pdpt*>(reinterpret_cast<uint64_t>(new_info_pdpt) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 }
 
 void x86_64::paging::context::clone_paging_info(x86_64::paging::context& new_info){
@@ -398,7 +398,7 @@ void x86_64::paging::context::clone_paging_info(x86_64::paging::context& new_inf
         if(bitops<uint64_t>::bit_test(pml4_entry_flags, x86_64::paging::page_entry_present)){
             if(!bitops<uint64_t>::bit_test(pml4_entry_flags, x86_64::paging::page_entry_huge)){
                 // Present and not huge, copy PDPT
-                uint64_t pdpt = reinterpret_cast<uint64_t>(clone_pdpt(reinterpret_cast<x86_64::paging::pdpt*>(get_frame(old_pml4_entry) + KERNEL_VBASE)));
+                uint64_t pdpt = reinterpret_cast<uint64_t>(clone_pdpt(reinterpret_cast<x86_64::paging::pdpt*>(get_frame(old_pml4_entry) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE)));
 
                 uint64_t new_entry = 0;
                 set_frame(new_entry, pdpt);
@@ -435,13 +435,13 @@ uint64_t x86_64::paging::context::get_phys(uint64_t virt){
 
     uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
     if(bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
-        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_VBASE);
+        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
         if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
-            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_VBASE);
+            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
             uint64_t pd_entry = pd->entries[pd_index_number];
             if(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
-                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_VBASE);
+                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
                 uint64_t pt_entry = pt->entries[pt_index_number];
                 if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present)){
                     return get_frame(pt_entry);
@@ -461,13 +461,13 @@ uint64_t x86_64::paging::context::get_entry(uint64_t virt){
 
     uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
     if(bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
-        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_VBASE);
+        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
         if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
-            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_VBASE);
+            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
             uint64_t pd_entry = pd->entries[pd_index_number];
             if(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
-                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_VBASE);
+                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
                 uint64_t pt_entry = pt->entries[pt_index_number];
                 if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present)){
                     return pt_entry;
@@ -488,13 +488,13 @@ bool x86_64::paging::context::set_page_protection(uint64_t virt, uint64_t flags,
 
     uint64_t pml4_entry = this->paging_info->entries[pml4_index_number];
     if(bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present)){
-        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_VBASE);
+        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[pml4_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         uint64_t pdpt_entry = pdpt->entries[pdpt_index_number];
         if(bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present)){
-            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_VBASE);
+            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[pdpt_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
             uint64_t pd_entry = pd->entries[pd_index_number];
             if(bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present)){
-                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_VBASE);
+                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[pd_index_number]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
                 uint64_t pt_entry = pt->entries[pt_index_number];
                 if(bitops<uint64_t>::bit_test(pt_entry, x86_64::paging::page_entry_present)){
                     uint64_t entry_flags = 0;
@@ -555,19 +555,19 @@ void x86_64::paging::context::fork_address_space(proc::process::thread& new_thre
         if(!bitops<uint64_t>::bit_test(pml4_entry, x86_64::paging::page_entry_present))
             continue;
 
-        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[i]) + KERNEL_VBASE);
+        x86_64::paging::pdpt* pdpt = reinterpret_cast<x86_64::paging::pdpt*>(get_frame(this->paging_info->entries[i]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         for(uint64_t j = 0; j < x86_64::paging::paging_structures_n_entries; j++){
             uint64_t pdpt_entry = pdpt->entries[j];
             if(!bitops<uint64_t>::bit_test(pdpt_entry, x86_64::paging::page_entry_present))
                 continue;
 
-            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[j]) + KERNEL_VBASE);
+            x86_64::paging::pd* pd = reinterpret_cast<x86_64::paging::pd*>(get_frame(pdpt->entries[j]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
             for(uint64_t k = 0; k < x86_64::paging::paging_structures_n_entries; k++){
                 uint64_t pd_entry = pd->entries[k];
                 if(!bitops<uint64_t>::bit_test(pd_entry, x86_64::paging::page_entry_present))
                     continue;
 
-                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[k]) + KERNEL_VBASE);
+                x86_64::paging::pt* pt = reinterpret_cast<x86_64::paging::pt*>(get_frame(pd->entries[k]) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
                 for(uint64_t l = 0; l < x86_64::paging::paging_structures_n_entries; l++){
                     uint64_t pt_entry = pt->entries[l];

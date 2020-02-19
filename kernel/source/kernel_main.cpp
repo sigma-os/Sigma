@@ -96,6 +96,14 @@ C_LINKAGE void kernel_main(){
         virt_start += 0x1000;
         phys_start += 0x1000;
     }
+    {
+        auto* mmap = reinterpret_cast<multiboot_tag_mmap*>(boot_data.mmap);
+        for(multiboot_memory_map_t* entry = mmap->entries; (uint64_t)entry < ((uint64_t)mmap + mmap->size); entry++)
+            if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
+                for(auto phys = entry->addr; phys < (entry->addr + entry->len); phys += mm::pmm::block_size)
+                    mm::vmm::kernel_vmm::get_instance().map_page(phys, phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_global);
+    }
+    
 
 
     proc::elf::map_kernel(*boot_protocol);

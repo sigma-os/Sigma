@@ -41,7 +41,7 @@ void smp::multiprocessing::boot_cpu(cpu_entry& e){
     *trampoline_stack_addr = (reinterpret_cast<uint64_t>(cpu_stack) + (mm::pmm::block_size * 4) + KERNEL_VBASE);
     
     uint64_t* trampoline_paging_addr = &smp::trampoline_paging;
-    *trampoline_paging_addr = (mm::vmm::kernel_vmm::get_instance().get_paging_info() - KERNEL_VBASE);
+    *trampoline_paging_addr = (mm::vmm::kernel_vmm::get_instance().get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
 
     this->boot_apic(e);

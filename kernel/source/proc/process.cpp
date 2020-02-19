@@ -323,7 +323,7 @@ proc::process::thread* proc::process::create_thread(void* rip, uint64_t stack, u
 
 proc::process::thread* proc::process::create_kernel_thread(kernel_thread_function function){
     void* rip = reinterpret_cast<void*>(function);
-    uint64_t cr3 = (mm::vmm::kernel_vmm::get_instance().get_paging_info() - KERNEL_VBASE);
+    uint64_t cr3 = (mm::vmm::kernel_vmm::get_instance().get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     uint64_t stack = reinterpret_cast<uint64_t>(new uint8_t[0x1000]); // TODO: Improve this
     stack += 0x1000; // Remember stack grows downwards
     return proc::process::create_thread(rip, stack, cr3, proc::process::thread_privilege_level::KERNEL);
@@ -424,7 +424,7 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     
     parent->vmm.fork_address_space(*child);
 
-    child->context.cr3 = child->vmm.get_paging_info() - KERNEL_VBASE;
+    child->context.cr3 = child->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
 
     // Set return values
     child->context.rax = 0; // Child should get 0 as return value
