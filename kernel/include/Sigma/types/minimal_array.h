@@ -44,7 +44,7 @@ namespace types
     private:
         size_t current_index;
         T static_elements[NStaticElements];
-        misc::lazy_initializer<types::vector<T>> dynamic_elements;
+        misc::lazy_initializer<types::linked_list<T>> dynamic_elements;
     };
     
 } // namespace types

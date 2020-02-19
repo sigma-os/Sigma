@@ -140,6 +140,20 @@ namespace types
                 return linked_list_iterator<T>(nullptr);
             }
 
+            NODISCARD_ATTRIBUTE
+		    T& operator[](size_t index) {
+			    size_t i = 0;
+                for(auto& entry : *this){
+                    i++;
+                    if(i == index)
+                        return entry;
+                }
+
+                PANIC("Index does not exist in linked_lsit");
+                while(1)
+                    ;
+            }
+
             size_t length(){
                 return _length;
             }

@@ -38,7 +38,8 @@ void smp::multiprocessing::boot_cpu(cpu_entry& e){
         debug_printf("Failed to allocate stack for CPU with lapic_id: %d\n", e.lapic_id);
         return;
     }
-    *trampoline_stack_addr = (reinterpret_cast<uint64_t>(cpu_stack) + (mm::pmm::block_size * 4) + KERNEL_VBASE);
+    
+    *trampoline_stack_addr = (reinterpret_cast<uint64_t>(cpu_stack) + (mm::pmm::block_size * 4) + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
     
     uint64_t* trampoline_paging_addr = &smp::trampoline_paging;
     *trampoline_paging_addr = (mm::vmm::kernel_vmm::get_instance().get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);

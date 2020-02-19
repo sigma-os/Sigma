@@ -49,12 +49,14 @@ C_LINKAGE boot::boot_protocol boot_data;
 static void enable_cpu_tasking(){
     uint64_t rsp = 0;
     asm("mov %%rsp, %0" : "=r"(rsp)); 
+    rsp = ALIGN_DOWN(rsp, 16); // Align stack to ABI requirements
     smp::cpu::get_current_cpu()->tss->rsp0 = rsp;
 
     proc::process::init_cpu();
 
     asm("sti"); // Start interrupts and wait for an APIC timer IRQ to arrive for the first scheduling task
-    while(1);
+    while(1)
+        ;
 }
 
 C_LINKAGE void kernel_main(){  
@@ -197,11 +199,7 @@ C_LINKAGE void kernel_main(){
 
 
 
-x86_64::spinlock::mutex ap_mutex = x86_64::spinlock::mutex();
-
 C_LINKAGE void smp_kernel_main(){
-    ap_mutex.lock();
-
     x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
     gdt.init();
@@ -227,9 +225,7 @@ C_LINKAGE void smp_kernel_main(){
 
     mm::vmm::kernel_vmm::get_instance().set();
 
-    printf("Booted CPU with lapic_id: %d\n", entry.lapic_id);
-
-    ap_mutex.unlock();
+    //printf("Booted CPU with lapic_id: %d\n", entry.lapic_id);
 
     enable_cpu_tasking();
     asm("cli; hlt"); // Wait what?
