@@ -2,7 +2,7 @@
 #define SIGMA_GENERIC_USER_HANDLE_H
 
 #include <Sigma/common.h>
-#include <Sigma/types/linked_list.h>
+#include <Sigma/types/hash_map.hpp>
 #include <Sigma/generic/virt.hpp>
 
 #include <klibcxx/utility.hpp>
@@ -49,27 +49,23 @@ namespace generic::handles
 		public:
 		uint64_t push(handles::handle* handle){
 			auto id = id_gen.id();
-			catalogue.push_back({id, handle});
+			catalogue.push_back(id, handle);
 
 			return id;
 		}
 
 		template<typename T>
 		T* get(uint64_t id){
-			for(auto& pair : catalogue){
-				if(pair.first == id){
-					ASSERT(pair.second->type == T::default_type);
+			auto* handle = catalogue[id];
+			ASSERT(handle->type == T::default_type);
 
-					return static_cast<T*>(pair.second);
-				}
-			}
-
-			return nullptr;
+			return static_cast<T*>(handle);
 		}
 
 		private:
 		misc::id_generator id_gen;
-		types::linked_list<std::pair<uint64_t, handles::handle*>> catalogue;
+		//types::linked_list<std::pair<uint64_t, handles::handle*>> catalogue;
+		types::hash_map<uint64_t, handles::handle*, types::nop_hasher<uint64_t>> catalogue;
 	};
 } // namespace handles
 
