@@ -35,7 +35,7 @@ void thread_ipc_manager::deinit()
  */
 bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_t* buffer) {
 	std::lock_guard guard{this->lock};
-	if (this->current_offset + (sizeof(ipc::ipc_message_header) + buffer_length) >= thread_ipc_manager_default_msg_buffer_size) {
+	if (this->current_offset + (sizeof(ipc::ipc_message_header) + buffer_length + sizeof(ipc::ipc_message_footer)) >= this->current_buffer_size) {
 		
 		size_t size = this->current_buffer_size * 2;
 		this->msg_buffer = static_cast<uint8_t*>(realloc(static_cast<void*>(this->msg_buffer), size));
@@ -88,6 +88,7 @@ bool thread_ipc_manager::receive_message(tid_t* origin, size_t* size, uint8_t* d
 	uint8_t* raw_msg = reinterpret_cast<uint8_t*>(header + 1);
 	memcpy(static_cast<void*>(data), static_cast<void*>(raw_msg), header->buffer_length);
 
+	this->event.untrigger();
 	this->current_unread_messages_count--;
 	this->current_offset -= (sizeof(ipc_message_header) + header->buffer_length + sizeof(ipc_message_footer));
 	return true;

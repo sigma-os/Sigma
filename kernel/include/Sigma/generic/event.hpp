@@ -14,6 +14,11 @@ namespace generic
             count.fetch_add(1);
         }
 
+        void untrigger(){
+            if(count)
+                count.fetch_sub(1);
+        }
+
         bool has_triggered(){
             uint64_t val = 0;
             if(count.compare_exchange_strong(val, 0))
