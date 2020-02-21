@@ -143,7 +143,11 @@ namespace proc::elf
         };
     };
 
-    bool start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilege, tid_t vfs_server);
+    struct server_tids {
+        tid_t vfs, kbus;
+    };
+
+    bool start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilege, server_tids servers);
     void map_kernel(boot::boot_protocol& protocol);
     void init_symbol_list(boot::boot_protocol& protocol);
     std::pair<const char*, size_t> get_symbol(uint64_t address); 

@@ -1,0 +1,31 @@
+<iota version="0.0.1" module="sigma.kbus">
+    <enum name="client_request_type" type="uint64">
+        <entry value="0">NoOperation</entry>
+        <entry value="1">CreateDevice</entry>
+        <entry value="2">AddAttribute</entry>
+        <entry value="3">GetAttribute</entry>
+        <entry value="4">FindDevices</entry>
+    </enum>
+
+    <message name="client_request">
+        <field type="uint64">command</field>
+        <field type="uint64">device</field>
+
+        <field type="string">key</field>
+        <field type="string">value</field>
+
+        <field type="string">query</field>
+    </message>
+
+    <enum name="server_response_status" type="uint64">
+        <entry value="0">Success</entry>
+    </enum>
+
+    <message name="server_response">
+        <field type="int64">status</field>
+        <field type="uint64">device</field>
+        
+        <field type="string">value</field>
+        <field type="list">results</field>
+    </message>
+</iota>

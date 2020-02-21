@@ -125,7 +125,7 @@ static bool check_elf_executable(proc::elf::Elf64_Ehdr* program_header){
     return true;
 }
 
-bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige, tid_t vfs_server){
+bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige, server_tids servers){
     proc::elf::Elf64_Ehdr program_header{};
     if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(&program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
         printf("[ELF]: Couldn't load file: %s\n", initrd_filename);
@@ -152,9 +152,11 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
 
             char* ld_path = nullptr;
             auxvals aux{};
-
-            x86_64::smap::smap_guard guard{};
-            load_executable(initrd_filename, &aux, new_thread, &ld_path, 0);
+            
+            {
+                x86_64::smap::smap_guard guard{};
+                load_executable(initrd_filename, &aux, new_thread, &ld_path, 0);
+            }
 
             new_thread->expand_thread_stack(10); // Create a stack of 10 pages for the process
 
@@ -162,9 +164,25 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
             new_thread->context.rbp = new_thread->context.rsp;
             new_thread->context.cr3 = (new_thread->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
+            auto push = [&](uint64_t value){
+                new_thread->context.rsp -= sizeof(uint64_t);
+                *(uint64_t*)(new_thread->context.rsp) = value;
+            };
+
             if(ld_path == nullptr){
                 // Static Executable, No Dynamic loader
                 new_thread->context.rip = aux.at_entry;
+
+                push(0); // Align stack
+                push(0); // Null
+                push(0); // Null data
+                push(servers.kbus);
+                push(0x1001); // AT_KBUS_SERVER
+                push(servers.vfs);
+                push(0x1000); // AT_VFS_SERVER
+                push(0);
+                push(0);
+                push(0);
             } else {
                 // Load dynamic shit
                 proc::elf::Elf64_Ehdr ld_program_header{};
@@ -175,19 +193,20 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
     
                 check_elf_executable(&ld_program_header);
                 auxvals ld_aux{};
-                //TODO: Don't hardcode ld.so offset
-                load_executable(ld_path, &ld_aux, new_thread, nullptr, 0x800000000);
 
-                auto push = [&](uint64_t value){
-                    new_thread->context.rsp -= sizeof(uint64_t);
-                    *(uint64_t*)(new_thread->context.rsp) = value;
-                };
+                {
+                    x86_64::smap::smap_guard smap_guard{};
+                    //TODO: Don't hardcode ld.so offset
+                    load_executable(ld_path, &ld_aux, new_thread, nullptr, 0x800000000);
+                }
 
                 push(0); // Align stack
                 push(0); // Null
                 push(0); // Null data
-                push(vfs_server);
-                push(0x1000); // AT_VFS server
+                push(servers.kbus);
+                push(0x1001); // AT_KBUS_SERVER
+                push(servers.vfs);
+                push(0x1000); // AT_VFS_SERVER
                 push(aux.at_phdr);
                 push(3); // ph_hdr
                 push(aux.at_phent);

@@ -180,12 +180,14 @@ C_LINKAGE void kernel_main(){
     proc::syscall::init_syscall();
 
     // TODO: Start this in modular way
-    proc::process::thread* thread = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &thread, proc::process::thread_privilege_level::DRIVER, 0)) printf("Failed to load Zeta\n");
+    proc::process::thread* vfs = nullptr;
+    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &vfs, proc::process::thread_privilege_level::DRIVER, {})) printf("Failed to load Zeta\n");
 
-    proc::process::thread* blockdev = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/xhci", &blockdev, proc::process::thread_privilege_level::DRIVER, thread->tid)) printf("Failed to load nvme\n");
+    proc::process::thread* kbus = nullptr;
+    if(!proc::elf::start_elf_executable("/usr/bin/kbus", &kbus, proc::process::thread_privilege_level::DRIVER, {.vfs = vfs->tid, .kbus = 0})) printf("Failed to load kbus\n");
 
+    proc::process::thread* block = nullptr;
+    if(!proc::elf::start_elf_executable("/usr/bin/nvme", &block, proc::process::thread_privilege_level::DRIVER, {.vfs = vfs->tid, .kbus = kbus->tid})) printf("Failed to load nvme\n");
     /*proc::process::create_kernel_thread(+[](){
         // TODO: Initialize ACPI kernel thread and PCI kernel thread
 
