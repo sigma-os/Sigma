@@ -169,6 +169,7 @@ namespace proc::process
     // General Management
     tid_t fork(x86_64::idt::idt_registers* regs);
     void kill(x86_64::idt::idt_registers* regs);
+    void yield(x86_64::idt::idt_registers* regs);
 
 
     // IPC

@@ -66,6 +66,10 @@ uint64_t libsigma_fork(void){
     return libsigma_syscall0(sigmaSyscallFork);
 }
 
+void libsigma_yield(void){
+    libsigma_syscall0(sigmaSyscallYield);
+}
+
 #ifdef __cplusplus
 }
 #endif

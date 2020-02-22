@@ -435,6 +435,10 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     return child->tid;
 }
 
+void proc::process::yield(x86_64::idt::idt_registers* regs){
+    timer_handler(regs, nullptr);
+}
+
 #pragma region proc::process::thread
 
 void proc::process::thread::set_state(proc::process::thread_state new_state){

@@ -18,6 +18,7 @@ enum {
     sigmaSyscallSetFsBase,
     sigmaSyscallKill,
     sigmaSyscallFork,
+    sigmaSyscallYield,
     sigmaSyscallGetCurrentTid,
     sigmaSyscallBlockThread,
 

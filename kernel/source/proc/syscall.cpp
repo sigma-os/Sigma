@@ -184,6 +184,11 @@ static uint64_t syscall_vctl(x86_64::idt::idt_registers* regs){
 }
 
 
+static uint64_t syscall_yield(x86_64::idt::idt_registers* regs){
+    proc::process::yield(regs);
+    return 0;
+}
+
 
 using syscall_function = uint64_t (*)(x86_64::idt::idt_registers*);
 
@@ -198,6 +203,7 @@ kernel_syscall syscalls[] = {
     {.func = syscall_set_fsbase, .name = "set_fsbase"},
     {.func = syscall_kill, .name = "kill"},
     {.func = syscall_fork, .name = "fork"},
+    {.func = syscall_yield, .name = "yield"},
     {.func = syscall_get_current_tid, .name = "get_current_tid"},
     {.func = syscall_block_thread, .name = "block_thread"},
 
