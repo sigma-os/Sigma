@@ -61,6 +61,7 @@ std::vector<kbus::object> kbus::find_devices(std::string query){
     client_request_builder builder{};
 
     builder.add_command((uint64_t)client_request_type::FindDevices);
+    builder.add_query(query);
 
     if(libsigma_ipc_send(get_kbus_tid(), (libsigma_message_t*)builder.serialize(), builder.length())){
         printf("libkbus: Failed to send FindDevices message\n");
