@@ -1,6 +1,9 @@
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/proc/syscall.h>
 #include <Sigma/proc/process.h>
+#include <Sigma/misc/debug.h>
+#include <Sigma/arch/x86_64/cpu.h>
+
 x86_64::idt::handler handlers[x86_64::idt::idt_max_entries] = {};
 
 struct {
@@ -99,6 +102,11 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
         if(auto* thread = proc::process::get_current_thread(); thread)
             if(thread->state == proc::process::thread_state::RUNNING)
                 debug_printf("    Current TID: %x\n", proc::process::get_current_tid());
+
+        {
+            x86_64::smap::smap_guard smap{};
+            debug::trace_stack(registers->rbp);
+        }
     }
 
     if(handlers[n].callback)

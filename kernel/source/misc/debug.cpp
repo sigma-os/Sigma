@@ -6,9 +6,9 @@ struct frame {
     uint64_t rip;
 };
 
-void debug::trace_stack(){
+void debug::trace_stack(uintptr_t rbp){
     #if defined(DEBUG)
-    auto* current = static_cast<frame*>(__builtin_frame_address(0));
+    auto* current = (frame*)rbp;
 
 	debug_printf("Starting Stack Trace\n");
 	for(size_t i = 0; i < UINT64_MAX; i++) {
@@ -25,6 +25,10 @@ void debug::trace_stack(){
 
 	debug_printf("End of Stack Trace\n");
 	#endif
+}
+
+void debug::trace_stack(){
+	trace_stack((uintptr_t)__builtin_frame_address(0));
 }
 
 // TODO: Instead of a set x value use another compile time source
