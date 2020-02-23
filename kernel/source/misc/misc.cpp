@@ -23,10 +23,9 @@ void misc::kernel_args::init(char* str){
 }
 
 bool misc::kernel_args::get_bool(const char* key){
-    char* _key = const_cast<char*>(key); // oOOH UB ooooh
     char* current = str_int;
     for(uint64_t i = 0; i < n_pairs; i++){
-        if(memcmp(static_cast<void*>(current), static_cast<void*>(_key), misc::min(strlen(current), strlen(_key))) == 0)
+        if(memcmp(static_cast<const void*>(current), static_cast<const void*>(key), misc::min(strlen(current), strlen(key))) == 0)
             return true;
         
         current += strlen(current) + 1;
@@ -35,11 +34,10 @@ bool misc::kernel_args::get_bool(const char* key){
 }
 
 const char* misc::kernel_args::get_str(const char* key){
-    char* _key = const_cast<char*>(key); // oOOH UB ooooh
     char* current = str_int;
     for(uint64_t i = 0; i < n_pairs; i++){
-        if(memcmp(static_cast<void*>(current), static_cast<void*>(_key), misc::min(strlen(current), strlen(_key))) == 0)
-            return current + strlen(_key) + 1; // Skip key + equal sign
+        if(memcmp(static_cast<const void*>(current), static_cast<const void*>(key), misc::min(strlen(current), strlen(key))) == 0)
+            return current + strlen(key) + 1; // Skip key + equal sign
         
         current += strlen(current) + 1;
     }
