@@ -145,9 +145,8 @@ namespace x86_64::pci
         void install_msi(uint32_t dest_id, uint8_t vector);
     };
 
-    using pci_iterator = uint64_t;
-
-    x86_64::pci::device iterate(pci_iterator& iterator);
+    x86_64::pci::device& find_device(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func);
+    x86_64::pci::device& find_device_by_class(uint16_t main_class, uint16_t subclass, uint8_t prog_if, uint64_t index);
 
     constexpr const char* pci_root_bus_pnp_id = "PNP0A03";
     constexpr const char* pcie_root_bus_pnp_id = "PNP0A08";

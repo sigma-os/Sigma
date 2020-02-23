@@ -510,17 +510,32 @@ x86_64::pci::bar x86_64::pci::read_bar(uint8_t bus, uint8_t slot, uint8_t functi
     return x86_64::pci::read_bar(0, bus, slot, function, number);
 }
 
-x86_64::pci::device x86_64::pci::iterate(x86_64::pci::pci_iterator& iterator){
-    uint64_t i = 0;
-    for(const auto& entry : pci_devices){
-        if(i == iterator){
-            ++iterator;
+
+
+x86_64::pci::device& x86_64::pci::find_device(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func){
+    for(auto& entry : pci_devices){
+        if(entry.seg == seg && entry.bus == bus && entry.device == slot && entry.function == func)
             return entry;
-        } 
-        i++;
     }
 
-    return x86_64::pci::device();
+    PANIC("Couldn't find device by coords");
+    while(true)
+        ;
+}
+
+x86_64::pci::device& x86_64::pci::find_device_by_class(uint16_t main_class, uint16_t subclass, uint8_t prog_if, uint64_t index){
+    uint64_t i = 0;
+    for(auto& entry : pci_devices){
+        if(entry.class_code == main_class && entry.subclass_code == subclass && entry.prog_if == prog_if){
+            if(index == i)
+                return entry;
+            i++;
+        }
+    }
+
+    PANIC("Couldn't find device by class");
+    while(true)
+        ;
 }
 
 static x86_64::pci::device* pci_get_root_bus(uint16_t seg, uint8_t bus){
