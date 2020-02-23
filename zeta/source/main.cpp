@@ -8,6 +8,11 @@
 #include <string.h>
 #include <assert.h>
 
+#include <atomic>
+#include <experimental/coroutine>
+#include <async/basic.hpp>
+#include <async/result.hpp>
+
 #define ZETA_ASSERT(condition) do { \
 				if(!(condition)){ \
                     libsigma_klog("Zeta Assertion Failed, condition: " #condition); \
@@ -21,29 +26,31 @@ static void send_return(tid_t target, sigma::zeta::server_response_builder& res)
     libsigma_ipc_send(target, (libsigma_message_t*)buf, len);
 }
 
-void handle_request(){
-    if(libsigma_ipc_get_msg_size() == 0) // No new message so block until there is
-        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+async::result<void> handle_requests(){
+    libsigma_klog("zeta: Handling requests\n");
+    while(true) {
+        if(libsigma_ipc_get_msg_size() == 0) // No new message so block until there is
+            libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
-    auto msg_size = libsigma_ipc_get_msg_size();
-    auto msg_raw = std::make_unique<uint8_t[]>(msg_size);
-    auto* msg = (libsigma_message_t*)msg_raw.get();
+        auto msg_size = libsigma_ipc_get_msg_size();
+        auto msg_raw = std::make_unique<uint8_t[]>(msg_size);
+        auto* msg = (libsigma_message_t*)msg_raw.get();
 
-    tid_t origin;
-    size_t useless_msg_size;
-    if(libsigma_ipc_receive(&origin, msg, &useless_msg_size) == 1){
-        libsigma_klog("zeta: Failed to receive IPC message\n");
-        return;
-    }
+        tid_t origin;
+        size_t useless_msg_size;
+        if(libsigma_ipc_receive(&origin, msg, &useless_msg_size) == 1){
+            libsigma_klog("zeta: Failed to receive IPC message\n");
+            break;
+        }
 
-    sigma::zeta::client_request_parser parser{msg_raw.get(), msg_size};
-    ZETA_ASSERT(parser.has_command());
+        sigma::zeta::client_request_parser parser{msg_raw.get(), msg_size};
+        ZETA_ASSERT(parser.has_command());
 
-    auto command = static_cast<sigma::zeta::client_request_type>(parser.get_command());
+        auto command = static_cast<sigma::zeta::client_request_type>(parser.get_command());
 
-    switch (command)
-    {
-    case sigma::zeta::client_request_type::Open: {
+        switch (command)
+        {
+        case sigma::zeta::client_request_type::Open: {
             ZETA_ASSERT(parser.has_path());
             ZETA_ASSERT(parser.has_flags());
 
@@ -56,7 +63,7 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    case sigma::zeta::client_request_type::Close: {
+        case sigma::zeta::client_request_type::Close: {
             ZETA_ASSERT(parser.has_fd());
             int ret = fs::get_vfs().close(origin, parser.get_fd());
 
@@ -67,7 +74,7 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    case sigma::zeta::client_request_type::Read: {
+        case sigma::zeta::client_request_type::Read: {
             ZETA_ASSERT(parser.has_fd());
             ZETA_ASSERT(parser.has_count());
 
@@ -83,7 +90,7 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    case sigma::zeta::client_request_type::Write: {
+        case sigma::zeta::client_request_type::Write: {
             ZETA_ASSERT(parser.has_buffer());
             ZETA_ASSERT(parser.has_fd());
             ZETA_ASSERT(parser.has_count());
@@ -98,7 +105,7 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    case sigma::zeta::client_request_type::Dup2: {
+        case sigma::zeta::client_request_type::Dup2: {
             ZETA_ASSERT(parser.has_fd());
             ZETA_ASSERT(parser.has_newfd());
 
@@ -110,7 +117,7 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    case sigma::zeta::client_request_type::Seek: {
+        case sigma::zeta::client_request_type::Seek: {
             ZETA_ASSERT(parser.has_offset());
             ZETA_ASSERT(parser.has_whence());
             ZETA_ASSERT(parser.has_fd());
@@ -124,7 +131,7 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    case sigma::zeta::client_request_type::Tell: {
+        case sigma::zeta::client_request_type::Tell: {
             ZETA_ASSERT(parser.has_fd());
 
             uint64_t ret = fs::get_vfs().tell(origin, parser.get_fd());
@@ -136,22 +143,51 @@ void handle_request(){
             send_return(origin, builder);
         }
         break;
-    default:
-        break;
+        default:
+            break;
+        }
     }
 }
 
+
+struct sigma_io_service : async::io_service {
+    sigma_io_service() {}
+
+    sigma_io_service(const sigma_io_service &) = delete;
+	
+	sigma_io_service &operator= (const sigma_io_service &) = delete;
+
+    void wait() override {
+        libsigma_yield();
+    }
+
+    static sigma_io_service& global();
+};
+
+sigma_io_service& sigma_io_service::global() {
+	static sigma_io_service service;
+	return service;
+}
+
+async::run_queue *globalQueue() {
+	static async::run_queue queue{&sigma_io_service::global()};
+	return &queue;
+}
+
+async::detached init(){
+    async::detach(handle_requests());
+}
 
 int main(){
     fs::devfs devfs{};
     devfs.init();
 
-    auto loop = [&](){
-        while(true) 
-            handle_request();
-    };
     libsigma_klog("zeta: Started VFS\n");
-    loop();
+    
+    {
+        async::queue_scope scope{globalQueue()};
+        init();
+    }
 
-    while(true);
+    globalQueue()->run();
 }
