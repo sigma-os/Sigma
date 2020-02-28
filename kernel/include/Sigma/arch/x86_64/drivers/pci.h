@@ -154,7 +154,7 @@ namespace x86_64::pci
     void init_pci();
     void parse_pci();
 
-    const char* class_to_str(uint8_t class_code);
+    const char* class_to_str(uint8_t class_code, uint8_t subclass, uint8_t prog_if);
 } // namespace x86_64::pci
 
 

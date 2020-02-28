@@ -153,41 +153,141 @@ static void mcfg_pci_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func
     debug_printf("[PCI]: Tried to write to nonexistent device, %x:%x:%x:%x\n", seg, bus, slot, function);
 }
 
-const char* x86_64::pci::class_to_str(uint8_t class_code){
+const char* x86_64::pci::class_to_str(uint8_t class_code, uint8_t subclass, uint8_t prog_if){
     switch (class_code)
     {
-    case 0:
-        return "Undefined";
-        break;
-
+    case 0: return "Undefined";
     case 1:
+        switch (subclass)
+        {
+        case 0: return "SCSI Bus Controller";
+        case 1: return "IDE Controller";
+        case 2: return "Floppy Disk Controller";
+        case 3: return "IPI Bus Controller";
+        case 4: return "RAID Controller";
+        case 5: return "ATA Controller";
+        case 6:
+            switch (prog_if)
+            {
+            case 0: return "Vendor specific SATA Controller";
+            case 1: return "AHCI SATA Controller";
+            case 2: return "Serial Storage Bus SATA Controller";
+            }
+            break;
+        case 7: return "Serial Attached SCSI Controller";
+        case 8:
+            switch (prog_if)
+            {
+            case 1: return "NVMHCI Controller";
+            case 2: return "NVMe Controller";
+            }
+            break;
+        }
         return "Mass Storage Controller";
-        break;
-    
     case 2:
+        switch (subclass)
+        {
+        case 0: return "Ethernet Controller";
+        case 1: return "Token Ring Controller";
+        case 2: return "FDDI Controller";
+        case 3: return "ATM Controller";
+        case 4: return "ISDN Controller";
+        case 5: return "WorldFip Controller";
+        case 6: return "PICMG 2.14 Controller";
+        case 7: return "InfiniBand Controller";
+        case 8: return "Fabric Controller";
+        }
         return "Network Controller";
-        break;
-    
     case 3:
+        switch (subclass)
+        {
+        case 0: return "VGA Compatible Controller";
+        case 1: return "XGA Controller";
+        case 2: return "3D Controller";
+        }
         return "Display Controller";
-        break;
-    
-    case 4:
-        return "Multimedia controller";
-        break;
-
-    case 5:
-        return "Memory Controller";
-        break;
-
+    case 4: return "Multimedia controller";
+    case 5: return "Memory Controller";
     case 6:
+        switch (subclass)
+        {
+        case 0: return "Host Bridge";
+        case 1: return "ISA Bridge";
+        case 2: return "EISA Bridge";
+        case 3: return "MCA Bridge";
+        case 4: return "PCI-to-PCI Bridge";
+        case 5: return "PCMCIA Bridge";
+        case 6: return "NuBus Bridge";
+        case 7: return "CardBus Bridge";
+        case 8: return "RACEway Bridge";
+        case 9: return "Semi-Transparent PCI-to-PCI Bridge";
+        case 10: return "InfiniBand-to-PCI Host Bridge";
+        }
         return "Bridge Device";
-        break;
-
+    case 8:
+        switch (subclass)
+        {
+        case 0:
+            switch (prog_if)
+            {
+            case 0: return "8259-Compatible PIC";
+            case 1: return "ISA-Compatible PIC";
+            case 2: return "EISA-Compatible PIC";
+            case 0x10: return "I/O APIC IRQ Controller";
+            case 0x20: return "I/O xAPIC IRQ Controller";
+            }
+            break;
+        case 1:
+            switch (prog_if)
+            {
+            case 0: return "8237-Compatible DMA Controller";
+            case 1: return "ISA-Compatible DMA Controller";
+            case 2: return "EISA-Compatible DMA Controller";
+            }
+            break;
+        case 2:
+            switch (prog_if)
+            {
+            case 0: return "8254-Compatible PIT";
+            case 1: return "ISA-Compatible PIT";
+            case 2: return "EISA-Compatible PIT";
+            case 3: return "HPET";
+            }
+            break;
+        case 3: return "Real Time Clock";
+        case 4: return "PCI Hot-Plug Controller";
+        case 5: return "SDHCI";
+        case 6: return "IOMMU";
+        }
+        return "Base System Peripheral";
     case 0xC:
+        switch (subclass)
+        {
+        case 0:
+            switch (prog_if)
+            {
+            case 0: return "Generic FireWire (IEEE 1394) Controller";
+            case 0x10: return "OHCI FireWire (IEEE 1394) Controller";
+            }
+            break;
+        case 1: return "ACCESS Bus Controller";
+        case 2: return "SSA Controller";
+        case 3:
+            switch (prog_if)
+            {
+            case 0: return "uHCI USB1 Controller";
+            case 0x10: return "oHCI USB1 Controller";
+            case 0x20: return "eHCI USB2 Controller";
+            case 0x30: return "xHCI USB3 Controller";
+            case 0xFE: return "USB Device";
+            }
+            break;
+        case 4: return "Fibre Channel Controller";
+        case 5: return "SMBus";
+        case 6: return "InfiniBand Controller";
+        case 7: return "IPMI Interface Controller";
+        }
         return "Serial Bus Controller";
-        break;
-    
     default:
         return "Unknown";
         break;
@@ -412,7 +512,7 @@ void x86_64::pci::parse_pci(){
 
     for(const auto& entry : pci_devices){
         if(entry.exists){
-            debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d]", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code), entry.class_code, entry.subclass_code, entry.prog_if);
+            debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d]", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code, entry.subclass_code, entry.prog_if), entry.class_code, entry.subclass_code, entry.prog_if);
 
             if(entry.has_irq)
                 debug_printf(", gsi: %d", entry.gsi);

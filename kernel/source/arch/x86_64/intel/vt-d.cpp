@@ -231,7 +231,7 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
 
                 source_id sid{.raw = (uint16_t)fault.sid};
                 auto& pci_dev = x86_64::pci::find_device(self.def->segment_number, sid.bus, sid.dev, sid.func);
-                printf("        SID: %x, [seg: %d, bus: %d, dev: %d, func: %d] -> %s [class: %d, subclass %d, prog_if: %d] \n", fault.sid, self.def->segment_number, sid.bus, sid.dev, sid.func, x86_64::pci::class_to_str(pci_dev.class_code), pci_dev.class_code, pci_dev.subclass_code, pci_dev.prog_if);
+                printf("        SID: %x, [seg: %d, bus: %d, dev: %d, func: %d] -> %s [class: %d, subclass %d, prog_if: %d] \n", fault.sid, self.def->segment_number, sid.bus, sid.dev, sid.func, x86_64::pci::class_to_str(pci_dev.class_code, pci_dev.subclass_code, pci_dev.prog_if), pci_dev.class_code, pci_dev.subclass_code, pci_dev.prog_if);
                 
 
                 if(fault.supervisor)
