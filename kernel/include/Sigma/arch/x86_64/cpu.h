@@ -97,7 +97,7 @@ namespace x86_64
                 uint64_t osfxsr : 1;
                 uint64_t osxmmexcpt : 1;
                 uint64_t umip : 1;
-                uint64_t res_0 : 1;
+                uint64_t la57 : 1;
                 uint64_t vmxe : 1;
                 uint64_t smxe : 1;
                 uint64_t res_1 : 1;
