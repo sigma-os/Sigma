@@ -359,7 +359,7 @@ void x86_64::svm::vcpu::run(generic::virt::vexit* vexit){
             asm("cli; hlt");
             break;
         }
-        case -1:
+        case (uint32_t)~0:
             printf("[SVM]: Invalid VMCB state\n");
 
             if(1){
