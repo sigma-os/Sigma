@@ -18,17 +18,16 @@ size_t libsigma_initrd_get_file_size(const char* filename){
     return libsigma_syscall1(sigmaSyscallInitrdSize, (uint64_t) filename);
 }
 
-int libsigma_ipc_send(tid_t dest, libsigma_message_t* msg, size_t msg_size){
-    return libsigma_syscall3(sigmaSyscallIpcSend, dest, msg_size, (uint64_t)msg);
+int libsigma_ipc_send(handle_t ring, libsigma_message_t* msg, size_t msg_size){
+    return libsigma_syscall3(sigmaSyscallIpcSend, ring, (uint64_t)msg, msg_size);
 }
 
-int libsigma_ipc_receive(tid_t* origin, libsigma_message_t* msg, size_t* msg_size){
-    int ret = libsigma_syscall3(sigmaSyscallIpcReceive, (uint64_t)msg, (uint64_t)msg_size, (uint64_t)origin);
-    return ret;
+int libsigma_ipc_receive(handle_t ring, libsigma_message_t* msg){
+    return libsigma_syscall2(sigmaSyscallIpcReceive, ring, (uint64_t)msg);
 }
 
-size_t libsigma_ipc_get_msg_size(){
-    return libsigma_syscall0(sigmaSyscallIpcGetSize);
+size_t libsigma_ipc_get_msg_size(handle_t ring){
+    return libsigma_syscall1(sigmaSyscallIpcGetSize, ring);
 }
 
 int libsigma_klog(const char* str){
@@ -58,8 +57,8 @@ tid_t libsigma_get_current_tid(void){
     return libsigma_syscall0(sigmaSyscallGetCurrentTid);
 }
 
-int libsigma_block_thread(enum libsigma_block_reasons reason){
-    return libsigma_syscall1(sigmaSyscallBlockThread, reason);
+int libsigma_block_thread(enum libsigma_block_reasons reason, handle_t handle){
+    return libsigma_syscall2(sigmaSyscallBlockThread, reason, handle);
 }
 
 uint64_t libsigma_fork(void){

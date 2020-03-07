@@ -89,42 +89,31 @@ static uint64_t syscall_initrd_get_size(x86_64::idt::idt_registers* regs){
     return proc::initrd::get_size(reinterpret_cast<char*>(SYSCALL_GET_ARG0()));
 }
 
-// ARG0: destination
+// ARG0: Ring handle number
 // ARG1: buf size
 // ARG2: buf
-static uint64_t syscall_send_message(x86_64::idt::idt_registers* regs){
+static uint64_t syscall_ipc_send(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG2());
 
-    proc::process::thread* thread = proc::process::thread_for_tid(SYSCALL_GET_ARG0());
-    if(!thread->ipc_manager.send_message(proc::process::get_current_tid(), SYSCALL_GET_ARG1(), reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG2()))){
-        return 1;
-    }
-
-    return 0;
+    return !proc::ipc::send(SYSCALL_GET_ARG0(), (std::byte*)SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2());
 }
 
-// ARG0: buf
-// ARG1: pointer to size_t (buf_size)
-// ARG2: pointer to tid (origin)
-static uint64_t syscall_receive_message(x86_64::idt::idt_registers* regs){
-    CHECK_PTR(SYSCALL_GET_ARG0());
+// ARG0: Ring handle number
+// ARG1: buf
+static uint64_t syscall_ipc_receive(x86_64::idt::idt_registers* regs){
     CHECK_PTR(SYSCALL_GET_ARG1());
-    CHECK_PTR(SYSCALL_GET_ARG2());
 
-    uint8_t* buf_ptr = reinterpret_cast<uint8_t*>(SYSCALL_GET_ARG0());
-    uint64_t* buf_size_ptr = reinterpret_cast<uint64_t*>(SYSCALL_GET_ARG1());
-    tid_t* origin_ptr = reinterpret_cast<tid_t*>(SYSCALL_GET_ARG2());
-    if(!proc::process::receive_message(origin_ptr, buf_size_ptr, buf_ptr)){
-        return 1;
-    }
-    return 0;
+    return !proc::ipc::receive(SYSCALL_GET_ARG0(), (std::byte*)SYSCALL_GET_ARG1());
 }
 
-static uint64_t syscall_get_message_size(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
-	return proc::process::get_message_size();
+// ARG0: Ring handle number
+// RET: Size of top message in queue
+static uint64_t syscall_ipc_get_message_size(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs) {
+	return proc::ipc::get_message_size(SYSCALL_GET_ARG0());
 }
 
 // ARG0: Reason
+// ARG1: Generic handle
 static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs){
     auto* thread = proc::process::get_current_thread();
 
@@ -137,7 +126,7 @@ static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_reg
     if(SYSCALL_GET_ARG0() == blockForever)
         thread->set_state(proc::process::thread_state::SILENT);
     else if(SYSCALL_GET_ARG0() == blockWaitForIpc)
-        thread->block(&thread->ipc_manager.event, regs);
+        thread->block(&proc::ipc::get_receive_event(SYSCALL_GET_ARG1()), regs);
     else
         printf("[SYSCALL]: Unknown block reason: %x", SYSCALL_GET_ARG0());
     return 0;
@@ -213,9 +202,9 @@ kernel_syscall syscalls[] = {
     {.func = syscall_initrd_read, .name = "initrd_read"},
     {.func = syscall_initrd_get_size, .name = "initrd_get_size"},
 
-    {.func = syscall_send_message, .name = "ipc_send"},
-    {.func = syscall_receive_message, .name = "ipc_receive"},
-    {.func = syscall_get_message_size, .name = "ipc_get_message_size"},
+    {.func = syscall_ipc_send, .name = "ipc_send"},
+    {.func = syscall_ipc_receive, .name = "ipc_receive"},
+    {.func = syscall_ipc_get_message_size, .name = "ipc_get_message_size"},
 
     {.func = syscall_devctl, .name = "devctl"},
     {.func = syscall_vctl, .name = "vctl"},

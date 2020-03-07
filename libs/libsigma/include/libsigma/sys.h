@@ -56,17 +56,16 @@ uint64_t libsigma_fork(void);
 tid_t libsigma_get_current_tid(void);
 
 enum libsigma_block_reasons{SIGMA_BLOCK_FOREVER = 0, SIGMA_BLOCK_WAITING_FOR_IPC};
-int libsigma_block_thread(enum libsigma_block_reasons reason);
+int libsigma_block_thread(enum libsigma_block_reasons reason, handle_t handle);
 
 typedef struct libsigma_message {
     uint8_t byte;
     uint8_t data[];
 } libsigma_message_t;
 
-int libsigma_ipc_send(tid_t dest, libsigma_message_t* msg, size_t msg_size);
-int libsigma_ipc_receive(tid_t* origin, libsigma_message_t* buffer, size_t* buf_size);
-
-size_t libsigma_ipc_get_msg_size();
+int libsigma_ipc_send(handle_t ring, libsigma_message_t* msg, size_t msg_size);
+int libsigma_ipc_receive(handle_t ring, libsigma_message_t* msg);
+size_t libsigma_ipc_get_msg_size(handle_t ring);
 
 void* libsigma_vm_map(size_t size, void *virt_addr, void* phys_addr, int prot, int flags);
 

@@ -357,14 +357,6 @@ bool proc::process::is_blocked(tid_t tid){
     return proc::process::thread_for_tid(tid)->is_blocked();
 }
 
-bool proc::process::receive_message(tid_t* origin, size_t* size, uint8_t* data){
-    return get_current_thread()->ipc_manager.receive_message(origin, size, data);
-}
-
-size_t proc::process::get_message_size(){
-    return get_current_thread()->ipc_manager.get_msg_size();
-}
-
 tid_t proc::process::get_current_tid(){
     return get_current_thread()->tid;
 }
@@ -379,7 +371,6 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 
     proc::simd::destroy_state(thread->context.simd_state);
     thread->context = proc::process::thread_context(); // Remove all traces from previous function
-    thread->ipc_manager.deinit();
     thread->privilege = proc::process::thread_privilege_level::APPLICATION; // Lowest privilege
     for(auto& frame : thread->resources.frames) mm::pmm::free_block(reinterpret_cast<void*>(frame)); // Free frames
     thread->image = proc::process::thread_image();
@@ -406,7 +397,6 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
 
     parent->context.copy(child->context);
     child->image = parent->image;
-    child->ipc_manager.init(child->tid);
     
     parent->vmm.fork_address_space(*child);
 

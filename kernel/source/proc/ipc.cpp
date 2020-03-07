@@ -1,127 +1,153 @@
-#include <Sigma/proc/ipc.h>
+#include <Sigma/proc/ipc.hpp>
+#include <klibc/string.h>
 #include <Sigma/proc/process.h>
 
-using namespace proc::ipc;
+#include <Sigma/generic/user_handle.hpp>
 
-void thread_ipc_manager::init(tid_t tid)
-{
-	std::lock_guard guard{this->lock};
-	this->current_offset = 0;
-	this->current_buffer_size = thread_ipc_manager_default_msg_buffer_size;
-	this->current_unread_messages_count = 0;
-	this->tid = tid;
-	this->msg_buffer = reinterpret_cast<uint8_t*>(malloc(this->current_buffer_size));
-	if (this->msg_buffer == nullptr) {
-		printf("[IPC]: Couldn't allocate buffer for ipc manager for tid: %d\n", tid);
-		return;
-	}
-	memset(reinterpret_cast<void*>(this->msg_buffer), 0, this->current_buffer_size);
+proc::ipc::queue::queue(tid_t sender, tid_t receiver): _receive_event{}, _lock{}, _queue{}, _sender{sender}, _receiver{receiver} {}
+
+proc::ipc::queue::~queue(){}
+
+bool proc::ipc::queue::send(std::byte* data, size_t size){
+    std::lock_guard guard{this->_lock};
+
+    auto* copy = new std::byte[size];
+    if(!copy)
+        return false;
+    memcpy(copy, data, size);
+
+    this->_queue.push({.size = size, .data = copy});
+    this->_receive_event.trigger();
+    return true;
 }
 
-void thread_ipc_manager::deinit()
-{
-	std::lock_guard guard{this->lock};
-	if (this->current_offset >= this->current_buffer_size) {
-		printf("[IPC]: Detected buffer overrun while destructing thread_ipc_manager [%x], leaking memory..\n", this);
-		return;
-	}
-	if (this->msg_buffer) free(reinterpret_cast<void*>(this->msg_buffer));
+bool proc::ipc::queue::receive(std::byte* data){
+    std::lock_guard guard{this->_lock};
+    if(this->_queue.length() == 0)
+        return false; // No messages on queue right now
+    
+    const auto msg = this->_queue.pop();
+    memcpy(data, msg.data, msg.size);
+    delete[] msg.data;
+
+    return true;
 }
 
-/* The on memory layout of the message looks like this
- * | ipc_message_header
- * | uint8_t[] data
- * | ipc_message_footer
- */
-bool thread_ipc_manager::send_message(tid_t origin, size_t buffer_length, uint8_t* buffer) {
-	std::lock_guard guard{this->lock};
-	if (this->current_offset + (sizeof(ipc::ipc_message_header) + buffer_length + sizeof(ipc::ipc_message_footer)) >= this->current_buffer_size) {
-		
-		size_t size = this->current_buffer_size * 2;
-		this->msg_buffer = static_cast<uint8_t*>(realloc(static_cast<void*>(this->msg_buffer), size));
-		this->current_buffer_size = size;
-	}
-
-	ipc_message_header* header_ptr = reinterpret_cast<ipc_message_header*>(this->msg_buffer + this->current_offset);
-	new (header_ptr) ipc_message_header(this->tid, origin, buffer_length);
-	this->current_offset += sizeof(ipc_message_header);
-
-	memcpy(reinterpret_cast<void*>(this->msg_buffer + this->current_offset), reinterpret_cast<void*>(buffer), buffer_length);
-	this->current_offset += buffer_length;
-
-	ipc_message_footer* footer_ptr = reinterpret_cast<ipc_message_footer*>(this->msg_buffer + this->current_offset);
-	new (footer_ptr) ipc_message_footer();
-	this->current_offset += sizeof(ipc_message_footer);
-
-	header_ptr->footer = footer_ptr;
-	footer_ptr->header = header_ptr;
-
-	this->current_unread_messages_count++;
-	
-	this->event.trigger();
-
-	return true;
+size_t proc::ipc::queue::get_top_message_size(){
+    std::lock_guard guard{this->_lock};
+    if(this->_queue.length() == 0)
+        return 0; // No messages on queue right now
+    
+    return this->_queue.back().size;
 }
 
-bool thread_ipc_manager::receive_message(tid_t* origin, size_t* size, uint8_t* data)
-{
-	std::lock_guard guard{this->lock};
-	if (this->current_unread_messages_count == 0) 
-		return false; // No new messages
-
-	ipc_message_footer* footer = reinterpret_cast<ipc_message_footer*>(this->msg_buffer + this->current_offset - sizeof(ipc_message_footer));
-	if(!footer->check_magic()){
-		printf("[IPC]: Footer [%x] magic invalid", footer);
-		return false;
-	}
-
-	ipc_message_header* header = footer->header;
-	if(!header->check_magic()){
-		printf("[IPC]: Header [%x] magic invalid", header);
-		return false;
-	}
-
-
-	*origin = header->origin;
-	*size = header->buffer_length;
-
-	uint8_t* raw_msg = reinterpret_cast<uint8_t*>(header + 1);
-	memcpy(static_cast<void*>(data), static_cast<void*>(raw_msg), header->buffer_length);
-
-	this->event.untrigger();
-	this->current_unread_messages_count--;
-	this->current_offset -= (sizeof(ipc_message_header) + header->buffer_length + sizeof(ipc_message_footer));
-	return true;
+bool proc::ipc::ring::send(std::byte* data, size_t size){
+    tid_t tid = proc::process::get_current_tid();
+    if(tid == a)
+        return this->_b_queue.send(data, size);
+    else if(tid == b)
+        return this->_a_queue.send(data, size);
+    else
+        PANIC("Tried to send message on non-owned IPC ring");
 }
 
-size_t thread_ipc_manager::get_msg_size(){
-	if(this->current_unread_messages_count == 0)
-		return 0;
-
-	std::lock_guard guard{this->lock};
-
-	ipc_message_footer* footer = reinterpret_cast<ipc_message_footer*>(this->msg_buffer + this->current_offset - sizeof(ipc_message_footer));
-	if(!footer->check_magic()){
-		printf("[IPC]: Footer [%x] magic invalid", footer);
-		return 0;
-	}
-
-	ipc_message_header* header = footer->header;
-	if(!header->check_magic()){
-		printf("[IPC]: Header [%x] magic invalid", header);
-		return 0;
-	}
-
-	return header->buffer_length;
+bool proc::ipc::ring::receive(std::byte* data){
+    tid_t tid = proc::process::get_current_tid();
+    if(tid == a)
+        return this->_a_queue.receive(data);
+    else if(tid == b)
+        return this->_b_queue.receive(data);
+    else
+        PANIC("Tried to receive message on non-owned IPC ring");
+}
+        
+size_t proc::ipc::ring::get_top_message_size(){
+    tid_t tid = proc::process::get_current_tid();
+    if(tid == a)
+        return this->_a_queue.get_top_message_size();
+    else if(tid == b)
+        return this->_b_queue.get_top_message_size();
+    else{
+        printf("Tried to get top message size on non-owned IPC ring: %x\n", tid);
+        PANIC("");
+    }
 }
 
-void thread_ipc_manager::receive_message_sync(tid_t& origin, size_t& size, uint8_t* data){
-	if(this->current_unread_messages_count != 0){
-		this->receive_message(&origin, &size, data);
-		return;
-	}
+std::pair<tid_t, tid_t> proc::ipc::ring::get_recipients(){
+    return {this->a, this->b};
+}
 
-	volatile uint64_t old_count = this->current_unread_messages_count;
-	while(this->current_unread_messages_count == old_count);
-	this->receive_message(&origin, &size, data);
+generic::event& proc::ipc::ring::get_receive_event(){
+    tid_t tid = proc::process::get_current_tid();
+    if(tid == a)
+        return this->_a_queue._receive_event;
+    else if(tid == b)
+        return this->_b_queue._receive_event;
+    else
+        PANIC("Tried to get event size on non-owned IPC ring");
+}
+
+size_t proc::ipc::get_message_size(uint64_t ring){
+    auto* thread = proc::process::get_current_thread();
+    ASSERT(thread);
+
+    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
+    ASSERT(handle);
+
+    auto* ipc_ring = handle->ring;
+    ASSERT(ipc_ring);
+
+    return ipc_ring->get_top_message_size();
+}
+
+bool proc::ipc::send(uint64_t ring, std::byte* data, size_t size){
+    auto* thread = proc::process::get_current_thread();
+    ASSERT(thread);
+
+    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
+    ASSERT(handle);
+
+    auto* ipc_ring = handle->ring;
+    ASSERT(ipc_ring);
+
+    return ipc_ring->send(data, size);
+}
+
+bool proc::ipc::receive(uint64_t ring, std::byte* data){
+    auto* thread = proc::process::get_current_thread();
+    ASSERT(thread);
+
+    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
+    ASSERT(handle);
+
+    auto* ipc_ring = handle->ring;
+    ASSERT(ipc_ring);
+
+    return ipc_ring->receive(data);
+}
+
+generic::event& proc::ipc::get_receive_event(uint64_t ring){
+    auto* thread = proc::process::get_current_thread();
+    ASSERT(thread);
+
+    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
+    ASSERT(handle);
+
+    auto* ipc_ring = handle->ring;
+    ASSERT(ipc_ring);
+
+    return ipc_ring->get_receive_event();
+}
+
+std::pair<tid_t, tid_t> proc::ipc::get_recipients(uint64_t ring){
+    auto* thread = proc::process::get_current_thread();
+    ASSERT(thread);
+
+    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
+    ASSERT(handle);
+
+    auto* ipc_ring = handle->ring;
+    ASSERT(ipc_ring);
+
+    return ipc_ring->get_recipients();
 }

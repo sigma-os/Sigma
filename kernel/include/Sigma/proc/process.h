@@ -8,7 +8,7 @@
 #include <Sigma/acpi/madt.h>
 #include <Sigma/smp/cpu.h>
 #include <Sigma/types/vector.h>
-#include <Sigma/proc/ipc.h>
+#include <Sigma/proc/ipc.hpp>
 #include <Sigma/proc/simd.h>
 #include <Sigma/generic/user_handle.hpp>
 #include <Sigma/generic/event.hpp>
@@ -80,16 +80,15 @@ namespace proc::process
     enum class thread_privilege_level {APPLICATION = 0, DRIVER = 1, KERNEL = 2};
 
     struct thread {
-        thread(): context(proc::process::thread_context()), resources(proc::process::thread_resources()), \
-                  image(proc::process::thread_image()), state(proc::process::thread_state::DISABLED), \
-                  privilege(proc::process::thread_privilege_level::APPLICATION), ipc_manager(proc::ipc::thread_ipc_manager()), \
-                  vmm(x86_64::paging::context()), tid(0), thread_lock({}) {}
+        thread(): context{}, resources{}, image{}, state{}, \
+                  privilege{proc::process::thread_privilege_level::APPLICATION}, \
+                  vmm{}, tid{0}, thread_lock{}, handle_catalogue{} {}
+
         proc::process::thread_context context;
         proc::process::thread_resources resources;
         proc::process::thread_image image;
         proc::process::thread_state state;
         proc::process::thread_privilege_level privilege;
-        proc::ipc::thread_ipc_manager ipc_manager;
         x86_64::paging::context vmm;
         tid_t tid;
         x86_64::spinlock::mutex thread_lock;
@@ -172,11 +171,6 @@ namespace proc::process
     tid_t fork(x86_64::idt::idt_registers* regs);
     void kill(x86_64::idt::idt_registers* regs);
     void yield(x86_64::idt::idt_registers* regs);
-
-
-    // IPC
-    bool receive_message(tid_t* origin, size_t* size, uint8_t* data);
-    size_t get_message_size();
 } // namespace proc::sched
 
 
