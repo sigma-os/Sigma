@@ -6,6 +6,8 @@
 #include <Sigma/generic/device.h>
 #include <atomic>
 
+#include <protocols/zeta-sigma-kernel.hpp>
+
 #define SYSCALL_GET_FUNC() (regs->rax)
 #define SYSCALL_GET_ARG0() (regs->rbx)
 #define SYSCALL_GET_ARG1() (regs->rcx)
@@ -248,4 +250,67 @@ void proc::syscall::init_syscall(){
     }*/
 
     x86_64::idt::register_interrupt_handler({.vector = proc::syscall::syscall_isr_number, .callback = syscall_handler, .should_iret = true});
+}
+
+
+void proc::syscall::serve_kernel_vfs(uint64_t ring){
+    const auto& self = *proc::process::get_current_thread();
+    const auto [_, client_tid] = proc::ipc::get_recipients(ring);
+    debug_printf("[SYSCALL]: Serving kernel VFS on tid: %x for tid: %x, with ring handle: %x\n", self.tid, client_tid, ring);
+
+    while(true){
+        using namespace sigma::zeta;
+        while(proc::ipc::get_message_size(ring) == 0) // TODO: Block thread
+            ;
+        
+        size_t size = proc::ipc::get_message_size(ring);
+        auto* array = new uint8_t[size]{};
+        if(!proc::ipc::receive(ring, (std::byte*)array)){
+            PANIC("Failed to recieve kernel VFS message\n");
+        }
+
+        auto send_return = [ring](sigma::zeta::server_response_builder& res){
+            auto* buf = (std::byte*)res.serialize();
+            size_t len = res.length();
+            ASSERT(proc::ipc::send(ring, buf, len));
+        };
+
+        client_request_parser parser{array, size};
+        ASSERT(parser.has_command());
+        auto command = (client_request_type)parser.get_command();
+        switch (command)
+        {
+        case client_request_type::Write: {
+            ASSERT(parser.has_fd());
+            ASSERT(parser.has_count());
+            ASSERT(parser.has_buffer());
+
+            // stdout || stderr
+            if(parser.get_fd() == 1 || parser.get_fd() == 2){
+                size_t length = parser.get_count() + 1;
+                auto* tmp = new char[length]{};
+                ASSERT(parser.get_buffer().size() >= parser.get_count());
+                memcpy(tmp, parser.get_buffer().data(), parser.get_count());
+
+                debug_printf("%s", tmp);
+
+                delete[] tmp;
+            } else {
+                printf("[SYSCALL]: Unknown FD %x\n", parser.get_fd());
+                PANIC("Unknown FD");
+            }
+
+            server_response_builder builder{};
+            builder.add_status(0);
+
+            send_return(builder);
+        }
+        break;
+        default:
+            printf("[SYSCALL]: Unknown command in kernel VFS: %x\n", parser.get_command());
+            break;
+        }
+
+        delete[] array;
+    }
 }

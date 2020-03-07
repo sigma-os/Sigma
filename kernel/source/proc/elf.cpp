@@ -4,6 +4,8 @@
 #include <Sigma/mm/pmm.h>
 #include <Sigma/mm/vmm.h>
 
+#include <Sigma/proc/syscall.h>
+
 #include <Sigma/arch/x86_64/cpu.h>
 
 using namespace proc::elf;
@@ -125,7 +127,7 @@ static bool check_elf_executable(proc::elf::Elf64_Ehdr* program_header){
     return true;
 }
 
-bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige, server_tids servers){
+bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilige){
     proc::elf::Elf64_Ehdr program_header{};
     if(!proc::initrd::read_file(initrd_filename, reinterpret_cast<uint8_t*>(&program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
         printf("[ELF]: Couldn't load file: %s\n", initrd_filename);
@@ -144,6 +146,7 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
         // Executable File
         {
             proc::process::thread* new_thread = proc::process::create_blocked_thread(privilige);
+            new_thread->thread_lock.lock();
             new_thread->vmm = x86_64::paging::context();
 
             mm::vmm::kernel_vmm::get_instance().clone_paging_info(new_thread->vmm);
@@ -158,16 +161,27 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                 load_executable(initrd_filename, &aux, new_thread, &ld_path, 0);
             }
 
+            new_thread->thread_lock.unlock();
             new_thread->expand_thread_stack(10); // Create a stack of 10 pages for the process
+            new_thread->thread_lock.lock();
 
             new_thread->context.rsp = new_thread->image.stack_top;
-            new_thread->context.rbp = new_thread->context.rsp;
             new_thread->context.cr3 = (new_thread->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
             auto push = [&](uint64_t value){
                 new_thread->context.rsp -= sizeof(uint64_t);
                 *(uint64_t*)(new_thread->context.rsp) = value;
             };
+
+            auto* vfs_thread = proc::process::create_blocked_thread(proc::process::thread_privilege_level::KERNEL);
+            auto* vfs_ring = new proc::ipc::ring{vfs_thread->tid, new_thread->tid};
+            uint64_t kernel_vfs_ring_handle = vfs_thread->handle_catalogue.push(new generic::handles::ipc_ring_handle{vfs_ring});
+            uint64_t user_vfs_ring_handle = new_thread->handle_catalogue.push(new generic::handles::ipc_ring_handle{vfs_ring});
+
+            proc::process::make_kernel_thread(vfs_thread, +[](void* userptr){
+                proc::syscall::serve_kernel_vfs((uint64_t)userptr);
+                PANIC("Left kernel VFS?");
+            }, (void*)kernel_vfs_ring_handle);
 
             if(ld_path == nullptr){
                 // Static Executable, No Dynamic loader
@@ -176,15 +190,15 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                 push(0); // Align stack
                 push(0); // Null
                 push(0); // Null data
-                push(servers.kbus);
-                push(0x1001); // AT_KBUS_SERVER
-                push(servers.vfs);
+                //push(servers.kbus);
+                //push(0x1001); // AT_KBUS_SERVER
+                push(user_vfs_ring_handle);
                 push(0x1000); // AT_VFS_SERVER
                 push(0);
                 push(0);
                 push(0);
             } else {
-                // Load dynamic shit
+                // Load dynamic stuff
                 proc::elf::Elf64_Ehdr ld_program_header{};
                 if(!proc::initrd::read_file(ld_path, reinterpret_cast<uint8_t*>(&ld_program_header), 0, sizeof(proc::elf::Elf64_Ehdr))){
                     printf("[ELF]: Couldn't load file: %s\n", ld_path);
@@ -198,14 +212,17 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                     x86_64::smap::smap_guard smap_guard{};
                     //TODO: Don't hardcode ld.so offset
                     load_executable(ld_path, &ld_aux, new_thread, nullptr, 0x800000000);
+                    delete[] ld_path; // Cleanup
                 }
+
+                new_thread->context.rip = ld_aux.at_entry;
 
                 push(0); // Align stack
                 push(0); // Null
                 push(0); // Null data
-                push(servers.kbus);
-                push(0x1001); // AT_KBUS_SERVER
-                push(servers.vfs);
+                //push(servers.kbus);
+                //push(0x1001); // AT_KBUS_SERVER
+                push(user_vfs_ring_handle);
                 push(0x1000); // AT_VFS_SERVER
                 push(aux.at_phdr);
                 push(3); // ph_hdr
@@ -219,15 +236,12 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
                 push(0);
                 push(0);
 
-                new_thread->context.rip = ld_aux.at_entry;
-
-                // Cleanup
-                delete[] ld_path;
             }
 
             mm::vmm::kernel_vmm::get_instance().set();
             *thread = new_thread;
-            new_thread->set_state(proc::process::thread_state::IDLE);
+            new_thread->state = proc::process::thread_state::IDLE;
+            new_thread->thread_lock.unlock();
         }
         break;
     default:

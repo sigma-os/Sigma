@@ -87,7 +87,7 @@ kernel/build/iso/
 
 bx_enh_dbg.ini
 
-kernel/build_meson/
+kernel/include/protocols/*
 
 Sigma.srctrlbm
 Sigma.srctrldb

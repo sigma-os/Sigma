@@ -18,6 +18,8 @@ namespace proc::syscall
     constexpr uint8_t syscall_isr_number = 249;
 
     void init_syscall();
+
+    void serve_kernel_vfs(uint64_t ring);
 } // namespace proc::syscall
 
 
