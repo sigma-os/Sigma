@@ -13,13 +13,13 @@
                                 } \
                             } while(0)
 
-tid_t kbus_tid = 0;
+tid_t kbus_ring = 0;
 
-static tid_t get_kbus_tid(){
-    if(kbus_tid == 0)
-        kbus_tid = getauxval(AT_KBUS_SERVER);
+static handle_t get_kbus_ring(){
+    if(kbus_ring == 0)
+        kbus_ring = getauxval(AT_KBUS_SERVER);
 
-    return kbus_tid;
+    return kbus_ring;
 }
 
 kbus::object_id kbus::allocate_object(){
@@ -28,20 +28,18 @@ kbus::object_id kbus::allocate_object(){
 
     builder.add_command((uint64_t)client_request_type::CreateDevice);
 
-    if(libsigma_ipc_send(get_kbus_tid(), (libsigma_message_t*)builder.serialize(), builder.length())){
+    if(libsigma_ipc_send(get_kbus_ring(), (libsigma_message_t*)builder.serialize(), builder.length())){
         printf("libkbus: Failed to send CreateDevice message\n");
         return -1;
     }
 
-    if(libsigma_ipc_get_msg_size() == 0)
-        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
-    size_t res_size = libsigma_ipc_get_msg_size();
+    size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
     res.resize(res_size);
 
-    uint64_t origin, useless;
-    if(libsigma_ipc_receive(&origin, (libsigma_message_t*)res.data(), &useless)){
+    if(libsigma_ipc_receive(get_kbus_ring(), (libsigma_message_t*)res.data())){
         printf("libkbus: Failed to receive CreateDevice response\n");
         return -1;
     }
@@ -63,20 +61,18 @@ std::vector<kbus::object> kbus::find_devices(std::string query){
     builder.add_command((uint64_t)client_request_type::FindDevices);
     builder.add_query(query);
 
-    if(libsigma_ipc_send(get_kbus_tid(), (libsigma_message_t*)builder.serialize(), builder.length())){
+    if(libsigma_ipc_send(get_kbus_ring(), (libsigma_message_t*)builder.serialize(), builder.length())){
         printf("libkbus: Failed to send FindDevices message\n");
         return {};
     }
 
-    if(libsigma_ipc_get_msg_size() == 0)
-        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
-    size_t res_size = libsigma_ipc_get_msg_size();
+    size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
     res.resize(res_size);
 
-    uint64_t origin, useless;
-    if(libsigma_ipc_receive(&origin, (libsigma_message_t*)res.data(), &useless)){
+    if(libsigma_ipc_receive(get_kbus_ring(), (libsigma_message_t*)res.data())){
         printf("libkbus: Failed to receive FindDevices response\n");
         return {};
     }
@@ -107,20 +103,18 @@ std::string kbus::object::get_attribute(std::string key){
     builder.add_device(this->id);
     builder.add_key(key);
 
-    if(libsigma_ipc_send(get_kbus_tid(), (libsigma_message_t*)builder.serialize(), builder.length())){
+    if(libsigma_ipc_send(get_kbus_ring(), (libsigma_message_t*)builder.serialize(), builder.length())){
         printf("libkbus: Failed to send GetAttribute message\n");
         return "";
     }
 
-    if(libsigma_ipc_get_msg_size() == 0)
-        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
-    size_t res_size = libsigma_ipc_get_msg_size();
+    size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
     res.resize(res_size);
 
-    uint64_t origin, useless;
-    if(libsigma_ipc_receive(&origin, (libsigma_message_t*)res.data(), &useless)){
+    if(libsigma_ipc_receive(get_kbus_ring(), (libsigma_message_t*)res.data())){
         printf("libkbus: Failed to receive GetAttribute response\n");
         return "";
     }
@@ -144,20 +138,19 @@ using namespace sigma::kbus;
     builder.add_key(key);
     builder.add_value(value);
 
-    if(libsigma_ipc_send(get_kbus_tid(), (libsigma_message_t*)builder.serialize(), builder.length())){
+    if(libsigma_ipc_send(get_kbus_ring(), (libsigma_message_t*)builder.serialize(), builder.length())){
         printf("libkbus: Failed to send AddAttribute message\n");
         return;
     }
 
-    if(libsigma_ipc_get_msg_size() == 0)
+    if(libsigma_ipc_get_msg_size(get_kbus_ring()) == 0)
         libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
-    size_t res_size = libsigma_ipc_get_msg_size();
+    size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
     res.resize(res_size);
 
-    uint64_t origin, useless;
-    if(libsigma_ipc_receive(&origin, (libsigma_message_t*)res.data(), &useless)){
+    if(libsigma_ipc_receive(get_kbus_ring(), (libsigma_message_t*)res.data())){
         printf("libkbus: Failed to receive AddAttribute response\n");
         return;
     }

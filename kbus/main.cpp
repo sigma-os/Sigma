@@ -22,9 +22,8 @@ struct object {
 std::unordered_map<object_id, object> objects;
 object_id id_generator = 0;
 
-void handle_request(){
-    if(libsigma_ipc_get_msg_size() == 0) // No new message so block until there is
-        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+/*void handle_request(){
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
 
     auto msg_size = libsigma_ipc_get_msg_size();
     auto msg_raw = std::make_unique<uint8_t[]>(msg_size);
@@ -140,14 +139,14 @@ void handle_request(){
         printf("kbus: Unknown command: %ld\n", parser.get_command());
         break;
     }
-}
+}*/
 
-int main(){    
+int main(){
     // Disable buffering for stdout and stderr so debug message show up immediately
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
     printf("kbus: Starting\n");
-    while(true)
-        handle_request();
+    while(true);
+        //handle_request();
 }
