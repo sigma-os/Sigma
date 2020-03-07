@@ -10,7 +10,15 @@ namespace types
         bitmap() = default;
         bitmap(size_t n_bits){
             n_bytes = misc::div_ceil(n_bits, 8);
-            array = new uint8_t[n_bytes];
+            array = new uint8_t[n_bytes]{};
+        }
+
+        bitmap(const bitmap&) = delete;
+        bitmap& operator=(const bitmap& other){
+            this->n_bytes = other.n_bytes;
+            this->array = new uint8_t[other.n_bytes];
+            memcpy(this->array, other.array, other.n_bytes);
+            return *this;
         }
 
         ~bitmap(){

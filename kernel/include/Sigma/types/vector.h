@@ -20,6 +20,26 @@ namespace types
             free(static_cast<void*>(this->_data));
         }
 
+		vector(const vector& b){
+			this->_length = b._length;
+			this->_offset = b._offset;
+			this->_data = new (malloc(sizeof(T) * _length)) T;
+
+			for(size_t i = 0; i < this->_offset; i++)
+				this->_data[i] = b._data[i];
+		}
+        vector& operator=(const vector& other) = delete;
+
+		void resize(size_t size){
+			// TODO: This is very naive, shrink, move and default construct
+			if(size >= _length){
+                _length += size;
+                _data = new (realloc(_data, sizeof(T) * _length)) T;
+            }
+
+			this->_offset = size;
+		}
+
         void push_back(T value){
             if((_offset + 1) >= _length){
                 _length *= 2;

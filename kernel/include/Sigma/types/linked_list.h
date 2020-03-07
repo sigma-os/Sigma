@@ -46,6 +46,20 @@ namespace types
                     }
                 }
             }
+            
+
+            linked_list(const linked_list&) = delete;
+            linked_list& operator=(const linked_list& other){
+                this->head = nullptr;
+                this->tail = nullptr;
+                this->mutex = {};
+                this->_length = 0;
+
+                for(auto* entry = other.head; entry != nullptr; entry = entry->next)
+                    this->push_back(entry->item);
+
+                return *this;
+            }
 
             T* push_back(T entry){
                 std::lock_guard guard{this->mutex};
