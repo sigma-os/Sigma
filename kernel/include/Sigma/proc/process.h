@@ -149,10 +149,12 @@ namespace proc::process
     void init_cpu();
 
     // Thread Creation
-    using kernel_thread_function = void (*)();
-    proc::process::thread* create_kernel_thread(kernel_thread_function function);
-    proc::process::thread* create_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
-    proc::process::thread* create_blocked_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege);
+    using kernel_thread_function = void (*)(void*);
+    void make_kernel_thread(proc::process::thread* thread, kernel_thread_function function, void* userptr);
+
+
+    proc::process::thread* create_blocked_thread(proc::process::thread_privilege_level privilege);
+
 
     // Get current x
     proc::process::thread* thread_for_tid(tid_t tid);

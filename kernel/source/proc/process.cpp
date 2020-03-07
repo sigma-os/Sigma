@@ -6,7 +6,7 @@
 auto thread_list = types::linked_list<proc::process::thread>();
 static uint64_t current_thread_list_offset = 0;
 
-auto cpus = misc::lazy_initializer<types::vector<proc::process::managed_cpu>>();
+auto cpus = misc::lazy_initializer<types::linked_list<proc::process::managed_cpu>>();
 
 proc::process::thread* kernel_thread;
 
@@ -93,6 +93,7 @@ static proc::process::thread* schedule(proc::process::thread* current){
 }
 
 static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread* thread){
+    std::lock_guard guard{thread->thread_lock};
     thread->context.rax = regs->rax;
     thread->context.rbx = regs->rbx;
     thread->context.rcx = regs->rcx;
@@ -127,7 +128,8 @@ static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread
 }
 
 static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thread* new_thread, proc::process::thread* old_thread){
-    if(old_thread != nullptr) save_context(regs, old_thread); // This could be the first thread to run after an idle
+    if(old_thread != nullptr)
+        save_context(regs, old_thread); // This could be the first thread to run after an idle
 
     regs->rax = new_thread->context.rax;
     regs->rbx = new_thread->context.rbx;
@@ -157,10 +159,10 @@ static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thre
     proc::simd::restore_state(new_thread->context.simd_state);
 
     if(old_thread == nullptr){
-        x86_64::paging::set_current_info(&new_thread->vmm);
+        new_thread->vmm.set();
     } else {
         if(old_thread->context.cr3 != new_thread->context.cr3){
-            x86_64::paging::set_current_info(&new_thread->vmm);
+            new_thread->vmm.set();
         }
     }
 }
@@ -177,14 +179,9 @@ static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cp
 											// cpu has idled a quantum?
 		save_context(regs, current_thread); // Make sure the current thread can
 											// be picked up at a later date
-		switch(current_thread->state) {
-			case proc::process::thread_state::RUNNING:
-				current_thread->state = proc::process::thread_state::IDLE;
-				break;
-
-			default:
-				break;
-		}
+        std::lock_guard guard{current_thread->thread_lock};
+		if(current_thread->state == proc::process::thread_state::RUNNING)
+			current_thread->state = proc::process::thread_state::IDLE;
 
 		cpu->current_thread = nullptr; // Indicate to the scheduler that there is
 									   // nothing left running on this cpu
@@ -215,23 +212,17 @@ static void timer_handler(x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBU
         return;
     }
     proc::process::thread* new_thread = schedule(cpu->current_thread);
-    if(new_thread == nullptr){
-        idle_cpu(regs, cpu);
-    }
-    proc::process::thread* old_thread = cpu->current_thread;
+    if(!new_thread)
+        idle_cpu(regs, cpu); 
+    std::lock_guard new_guard{new_thread->thread_lock};
 
+    proc::process::thread* old_thread = cpu->current_thread;
     switch_context(regs, new_thread, old_thread);
 
-    if(old_thread != nullptr) {
-        switch (old_thread->state)
-        {
-        case proc::process::thread_state::RUNNING:
-            old_thread->state = proc::process::thread_state::IDLE;
-            break;
-    
-        default:
-            break;
-        }
+    if(old_thread) {
+        std::lock_guard old_guard{old_thread->thread_lock};
+        if(old_thread->state == proc::process::thread_state::RUNNING)
+				old_thread->state = proc::process::thread_state::IDLE;
     }
     
     cpu->current_thread = new_thread;
@@ -273,16 +264,10 @@ void proc::process::init_cpu(){
     printf("[MULTITASKING]: Tried to initialize cpu with apic_id: %x, that is not present in the tables\n", current_apic_id);
 }
 
-static proc::process::thread* create_thread_int(proc::process::thread* thread, uint64_t stack, void* rip,
-												uint64_t cr3, proc::process::thread_privilege_level privilege,
-												proc::process::thread_state state) {
-    thread->state = state;
-	thread->ipc_manager.init(thread->tid);
-	thread->context = proc::process::thread_context(); // Start with a clean slate, make sure
-													   // no data leaks to the next thread
-	thread->context.rip = reinterpret_cast<uint64_t>(rip);
-	thread->context.cr3 = cr3;
-	thread->context.rsp = stack;
+static proc::process::thread* create_thread_int(proc::process::thread* thread, proc::process::thread_privilege_level privilege, proc::process::thread_state state) {
+    std::lock_guard guard{thread->thread_lock};
+    thread->handle_catalogue = {};
+	thread->context = {}; // Start with a clean slate, make sure no data leaks to the next thread
 	thread->context.rflags = ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
 													// Bit 9 is IF, Interrupt flag, Force enable this
 												    // so timer interrupts arrive
@@ -304,42 +289,47 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, u
 			thread->context.ss = x86_64::gdt::user_data_selector | 3; // Requested Privilege level 3
 			break;
 	}
-
+    thread->state = state;
 	return thread;
 }
 
-proc::process::thread* proc::process::create_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege){
+void proc::process::make_kernel_thread(proc::process::thread* thread, kernel_thread_function function, void* userptr){
+    std::lock_guard guard{thread->thread_lock};
+
+    thread->vmm = {};
+    mm::vmm::kernel_vmm::get_instance().clone_paging_info(thread->vmm);
+    thread->context.cr3 = (thread->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
+
+    auto kernel_thread_trampoline = +[](kernel_thread_function f, void* userptr){
+        f(userptr);
+
+        printf("Left kernel thread?\n");
+        get_current_thread()->set_state(proc::process::thread_state::SILENT);
+        while(true)
+            asm("hlt");
+    };
+
+    thread->context.rip = (uint64_t)kernel_thread_trampoline;
+    thread->context.rsp = reinterpret_cast<uint64_t>(new uint8_t[0x2000]{}) + 0x2000; // TODO: Improve this;
+    thread->context.rsp = ALIGN_DOWN(thread->context.rsp, 16); // Align stack for C ABI
+    thread->context.rdi = (uint64_t)function;
+    thread->context.rsi = (uint64_t)userptr; // Bit hacky but assume sysv ABI
+    thread->privilege = thread_privilege_level::KERNEL;
+    thread->state = thread_state::IDLE;
+}
+
+proc::process::thread* proc::process::create_blocked_thread(proc::process::thread_privilege_level privilege){
+    std::lock_guard guard{scheduler_mutex};
     for(auto& thread : thread_list){
         if(thread.state == proc::process::thread_state::DISABLED){
             // Found an empty thread in the list
-            return create_thread_int(&thread, stack, rip, cr3, privilege, proc::process::thread_state::IDLE);
+            return create_thread_int(&thread, privilege, proc::process::thread_state::SILENT);
         }
     }
 
     auto* thread = thread_list.empty_entry();
     thread->tid = current_thread_list_offset++;
-    return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::IDLE);
-}
-
-proc::process::thread* proc::process::create_kernel_thread(kernel_thread_function function){
-    void* rip = reinterpret_cast<void*>(function);
-    uint64_t cr3 = (mm::vmm::kernel_vmm::get_instance().get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
-    uint64_t stack = reinterpret_cast<uint64_t>(new uint8_t[0x1000]); // TODO: Improve this
-    stack += 0x1000; // Remember stack grows downwards
-    return proc::process::create_thread(rip, stack, cr3, proc::process::thread_privilege_level::KERNEL);
-}
-
-proc::process::thread* proc::process::create_blocked_thread(void* rip, uint64_t stack, uint64_t cr3, proc::process::thread_privilege_level privilege){
-    for(auto& thread : thread_list){
-        if(thread.state == proc::process::thread_state::DISABLED){
-            // Found an empty thread in the list
-            return create_thread_int(&thread, stack, rip, cr3, privilege, proc::process::thread_state::BLOCKED);
-        }
-    }
-
-    auto* thread = thread_list.empty_entry();
-    thread->tid = current_thread_list_offset++;
-    return create_thread_int(thread, stack, rip, cr3, privilege, proc::process::thread_state::SILENT);
+    return create_thread_int(thread, privilege, proc::process::thread_state::SILENT);
 }
 
 proc::process::thread* proc::process::thread_for_tid(tid_t tid){
@@ -351,6 +341,7 @@ proc::process::thread* proc::process::thread_for_tid(tid_t tid){
 }
 
 proc::process::thread* proc::process::get_current_thread(){
+    std::lock_guard guard{scheduler_mutex}; // Some weird smp bug idfk
     return get_current_managed_cpu()->current_thread;
 }
 
@@ -375,11 +366,7 @@ size_t proc::process::get_message_size(){
 }
 
 tid_t proc::process::get_current_tid(){
-    auto* cpu = get_current_managed_cpu();
-    if(cpu == nullptr) return 0; // Kernel thread should be safe
-    auto* thread = cpu->current_thread;
-    if(thread == nullptr) return 0; // Same
-    return thread->tid;
+    return get_current_thread()->tid;
 }
 
 void proc::process::kill(x86_64::idt::idt_registers* regs){
@@ -412,8 +399,7 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     auto* parent = proc::process::get_current_thread();
     if(parent == nullptr) return 0;
     parent->thread_lock.lock();
-    auto* child = proc::process::create_blocked_thread(reinterpret_cast<void*>(regs->rip) \
-                                        , regs->rsp, 0, parent->privilege);
+    auto* child = proc::process::create_blocked_thread(parent->privilege);
     child->thread_lock.lock();
 
     save_context(regs, parent);
@@ -429,9 +415,9 @@ tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
     // Set return values
     child->context.rax = 0; // Child should get 0 as return value
 
+    parent->thread_lock.unlock();
     child->thread_lock.unlock();
     child->wake();
-    parent->thread_lock.unlock();
     return child->tid;
 }
 
