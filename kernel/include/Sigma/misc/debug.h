@@ -10,7 +10,7 @@ namespace debug
     void trace_stack();
 } // namespace debug
 
-C_LINKAGE void __stack_chk_fail();
+C_LINKAGE NORETURN_ATTRIBUTE void __stack_chk_fail();
 
 #if defined(SIGMA_UBSAN)
 
