@@ -12,8 +12,11 @@ void debug::trace_stack(uintptr_t rbp){
 
 	debug_printf("Starting Stack Trace\n");
 	for(size_t i = 0; i < UINT64_MAX; i++) {
+		if(!current)
+			break;
 		if(!misc::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr || !misc::is_canonical(current->rip) || current->rip == 0)
 			break;
+		
 		const auto [name, addr] = proc::elf::get_symbol(current->rip);
 		if(addr != 0)
 			debug_printf("  %d: RIP [%x] -> %s+%x\n", i, current->rip, name, current->rip - addr);
