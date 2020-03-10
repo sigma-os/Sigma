@@ -28,6 +28,7 @@ static proc::process::thread* schedule(proc::process::thread* current){
         if(current == nullptr){
             // Just got called without any current thread, loop through all of them
             for(auto& entry : thread_list){
+                std::lock_guard guard{entry.thread_lock};
                 if(entry.state == proc::process::thread_state::IDLE){
                     return &entry;
                 } else if(entry.state == proc::process::thread_state::BLOCKED){
@@ -51,6 +52,7 @@ static proc::process::thread* schedule(proc::process::thread* current){
         auto end = thread_list.end();
         while(it != end){
             auto& entry = *it;
+            std::lock_guard guard{entry.thread_lock};
             if(entry.state == proc::process::thread_state::IDLE){
                 return &entry;
             } else if(entry.state == proc::process::thread_state::BLOCKED){
@@ -69,6 +71,7 @@ static proc::process::thread* schedule(proc::process::thread* current){
         end = current_it;
         while(it != end){
             auto& entry = *it;
+            std::lock_guard guard{entry.thread_lock};
             if(entry.state == proc::process::thread_state::IDLE){
                 return &entry;
             } else if(entry.state == proc::process::thread_state::BLOCKED){
