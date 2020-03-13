@@ -25,19 +25,25 @@ types::queue<tid_t> scheduling_queue{};
 
 static proc::process::thread* schedule(proc::process::thread* current){
     auto round_robin = [current]() -> proc::process::thread* {
+        auto check_thread = [](proc::process::thread& t) -> bool {
+            if(t.state == proc::process::thread_state::IDLE){
+                return true;
+            } else if(t.state == proc::process::thread_state::BLOCKED){
+                if(t.event->has_triggered()){
+                    t.state = proc::process::thread_state::IDLE;
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         if(current == nullptr){
             // Just got called without any current thread, loop through all of them
             for(auto& entry : thread_list){
                 std::lock_guard guard{entry.thread_lock};
-                if(entry.state == proc::process::thread_state::IDLE){
+                if(check_thread(entry))
                     return &entry;
-                } else if(entry.state == proc::process::thread_state::BLOCKED){
-                    if(entry.event->has_triggered()){
-                        entry.wake();
-                        
-                        return &entry;
-                    }
-                }
             }
             return nullptr;
         }
@@ -53,16 +59,9 @@ static proc::process::thread* schedule(proc::process::thread* current){
         while(it != end){
             auto& entry = *it;
             std::lock_guard guard{entry.thread_lock};
-            if(entry.state == proc::process::thread_state::IDLE){
+            if(check_thread(entry))
                 return &entry;
-            } else if(entry.state == proc::process::thread_state::BLOCKED){
-                if(entry.event->has_triggered()){
-                    entry.wake();
-                    
-                    return &entry;
-                }
-            }
-
+            
             end = thread_list.end();
             ++it;
         }
@@ -72,24 +71,25 @@ static proc::process::thread* schedule(proc::process::thread* current){
         while(it != end){
             auto& entry = *it;
             std::lock_guard guard{entry.thread_lock};
-            if(entry.state == proc::process::thread_state::IDLE){
+            if(check_thread(entry))
                 return &entry;
-            } else if(entry.state == proc::process::thread_state::BLOCKED){
-                if(entry.event->has_triggered()){
-                    entry.wake();
-                    
-                    return &entry;
-                }
-            }
-
+            
             ++it;
         }
 
         return nullptr;
     };
 
+    if(current)
+        std::lock_guard current_guard{current->thread_lock};
+
     if(scheduling_queue.length() >= 1){
-        return proc::process::thread_for_tid(scheduling_queue.pop());
+        auto tid = scheduling_queue.pop();
+        for(auto& entry : thread_list){
+            if(entry.tid == tid)
+                return &entry;
+        }
+        PANIC("Couldn't find thread referenced in queue");
     } else {
         return round_robin();
     }
