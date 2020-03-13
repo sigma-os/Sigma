@@ -56,6 +56,14 @@ namespace generic::handles
 
 	class handle_catalogue {
 		public:
+
+		handle_catalogue& operator=(handle_catalogue&& other){
+            this->id_gen = std::move(other.id_gen);
+			this->catalogue = std::move(other.catalogue);
+
+            return *this;
+        }
+
 		NODISCARD_ATTRIBUTE
 		uint64_t push(handles::handle* handle){
 			auto id = id_gen.id();

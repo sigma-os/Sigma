@@ -299,7 +299,6 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, p
 void proc::process::make_kernel_thread(proc::process::thread* thread, kernel_thread_function function, void* userptr){
     std::lock_guard guard{thread->thread_lock};
 
-    thread->vmm = {};
     mm::vmm::kernel_vmm::get_instance().clone_paging_info(thread->vmm);
     thread->context.cr3 = (thread->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 

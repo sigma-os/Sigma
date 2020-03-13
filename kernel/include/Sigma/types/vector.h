@@ -28,7 +28,19 @@ namespace types
 			for(size_t i = 0; i < this->_offset; i++)
 				this->_data[i] = b._data[i];
 		}
-        vector& operator=(const vector& other) = delete;
+
+		vector& operator=(const types::vector<T>& other) {
+			this->_length = other._length;
+			this->_offset = other._offset;
+			this->_data = new (malloc(sizeof(T) * _length)) T;
+
+			for(size_t i = 0; i < this->_offset; i++)
+				this->_data[i] = other._data[i];
+
+			return *this;
+		}
+
+        //vector& operator=(const vector& other) = delete;
 
 		void resize(size_t size){
 			// TODO: This is very naive, shrink, move and default construct

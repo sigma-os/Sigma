@@ -23,6 +23,20 @@ namespace types
         public:
         hash_map(): hasher{} {}
 
+        hash_map(hash_map&& other){
+            this->list = std::move(other.list);
+            this->hasher = std::move(other.hasher);
+            this->lock = std::move(other.lock);
+        }
+
+        hash_map& operator=(hash_map&& other){
+            this->list = std::move(other.list);
+            this->hasher = std::move(other.hasher);
+            this->lock = std::move(other.lock);
+
+            return *this;
+        }
+
         void push_back(Key key, Value value){
             std::lock_guard guard{this->lock};
             auto hash = this->hasher(key);
