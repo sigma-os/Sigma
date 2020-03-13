@@ -72,7 +72,7 @@ initialize_cr4:
 global _kernel_early
 _kernel_early:
     mov rsp, stack_top
-    mov rbp, rsp
+    mov rbp, 0 ; Set to zero to provide stack trace stop
 
     call initialize_sse
     call initialize_osxsave
@@ -102,7 +102,7 @@ _smp_kernel_early:
     mov cr3, rax
 
     mov rsp, qword [trampoline_stack]
-    mov rbp, rsp
+    mov rbp, 0 ; Set to zero to provide stack trace stop
 
     mov byte [trampoline_booted], 1
 
