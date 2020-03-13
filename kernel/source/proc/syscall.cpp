@@ -306,6 +306,31 @@ void proc::syscall::serve_kernel_vfs(uint64_t ring){
             send_return(builder);
         }
         break;
+
+        case client_request_type::Seek: {
+            ASSERT(parser.has_fd());
+            ASSERT(parser.has_whence());
+            ASSERT(parser.has_offset());
+            printf("[SYSCALL]: Ignoring seek, fd: %d, whence: %d, offset: %d\n", parser.get_fd(), parser.get_whence(), parser.get_offset());
+
+            server_response_builder builder{};
+            builder.add_status(0);
+
+            send_return(builder);
+        }
+        break;
+
+        case client_request_type::Tell: {
+            ASSERT(parser.has_fd());
+            printf("[SYSCALL]: Ignoring Tell, fd: %d\n", parser.get_fd());
+
+            server_response_builder builder{};
+            builder.add_status(0);
+            builder.add_offset(0);
+
+            send_return(builder);
+        }
+        break;
         default:
             printf("[SYSCALL]: Unknown command in kernel VFS: %x\n", parser.get_command());
             break;
