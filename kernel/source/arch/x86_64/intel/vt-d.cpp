@@ -77,7 +77,7 @@ uint64_t x86_64::vt_d::device_context_table::get_phys(){
 
 #pragma region dma_remapping_engine
 
-x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remapping_def* def): pci_segment{def->segment_number} {
+x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remapping_def* def): root_table{this}, pci_segment{def->segment_number} {
     this->def = def;
 
     mm::vmm::kernel_vmm::get_instance().map_page(def->register_base, def->register_base + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_no_execute);
@@ -142,8 +142,6 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     this->domain_ids.set(0); // Reserve domain id 0, is only really required if cap.CM is set, but not worth the hassle
 
     debug_printf("         Installing Root Table...");
-
-    this->root_table = device_context_table{this};
 
     auto root_addr = dma_remapping_engine_regs::root_table_address_t{.raw = 0};
     root_addr.address = (this->root_table.get_phys() >> 12);

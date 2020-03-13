@@ -268,6 +268,8 @@ namespace x86_64::vt_d
         device_context_table(dma_remapping_engine* engine);
         ~device_context_table();
 
+        device_context_table& operator=(const device_context_table&) = delete;
+
         uint64_t get_phys();
 
         sl_paging::context& get_translation(uint8_t bus, uint8_t dev, uint8_t func);
