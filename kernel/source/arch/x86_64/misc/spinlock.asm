@@ -40,12 +40,12 @@ try_acquire:
     push rbp
     mov rbp, rsp
 
-    mov rax, 0
+    mov rax, 1
 
     lock bts word [rdi], 0
     jnc .success
 
-    mov rax, 1
+    mov rax, 0
 .success:
     mov rsp, rbp
     pop rbp
