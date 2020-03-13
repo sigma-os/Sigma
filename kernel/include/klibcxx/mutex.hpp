@@ -8,7 +8,7 @@
 namespace KLIBCXX_NAMESPACE_NAME {
     class mutex {
         public:
-        constexpr mutex() noexcept : handle({}) {}
+        constexpr mutex() noexcept : handle{} {}
 
         ~mutex() = default;
 
