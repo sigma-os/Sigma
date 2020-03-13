@@ -17,6 +17,7 @@ namespace proc::ipc
         bool send(std::byte* data, size_t size);
         bool receive(std::byte* data);
         size_t get_top_message_size();
+        size_t get_n_messages();
 
         generic::event _receive_event;
 
@@ -38,6 +39,7 @@ namespace proc::ipc
 
         bool send(std::byte* data, size_t size);
         bool receive(std::byte* data);
+        size_t get_n_messages();
         size_t get_top_message_size();
         generic::event& get_receive_event();
         std::pair<tid_t, tid_t> get_recipients();
@@ -49,6 +51,7 @@ namespace proc::ipc
     };
 
     size_t get_message_size(uint64_t ring);
+    size_t get_n_messages(uint64_t ring);
     bool send(uint64_t ring, std::byte* data, size_t size);
     bool receive(uint64_t ring, std::byte* data);
     generic::event& get_receive_event(uint64_t ring);

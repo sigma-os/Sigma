@@ -41,6 +41,11 @@ size_t proc::ipc::queue::get_top_message_size(){
     return this->_queue.back().size;
 }
 
+size_t proc::ipc::queue::get_n_messages(){
+    std::lock_guard guard{this->_lock};
+    return this->_queue.length();
+}
+
 bool proc::ipc::ring::send(std::byte* data, size_t size){
     tid_t tid = proc::process::get_current_tid();
     if(tid == a)
@@ -73,6 +78,19 @@ size_t proc::ipc::ring::get_top_message_size(){
     }
 }
 
+size_t proc::ipc::ring::get_n_messages(){
+    tid_t tid = proc::process::get_current_tid();
+    if(tid == a)
+        return this->_a_queue.get_n_messages();
+    else if(tid == b)
+        return this->_b_queue.get_n_messages();
+    else{
+        printf("Tried to get n messages size on non-owned IPC ring: %x\n", tid);
+        PANIC("");
+    }
+}
+
+
 std::pair<tid_t, tid_t> proc::ipc::ring::get_recipients(){
     return {this->a, this->b};
 }
@@ -87,7 +105,7 @@ generic::event& proc::ipc::ring::get_receive_event(){
         PANIC("Tried to get event size on non-owned IPC ring");
 }
 
-size_t proc::ipc::get_message_size(uint64_t ring){
+static proc::ipc::ring* get_ring(uint64_t ring){
     auto* thread = proc::process::get_current_thread();
     ASSERT(thread);
 
@@ -97,57 +115,29 @@ size_t proc::ipc::get_message_size(uint64_t ring){
     auto* ipc_ring = handle->ring;
     ASSERT(ipc_ring);
 
-    return ipc_ring->get_top_message_size();
+    return ipc_ring;
+}
+
+size_t proc::ipc::get_message_size(uint64_t ring){
+    return get_ring(ring)->get_top_message_size();
+}
+
+size_t proc::ipc::get_n_messages(uint64_t ring){
+    return get_ring(ring)->get_n_messages();
 }
 
 bool proc::ipc::send(uint64_t ring, std::byte* data, size_t size){
-    auto* thread = proc::process::get_current_thread();
-    ASSERT(thread);
-
-    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
-    ASSERT(handle);
-
-    auto* ipc_ring = handle->ring;
-    ASSERT(ipc_ring);
-
-    return ipc_ring->send(data, size);
+    return get_ring(ring)->send(data, size);
 }
 
 bool proc::ipc::receive(uint64_t ring, std::byte* data){
-    auto* thread = proc::process::get_current_thread();
-    ASSERT(thread);
-
-    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
-    ASSERT(handle);
-
-    auto* ipc_ring = handle->ring;
-    ASSERT(ipc_ring);
-
-    return ipc_ring->receive(data);
+    return get_ring(ring)->receive(data);
 }
 
 generic::event& proc::ipc::get_receive_event(uint64_t ring){
-    auto* thread = proc::process::get_current_thread();
-    ASSERT(thread);
-
-    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
-    ASSERT(handle);
-
-    auto* ipc_ring = handle->ring;
-    ASSERT(ipc_ring);
-
-    return ipc_ring->get_receive_event();
+    return get_ring(ring)->get_receive_event();
 }
 
 std::pair<tid_t, tid_t> proc::ipc::get_recipients(uint64_t ring){
-    auto* thread = proc::process::get_current_thread();
-    ASSERT(thread);
-
-    auto* handle = thread->handle_catalogue.get<generic::handles::ipc_ring_handle>(ring);
-    ASSERT(handle);
-
-    auto* ipc_ring = handle->ring;
-    ASSERT(ipc_ring);
-
-    return ipc_ring->get_recipients();
+    return get_ring(ring)->get_recipients();
 }
