@@ -21,7 +21,8 @@
 
 #define CHECK_PTR(ptr) \
 	if(!misc::is_canonical((ptr)) || !PTR_IS_USERLAND((ptr)) || (ptr) == 0){ \
-        debug_printf("[SYSCALL]: Pointer check failed [%x]\n", ptr); \
+        printf("[SYSCALL]: Pointer check failed [%x]\n", ptr); \
+        PANIC(""); \
 	    return 1; \
     }
 
@@ -92,10 +93,10 @@ static uint64_t syscall_initrd_get_size(x86_64::idt::idt_registers* regs){
 }
 
 // ARG0: Ring handle number
-// ARG1: buf size
-// ARG2: buf
+// ARG1: buf
+// ARG2: buf size
 static uint64_t syscall_ipc_send(x86_64::idt::idt_registers* regs){
-    CHECK_PTR(SYSCALL_GET_ARG2());
+    CHECK_PTR(SYSCALL_GET_ARG1());
 
     return !proc::ipc::send(SYSCALL_GET_ARG0(), (std::byte*)SYSCALL_GET_ARG1(), SYSCALL_GET_ARG2());
 }
@@ -124,6 +125,8 @@ static uint64_t syscall_block_thread(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_reg
         blockForever = 0,
         blockWaitForIpc
     };
+
+    SYSCALL_SET_RETURN_VALUE(0); // Set return value early for regs
 
     if(SYSCALL_GET_ARG0() == blockForever)
         thread->set_state(proc::process::thread_state::SILENT);
@@ -260,7 +263,7 @@ void proc::syscall::serve_kernel_vfs(uint64_t ring){
 
     while(true){
         using namespace sigma::zeta;
-        while(proc::ipc::get_message_size(ring) == 0) // TODO: Block thread
+        while(proc::ipc::get_n_messages(ring) == 0) // TODO: Block thread
             ;
         
         size_t size = proc::ipc::get_message_size(ring);
