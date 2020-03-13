@@ -14,7 +14,7 @@ void debug::trace_stack(uintptr_t rbp){
 	for(size_t i = 0; i < UINT64_MAX; i++) {
 		if(!current)
 			break;
-		if(!misc::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr || !misc::is_canonical(current->rip) || current->rip == 0)
+		if(!misc::is_canonical((uint64_t)current->rbp) || current->rbp == nullptr || (uintptr_t)current->rbp <= 0x00007fffffffffff || !misc::is_canonical(current->rip) || current->rip == 0 || current->rip <= 0x00007fffffffffff)
 			break;
 		
 		const auto [name, addr] = proc::elf::get_symbol(current->rip);
