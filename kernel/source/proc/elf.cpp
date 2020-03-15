@@ -177,10 +177,10 @@ bool proc::elf::start_elf_executable(const char* initrd_filename, proc::process:
             uint64_t kernel_vfs_ring_handle = vfs_thread->handle_catalogue.push(new generic::handles::ipc_ring_handle{vfs_ring});
             uint64_t user_vfs_ring_handle = new_thread->handle_catalogue.push(new generic::handles::ipc_ring_handle{vfs_ring});
 
-            proc::process::make_kernel_thread(vfs_thread, +[](void* userptr){
-                proc::syscall::serve_kernel_vfs((uint64_t)userptr);
+            proc::process::make_kernel_thread(vfs_thread, [kernel_vfs_ring_handle](){
+                proc::syscall::serve_kernel_vfs(kernel_vfs_ring_handle);
                 PANIC("Left kernel VFS?");
-            }, (void*)kernel_vfs_ring_handle);
+            });
 
             if(ld_path == nullptr){
                 // Static Executable, No Dynamic loader

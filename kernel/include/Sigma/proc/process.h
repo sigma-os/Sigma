@@ -97,6 +97,13 @@ namespace proc::process
 
 		generic::handles::handle_catalogue handle_catalogue;
 
+        struct {
+            void reset(){
+                this->kernel_stack.reset();
+            }
+            x86_64::kernel_stack kernel_stack;
+        } stacks;
+
         void set_state(proc::process::thread_state new_state);
 
 
@@ -148,8 +155,17 @@ namespace proc::process
     void init_cpu();
 
     // Thread Creation
-    using kernel_thread_function = void (*)(void*);
-    void make_kernel_thread(proc::process::thread* thread, kernel_thread_function function, void* userptr);
+    template<typename F>
+    void make_kernel_thread(proc::process::thread* thread, F f){
+        auto trampoline = [](void* argument){
+            auto* functor = (F*)argument;
+            (*functor)();
+        };
+
+        auto* item = thread->stacks.kernel_stack.push<F>(f);
+        return make_kernel_thread(thread, trampoline, item);
+    }
+    void make_kernel_thread(proc::process::thread* thread, void (*function)(void*), void* arg);
 
 
     proc::process::thread* create_blocked_thread(proc::process::thread_privilege_level privilege);

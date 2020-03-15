@@ -62,6 +62,57 @@ namespace x86_64
         void init();
         void restore_key();
     }
+
+    class kernel_stack {
+        public:
+        kernel_stack(size_t size = kernel_stack::default_size): _size{size} {
+            this->_bottom = new uint8_t[this->_size];
+            memset(this->_bottom, 0, this->_size);
+
+            this->_top = this->_bottom + this->_size;
+        }
+
+        ~kernel_stack(){
+            if(this->_bottom)
+                delete[] this->_bottom;
+        }
+
+        kernel_stack(const kernel_stack&) = delete;
+        kernel_stack(kernel_stack&& b){
+            this->~kernel_stack();
+
+            this->_size = std::move(b._size);
+            this->_bottom = std::move(b._bottom);
+            this->_top = std::move(b._top);
+        }
+
+        kernel_stack& operator=(kernel_stack other) = delete;
+
+        void* top(){
+            return this->_top;
+        }
+
+        size_t size(){
+            return this->_size;
+        }
+
+        void reset(){
+            memset(this->_bottom, 0, this->_size);
+            this->_top = this->_bottom + this->_size;
+        }
+
+        template<typename T, typename... Args>
+        T* push(Args&&... args){
+            this->_top -= ALIGN_UP(sizeof(T), ((16 < alignof(T)) ? alignof(T) : 16)); // Align to at the very least ABI requirements
+            return new (this->_top) T{std::forward<Args>(args)...};
+        }
+
+        private:
+        size_t _size;
+        uint8_t* _bottom, *_top;
+
+        constexpr static size_t default_size = 0x2000;  
+    };
     
     namespace regs {
         union cr4 {

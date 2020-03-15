@@ -270,6 +270,7 @@ void proc::process::init_cpu(){
 static proc::process::thread* create_thread_int(proc::process::thread* thread, proc::process::thread_privilege_level privilege, proc::process::thread_state state) {
     std::lock_guard guard{thread->thread_lock};
     thread->handle_catalogue = {};
+    thread->stacks.reset();
 	thread->context = {}; // Start with a clean slate, make sure no data leaks to the next thread
 	thread->context.rflags = ((1 << 1) | (1 << 9)); // Bit 1 is reserved, should always be 1
 													// Bit 9 is IF, Interrupt flag, Force enable this
@@ -296,13 +297,13 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, p
 	return thread;
 }
 
-void proc::process::make_kernel_thread(proc::process::thread* thread, kernel_thread_function function, void* userptr){
+void proc::process::make_kernel_thread(proc::process::thread* thread, void (*function)(void*), void* userptr){
     std::lock_guard guard{thread->thread_lock};
 
     mm::vmm::kernel_vmm::get_instance().clone_paging_info(thread->vmm);
     thread->context.cr3 = (thread->vmm.get_paging_info() - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
-    auto kernel_thread_trampoline = +[](kernel_thread_function f, void* userptr){
+    auto kernel_thread_trampoline = +[](void (*f)(void*), void* userptr){
         f(userptr);
 
         printf("Left kernel thread?\n");
@@ -312,8 +313,7 @@ void proc::process::make_kernel_thread(proc::process::thread* thread, kernel_thr
     };
 
     thread->context.rip = (uint64_t)kernel_thread_trampoline;
-    thread->context.rsp = reinterpret_cast<uint64_t>(new uint8_t[0x2000]{}) + 0x2000; // TODO: Improve this;
-    thread->context.rsp = ALIGN_DOWN(thread->context.rsp, 16); // Align stack for C ABI
+    thread->context.rsp = (uint64_t)thread->stacks.kernel_stack.top();
     thread->context.rdi = (uint64_t)function;
     thread->context.rsi = (uint64_t)userptr; // Bit hacky but assume sysv ABI
     thread->privilege = thread_privilege_level::KERNEL;
@@ -371,6 +371,7 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 
     thread->state = proc::process::thread_state::DISABLED;
 
+    thread->stacks.reset();
     proc::simd::destroy_state(thread->context.simd_state);
     thread->context = proc::process::thread_context(); // Remove all traces from previous function
     thread->privilege = proc::process::thread_privilege_level::APPLICATION; // Lowest privilege
