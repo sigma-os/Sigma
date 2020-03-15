@@ -307,6 +307,8 @@ isr_stub:
     cld
     mov rdi, rsp
 
+    and rsp, ~0xF ; Align stack for ABI requirements
+
     extern sigma_isr_handler
     call sigma_isr_handler
 

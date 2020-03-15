@@ -39,7 +39,7 @@ initialize_osxsave:
     ret
 
 initialize_efer:
-    mov ecx, EFER_MSR
+    mov ecx, 0xC0000080 ; IA32_EFER
     rdmsr
     bts eax, 0 ; Set SCE for the syscall and sysret instructions
     bts eax, 11 ; Set NXE for No-Execute-Support
@@ -71,7 +71,11 @@ initialize_cr4:
 
 global _kernel_early
 _kernel_early:
-    mov rsp, stack_top
+    cld
+    cli
+
+    mov rsp, bsp_stack_top
+    and rsp, ~0xF ; Align stack for ABI requirements
     mov rbp, 0 ; Set to zero to provide stack trace stop
 
     call initialize_sse
@@ -82,10 +86,7 @@ _kernel_early:
 
     extern _init
     call _init
-
-
-    cld
-    cli
+    
     extern kernel_main
     call kernel_main
 
@@ -98,12 +99,16 @@ _kernel_early:
 
 global _smp_kernel_early
 _smp_kernel_early:
+    cli
+    cld
+
     mov rax, qword [trampoline_paging]
     mov cr3, rax
 
     mov rsp, qword [trampoline_stack]
+    and rsp, ~0xF ; Align stack for ABI requirements
     mov rbp, 0 ; Set to zero to provide stack trace stop
-
+    
     mov byte [trampoline_booted], 1
 
     call initialize_sse
@@ -111,9 +116,6 @@ _smp_kernel_early:
     call initialize_efer
     call initialize_cr0
     call initialize_cr4
-    
-    cli
-    cld
     
     extern smp_kernel_main
     call smp_kernel_main
@@ -134,16 +136,6 @@ trampoline_booted: db 0
 section .bss
 
 align 16
-stack_bottom:
+bsp_stack_bottom:
     resb 0x4000
-stack_top:
-
-
-RAW_VGA_BUFFER equ (0xb8000 + KERNEL_LMA)
-
-CODE_SEG equ 0x08
-DATA_SEG equ 0x10
-
-KERNEL_LMA equ 0xffffffff80000000
-
-EFER_MSR equ 0xC0000080
+bsp_stack_top:
