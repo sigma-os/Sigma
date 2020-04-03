@@ -2,48 +2,44 @@
 #define SIGMA_KERNEL_TYPES_LINKED_LIST
 
 #include <Sigma/common.h>
-#include <klibcxx/mutex.hpp>
-#include <Sigma/arch/x86_64/misc/spinlock.h>
 
 namespace types
 {
     template<typename T>
     class linked_list {
         public:
-            template<typename entry_T>
             struct linked_list_entry {
                 public:
                     template<typename... Args>
-                    linked_list_entry(Args&&... args): item{entry_T{std::forward<Args>(args)...}}, prev{nullptr}, next{nullptr} {}
+                    linked_list_entry(Args&&... args): item{T{std::forward<Args>(args)...}}, prev{}, next{} {}
 
-                    entry_T item;
-                    linked_list_entry<entry_T>* prev;
-                    linked_list_entry<entry_T>* next;
+                    T item;
+                    linked_list_entry* prev;
+                    linked_list_entry* next;
             };
 
-            template<typename iterator_T>
             class linked_list_iterator {
                 public:
-                    explicit linked_list_iterator(linked_list_entry<iterator_T>* entry): entry(entry) { }
+                    explicit linked_list_iterator(linked_list_entry* entry): entry{entry} {}
                     T& operator*(){
                         return entry->item;
                     }
                     void operator++(){
-                        if(this->entry) this->entry = this->entry->next;
+                        if(this->entry)
+                            this->entry = this->entry->next;
                     }
                     bool operator!=(linked_list_iterator it){
                         return this->entry != it.entry;
                     }
-                    linked_list_entry<iterator_T>* entry;
+                    linked_list_entry* entry;
             };
 
-            constexpr linked_list() noexcept : head(nullptr), tail(nullptr), mutex(x86_64::spinlock::mutex()), _length(0) {}
+            constexpr linked_list() noexcept : head{}, tail{}, _length{} {}
 
             ~linked_list() {
                 if((this->head != nullptr) && (this->tail != nullptr) && (this->_length != 0)){
-                    for(T& e : *this){
-                        delete &e;
-                    }
+                    for(auto* entry = this->head; entry != nullptr; entry = entry->next)
+                        delete entry;
                 }
             }
             
@@ -52,7 +48,6 @@ namespace types
             linked_list& operator=(const linked_list& other){
                 this->head = nullptr;
                 this->tail = nullptr;
-                this->mutex = {};
                 this->_length = 0;
 
                 for(auto* entry = other.head; entry != nullptr; entry = entry->next)
@@ -62,12 +57,8 @@ namespace types
             }
 
             T* push_back(T entry){
-                std::lock_guard guard{this->mutex};
-                auto* new_entry = new linked_list_entry<T>{};
-
-                new_entry->item = entry;
+                auto* new_entry = new linked_list_entry{entry};
                 new_entry->next = nullptr;
-
                 
                 if(this->_length == 0){
                     this->head = new_entry;
@@ -87,8 +78,7 @@ namespace types
 
             template<typename... Args>
             T* emplace_back(Args&&... args){
-                std::lock_guard guard{this->mutex};
-                auto* new_entry = new linked_list_entry<T>{std::forward<Args>(args)...};
+                auto* new_entry = new linked_list_entry{std::forward<Args>(args)...};
 
                 new_entry->next = nullptr;
 
@@ -109,8 +99,7 @@ namespace types
             }
 
             T* empty_entry(){
-                std::lock_guard guard{this->mutex};
-                auto* new_entry = new linked_list_entry<T>{};
+                auto* new_entry = new linked_list_entry{};
                 
                 new_entry->next = nullptr;
 
@@ -130,28 +119,28 @@ namespace types
                 return &(new_entry->item);
             }
 
-            linked_list_entry<T>* get_entry_for_item(T* entry){
-                for(linked_list_entry<T>* item = head; item != nullptr; item = item->next){
+            linked_list_entry* get_entry_for_item(T* entry){
+                for(auto* item = head; item != nullptr; item = item->next){
                     if(&(item->item) == entry) return item;
                 }
 
                 return nullptr;
             }
 
-            linked_list_iterator<T> get_iterator_for_item(T* item){
-                linked_list_entry<T>* entry = get_entry_for_item(item);
+            linked_list_iterator get_iterator_for_item(T* item){
+                auto* entry = get_entry_for_item(item);
                 if(entry == nullptr){
-                    return linked_list_iterator<T>(nullptr);
+                    return linked_list_iterator{nullptr};
                 }
-                return linked_list_iterator<T>(entry);
+                return linked_list_iterator{entry};
             }
 
-            linked_list_iterator<T> begin(){
-                return linked_list_iterator<T>(head);
+            linked_list_iterator begin(){
+                return linked_list_iterator{head};
             }
 
-            linked_list_iterator<T> end(){
-                return linked_list_iterator<T>(nullptr);
+            linked_list_iterator end(){
+                return linked_list_iterator{nullptr};
             }
 
             NODISCARD_ATTRIBUTE
@@ -173,10 +162,9 @@ namespace types
             }
 
 
-            linked_list_entry<T>* head;
-            linked_list_entry<T>* tail;
+            linked_list_entry* head;
+            linked_list_entry* tail;
         private:
-            x86_64::spinlock::mutex mutex;
             size_t _length;
     };
 } // types

@@ -22,7 +22,8 @@ long_mode_start:
     invlpg [0]
 
     mov rsp, loader_stack_top
-    mov rbp, rsp
+    and rsp, ~8 ; Make sure rsp + 8 is 16 byte aligned as mandated by the SysV ABI
+    mov rbp, 0
 
     extern _start_multiboot_info
     extern _start_multiboot_magic
@@ -60,6 +61,38 @@ align 16
 loader_stack_bottom:
     resb 0x4000
 loader_stack_top:
+
+section .data
+align 0x1000
+global p4_table
+
+p4_table:
+    dq p3_table - KERNEL_LMA + 3
+    times 255 dq 0
+    dq p3_table - KERNEL_LMA + 3
+    times 254 dq 0
+    dq p3_table - KERNEL_LMA + 3
+
+p3_table:
+    dq p2_table - KERNEL_LMA + 3
+    times 509 dq 0
+    dq p2_table - KERNEL_LMA + 3
+    times 1 dq 0
+
+%macro gen_pd_2mb 3
+	%assign i %1
+	%rep %2
+		dq (i | 0x83)
+		%assign i i+0x200000
+	%endrep
+	%rep %3
+		dq 0
+	%endrep
+%endmacro
+
+p2_table:
+    gen_pd_2mb 0,512,0
+
 
 KERNEL_LMA equ 0xffffffff80000000
 CODE_SEG equ 0x08

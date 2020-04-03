@@ -30,26 +30,23 @@ constexpr uint64_t indicies_to_addr(uint64_t pml4_index, uint64_t pdpt_index, ui
     return virt_addr;
 }
 
-static inline void set_frame(uint64_t& entry, uint64_t phys){
+constexpr void set_frame(uint64_t& entry, uint64_t phys){
     entry |= (phys & 0x000FFFFFFFFFF000);
 }
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t get_frame(uint64_t entry){
+constexpr uint64_t get_frame(uint64_t entry){
     return entry & 0x000FFFFFFFFFF000;
 }
 
-static inline void set_flags(uint64_t& entry, uint64_t flags){
+constexpr void set_flags(uint64_t& entry, uint64_t flags){
     entry |= (flags & 0xFFF0000000000FFF);
 }
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t get_flags(uint64_t entry){
+constexpr uint64_t get_flags(uint64_t entry){
     return (entry & 0xFFF0000000000FFF);
 }
 
-ALWAYSINLINE_ATTRIBUTE
-static inline uint64_t get_pat_flags(map_page_cache_types types){
+constexpr uint64_t get_pat_flags(map_page_cache_types types){
     uint64_t ret = 0;
     switch (types)
     {
@@ -79,7 +76,7 @@ x86_64::paging::pml4* x86_64::paging::get_current_info(){
 }
 
 void x86_64::paging::set_current_info(x86_64::paging::context* info){
-    auto* cpu = smp::cpu::entry::get_cpu();
+    auto* cpu = smp::cpu::get_current_cpu();
     auto& cpu_context = cpu->pcid_context;
 
     if(cpu->features.pcid){ 
@@ -119,7 +116,7 @@ void x86_64::paging::invalidate_addr(uint64_t addr)
 }
 
 void invalidate_pcid(uint16_t pcid){
-    if(smp::cpu::entry::get_cpu()->features.invpcid){
+    if(smp::cpu::get_current_cpu()->features.invpcid){
         struct {
 		    uint64_t pcid;
 		    const void *address;
@@ -148,14 +145,14 @@ uint64_t x86_64::paging::pcid_context::get_timestamp(){
 void x86_64::paging::pcid_context::set_context(){
     uint64_t table_phys = reinterpret_cast<uint64_t>(this->context->get_paging_info()) - KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE;
     uint64_t cr3 = table_phys | this->pcid;
-    if(smp::cpu::entry::get_cpu()->features.pcid)
+    if(smp::cpu::get_current_cpu()->features.pcid)
         bitops<uint64_t>::bit_set(cr3, 63); // Do not invalidate the PCID
 
     asm volatile ("mov %0, %%cr3" : : "r"(cr3) : "memory");
 
-    this->timestamp = smp::cpu::entry::get_cpu()->pcid_context.next_timestamp++;
+    this->timestamp = smp::cpu::get_current_cpu()->pcid_context.next_timestamp++;
 
-    smp::cpu::entry::get_cpu()->pcid_context.active_context = this->pcid;
+    smp::cpu::get_current_cpu()->pcid_context.active_context = this->pcid;
 }
 
 void x86_64::paging::pcid_context::set_context(x86_64::paging::context* context){
@@ -166,13 +163,13 @@ void x86_64::paging::pcid_context::set_context(x86_64::paging::context* context)
     uint64_t cr3 = table_phys | this->pcid; // Invalidate PCID
     asm volatile ("mov %0, %%cr3" : : "r"(cr3) : "memory");
 
-    this->timestamp = smp::cpu::entry::get_cpu()->pcid_context.next_timestamp++;
+    this->timestamp = smp::cpu::get_current_cpu()->pcid_context.next_timestamp++;
 
-    smp::cpu::entry::get_cpu()->pcid_context.active_context = this->pcid;
+    smp::cpu::get_current_cpu()->pcid_context.active_context = this->pcid;
 }
 
 bool x86_64::paging::pcid_context::is_active(){
-    return this->pcid == smp::cpu::entry::get_cpu()->pcid_context.active_context;
+    return this->pcid == smp::cpu::get_current_cpu()->pcid_context.active_context;
 }
 
 x86_64::paging::context* x86_64::paging::pcid_context::get_context(){

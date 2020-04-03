@@ -49,7 +49,7 @@ static void push(rle_stack_entry entry){
 void mm::pmm::print_stack(){
     debug_printf("Starting PMM Stack dump\n");
     for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
-        debug_printf("  Entry: Start: %x, Length: %x\n", entry->base, (entry->n_pages * mm::pmm::block_size));
+        debug_printf("  Entry: Start: %x, Length: %x [%x]\n", entry->base, entry->n_pages, (entry->n_pages * mm::pmm::block_size));
     }
 }
 
@@ -110,11 +110,11 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
         {
             // TODO: Make this work on real hw
             // If it is below 1MiB just skip it
-            /*if(entry->addr + entry->len < (1024 * 1024))
+            if((entry->addr + entry->len) < (1024 * 1024))
                 continue;
             else if(entry->addr < (1024 * 1024))
                 push({.base = (1024 * 1024), .n_pages = ((entry->len - ((1024 * 1024) - entry->addr)) / mm::pmm::block_size)});
-            else*/
+            else
                 push({.base = entry->addr, .n_pages = (entry->len / mm::pmm::block_size)});
         }
     }
@@ -126,30 +126,56 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     // TODO: Remove this hack and just ignore any mem under 1MiB
     for(int i = 0; i < 10; i++)
         mm::pmm::alloc_block();
+
+    auto reserve_block = [](uint64_t addr){
+        std::lock_guard guard{pmm_global_mutex};
+        for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
+            if(addr >= entry->base && addr <= (entry->base + (entry->n_pages * mm::pmm::block_size)) && entry->n_pages != 0){
+                // Replace the entry and push the other one
+                auto copy = *entry;
+                uint64_t low_offset = addr - entry->base;
+                entry->n_pages = (low_offset / mm::pmm::block_size);
+
+                uint64_t high_offset = (copy.base + (copy.n_pages * mm::pmm::block_size)) - (addr + mm::pmm::block_size);
+                push({.base = (addr + mm::pmm::block_size), .n_pages = (high_offset / mm::pmm::block_size)});
+                break;
+            }
+        }
+    };
+
+    for(uint64_t addr = (kernel_start - KERNEL_VBASE); addr <= (kernel_end - KERNEL_VBASE); addr += mm::pmm::block_size)
+        reserve_block(addr);
+
+    for(uint64_t addr = (mbd_start - KERNEL_VBASE); addr <= (mbd_end - KERNEL_VBASE); addr += mm::pmm::block_size)
+        reserve_block(addr);
+
+    for(uint64_t addr = initrd_start; addr <= initrd_end; addr += mm::pmm::block_size)
+        reserve_block(addr);
+
+    sort_stack(); // Cleanup things that might've been left behind by reserve_block()
 }
 
 NODISCARD_ATTRIBUTE
 void* mm::pmm::alloc_block(){
-    pmm_global_mutex.lock();
+    std::lock_guard guard{pmm_global_mutex};
+
     rle_stack_entry ent = pop();
-    while(ent.n_pages == 0) ent = pop();
+    while(ent.n_pages == 0) 
+        ent = pop();
+    
     uint64_t addr = ent.base;
     ent.base += mm::pmm::block_size;
     ent.n_pages--;
-    if(ent.n_pages != 0) push(ent);
+    if(ent.n_pages != 0) 
+        push(ent);
 
-    if(((addr >= (kernel_start - KERNEL_VBASE)) && (addr <= (kernel_end - KERNEL_VBASE))) || ((addr >= (mbd_start - KERNEL_VBASE) && addr <= (mbd_end - KERNEL_VBASE))) || ((addr >= (initrd_start) && addr <= (initrd_end)))){
-        // Addr is in kernel, multiboot info or initrd so just ignore it and get a new one
-        pmm_global_mutex.unlock();
-        return mm::pmm::alloc_block();
-    }
-    pmm_global_mutex.unlock();
     return reinterpret_cast<void*>(addr);
 }
 
 NODISCARD_ATTRIBUTE
 void* mm::pmm::alloc_n_blocks(size_t n){
-    pmm_global_mutex.lock();
+    std::lock_guard guard{pmm_global_mutex};
+
     uint64_t base = 0;
     for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
         if(entry->n_pages >= n){
@@ -163,12 +189,6 @@ void* mm::pmm::alloc_n_blocks(size_t n){
         PANIC("[PMM]: Out of memory");
     }
 
-    if(((base >= (kernel_start - KERNEL_VBASE)) && (base <= (kernel_end - KERNEL_VBASE))) || ((base >= (mbd_start - KERNEL_VBASE) && base <= (mbd_end - KERNEL_VBASE))) || ((base >= (initrd_start) && base <= (initrd_end)))){
-        // Addr is in kernel or multiboot info so just ignore it and get a new one
-        pmm_global_mutex.unlock();
-        return mm::pmm::alloc_n_blocks(n);
-    }
-    pmm_global_mutex.unlock();
     return reinterpret_cast<void*>(base);
 }
 
@@ -183,7 +203,7 @@ void mm::pmm::free_block(void* block){
             entry->base -= mm::pmm::block_size;
             entry->n_pages++;
             return;
-        } else if((entry->base + mm::pmm::block_size) == addr){
+        } else if((entry->base + (entry->n_pages * mm::pmm::block_size)) == addr){
             // We're just above this entry
             entry->n_pages++;
             return;
@@ -218,10 +238,11 @@ static void sorted_insert(rle_stack_entry x)
 static void sort_stack() 
 { 
     if(stack_base != stack_pointer){
-        rle_stack_entry x = pop(); 
+        rle_stack_entry x = pop();
   
         sort_stack(); 
 
-        sorted_insert(x); 
+        if(x.n_pages)
+            sorted_insert(x); 
     }
 } 

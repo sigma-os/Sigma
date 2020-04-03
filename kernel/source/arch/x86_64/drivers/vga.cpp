@@ -109,9 +109,9 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
 void x86_64::vga::writer::set_cursor_to_hw(){
     std::lock_guard guard{this->mutex};
 
-    const auto [x, y] = this->get_hardware_cursor();
-    this->x = x;
-    this->y = y;
+    const auto [_x, _y] = this->get_hardware_cursor();
+    this->x = _x;
+    this->y = _y;
 }
 
 void x86_64::vga::writer::scroll(){

@@ -19,7 +19,7 @@ namespace x86_64::gdt
 
     struct PACKED_ATTRIBUTE pointer {
         void update_gdtr(){
-            asm("lgdt %0" : : "m"(*this));
+            asm("lgdt %0" : : "m"(*this) : "memory");
         }
         uint16_t size;
         uint64_t pointer;

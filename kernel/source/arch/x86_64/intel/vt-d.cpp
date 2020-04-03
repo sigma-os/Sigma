@@ -150,10 +150,10 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     this->wbflush();
     this->regs->root_table_address = root_addr.raw;
 
-    this->regs->global_command |= (1 << 30); // Ask hw to update root table ptr
+    this->regs->global_command |= (1u << 30); // Ask hw to update root table ptr
 
     // Wait for HW to indicate root table ptr is initialized
-    while(!(this->regs->global_status & (1 << 30)))
+    while(!(this->regs->global_status & (1u << 30)))
         ;
 
     this->invalidate_global_context();
@@ -164,9 +164,9 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     asm("mfence" : : : "memory");
 
     debug_printf("         Enabling translation...");
-    this->regs->global_command = (1 << 31);
+    this->regs->global_command = (1u << 31);
 
-    while(!(this->regs->global_status & (1 << 31)))
+    while(!(this->regs->global_status & (1u << 31)))
         ;
 
     debug_printf("Done\n");
@@ -282,7 +282,7 @@ x86_64::vt_d::dma_remapping_engine::dma_remapping_engine(acpi_table::dma_remappi
     }, .userptr = (void*)this, .is_irq = true});
     
     // Clear IRQ Mask
-    this->regs->fault_event_control &= ~(1 << 31);
+    this->regs->fault_event_control &= ~(1u << 31);
 
     debug_printf("Done\n");
 }

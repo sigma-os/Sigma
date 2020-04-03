@@ -1,8 +1,20 @@
 #include <Sigma/arch/x86_64/cpu.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
 #include <klibc/stdio.h>
+#include <Sigma/smp/cpu.h>
 
 #include <Sigma/arch/x86_64/amd/svm.hpp>
+
+
+x86_64::smap::smap_guard::smap_guard(){
+    if(smp::cpu::get_current_cpu()->features.smap)
+        asm("stac");
+}
+
+x86_64::smap::smap_guard::~smap_guard(){
+    if(smp::cpu::get_current_cpu()->features.smap)
+        asm("clac");
+}
 
 void x86_64::smep::init(){
     if(misc::kernel_args::get_bool("nosmep")){
@@ -36,7 +48,7 @@ void x86_64::smap::init(){
             cr4.bits.smap = 1; // Enable SMAP
             cr4.flush();
 
-            smp::cpu::entry::get_cpu()->features.smap = 1;
+            smp::cpu::get_current_cpu()->features.smap = 1;
 
             asm("clac");
             debug_printf("[CPU]: Enabled SMAP\n");
@@ -102,7 +114,7 @@ void x86_64::pcid::init(){
         cr4.bits.pcide = 1;
         cr4.flush();
 
-        auto* cpu = smp::cpu::entry::get_cpu();
+        auto* cpu = smp::cpu::get_current_cpu();
         cpu->features.pcid = supports_pcid;
         cpu->features.invpcid = supports_invpcid;
 

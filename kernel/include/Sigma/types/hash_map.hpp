@@ -21,31 +21,26 @@ namespace types
     template<typename Key, typename Value, typename Hasher>
     class hash_map {
         public:
-        hash_map(): hasher{} {}
-
+        hash_map() = default;
         hash_map(hash_map&& other){
             this->list = std::move(other.list);
             this->hasher = std::move(other.hasher);
-            this->lock = std::move(other.lock);
         }
 
         hash_map& operator=(hash_map&& other){
             this->list = std::move(other.list);
             this->hasher = std::move(other.hasher);
-            this->lock = std::move(other.lock);
 
             return *this;
         }
 
         void push_back(Key key, Value value){
-            std::lock_guard guard{this->lock};
             auto hash = this->hasher(key);
 
             this->list.push_back({hash, value});
         }
 
         Value& operator[](Key key){
-            std::lock_guard guard{this->lock};
             auto hash = this->hasher(key);
 
             for(auto& entry : list)
@@ -63,8 +58,6 @@ namespace types
         types::linked_list<entry> list;
 
         Hasher hasher;
-
-        x86_64::spinlock::mutex lock;
     };
 } // namespace types
 

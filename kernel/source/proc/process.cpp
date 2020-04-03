@@ -11,6 +11,9 @@ auto cpus = misc::lazy_initializer<types::linked_list<proc::process::managed_cpu
 proc::process::thread* kernel_thread;
 
 proc::process::managed_cpu* proc::process::get_current_managed_cpu(){
+    if(!cpus)
+        return nullptr;
+    
     auto current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
     for(auto& entry : *cpus){
         if(entry.cpu.lapic_id == current_apic_id){

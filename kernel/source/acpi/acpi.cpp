@@ -21,7 +21,7 @@ static bool do_checksum(acpi::sdt_header* header){
 
 acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 	debug_printf("[ACPI]: Requesting table: %s, index: %d...", signature, index);
-	if(signature == acpi::dsdt_signature) {
+	if(memcmp(signature, acpi::dsdt_signature, 4) == 0) {
         uint64_t dsdt_addr = 0;
         if(auto* override = misc::kernel_args::get_str("dsdt_override"); override != nullptr){
             // DSDT has been overridden via kernel arguments
@@ -39,7 +39,7 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 		    dsdt_addr = (dsdt_phys_addr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
 
 		    mm::vmm::kernel_vmm::get_instance().map_page(dsdt_phys_addr, dsdt_addr,
-			    										 map_page_flags_present |map_page_flags_no_execute, map_page_cache_types::uncacheable);
+			    										 map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
 		    for(size_t i = 1; i < ((((acpi::sdt_header*)dsdt_addr)->length / mm::pmm::block_size) + 1); i++) {
 			    mm::vmm::kernel_vmm::get_instance().map_page(
                         (dsdt_phys_addr + (mm::pmm::block_size * i)), (dsdt_addr + (mm::pmm::block_size * i)),
@@ -71,7 +71,7 @@ acpi::table* acpi::get_table(const char* signature, uint64_t index) {
 }
 
 acpi::table* acpi::get_table(const char* signature){
-    if(signature == acpi::dsdt_signature) {
+    if(memcmp(signature, acpi::dsdt_signature, 4) == 0) {
         uint64_t dsdt_addr = 0;
         if(auto* override = misc::kernel_args::get_str("dsdt_override"); override != nullptr){
             // DSDT has been overridden via kernel arguments

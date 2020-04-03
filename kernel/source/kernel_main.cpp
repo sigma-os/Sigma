@@ -47,8 +47,7 @@ auto cpu_list = types::minimal_array<1, smp::cpu::entry>{};
 C_LINKAGE boot::boot_protocol boot_data;
 
 static void enable_cpu_tasking(){
-    uint64_t rsp = 0;
-    asm("mov %%rsp, %0" : "=r"(rsp)); 
+    uint64_t rsp = (uint64_t)smp::cpu::get_current_cpu()->kstack->top();
     rsp = ALIGN_DOWN(rsp, 16); // Align stack to ABI requirements
     smp::cpu::get_current_cpu()->tss->rsp0 = rsp;
 
@@ -89,34 +88,42 @@ C_LINKAGE void kernel_main(){
     idt.init();
     x86_64::idt::register_generic_handlers();    
 
+    proc::elf::init_symbol_list(*boot_protocol);
+
+    auto& vmm = mm::vmm::kernel_vmm::get_instance();
+
     uint64_t virt_start = KERNEL_VBASE;
     uint64_t phys_start = 0x0;
-    
-    for(uint32_t i = 0; i < (1024 * 20); i++){
-        mm::vmm::kernel_vmm::get_instance().map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable | map_page_flags_global);
+
+    for(size_t i = 0; i < (1024 * 20); i++){
+        vmm.map_page(phys_start, virt_start, map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute);
 
         virt_start += 0x1000;
         phys_start += 0x1000;
     }
+
     {
         auto* mmap = reinterpret_cast<multiboot_tag_mmap*>(boot_data.mmap);
-        for(multiboot_memory_map_t* entry = mmap->entries; (uint64_t)entry < ((uint64_t)mmap + mmap->size); entry++)
-            if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
-                for(auto phys = entry->addr; phys < (entry->addr + entry->len); phys += mm::pmm::block_size)
-                    mm::vmm::kernel_vmm::get_instance().map_page(phys, phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_global);
-    }
-    
+        for(multiboot_memory_map_t* mmap_entry = mmap->entries; (uintptr_t)mmap_entry < ((uintptr_t)mmap + mmap->size); mmap_entry++){
+            if(mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE){
+                auto phys = ALIGN_DOWN(mmap_entry->addr, mm::pmm::block_size);
+                auto top = ALIGN_UP(mmap_entry->addr + mmap_entry->len, mm::pmm::block_size);
+                
+                for(; phys < top; phys += mm::pmm::block_size){
+                    vmm.map_page(phys, phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute);
+                }
+            }
 
+        }
+    }
 
     proc::elf::map_kernel(*boot_protocol);
-
-    mm::vmm::kernel_vmm::get_instance().set();
-    
+    vmm.set();
 
     mm::hmm::init(); 
 
-    proc::elf::init_symbol_list(*boot_protocol);
-    
+    entry.idle_stack.init();
+    entry.kstack.init();    
 
     // Initialize initrd as early as possible so it can be used for reading files for command line args
     for(uint64_t i = 0; i < boot_data.kernel_initrd_size; i += mm::pmm::block_size){
@@ -219,6 +226,8 @@ C_LINKAGE void smp_kernel_main(){
     entry.tss = &tss;
     entry.tss_gdt_offset = tss_offset;
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
+    entry.idle_stack.init();
+    entry.kstack.init();
 
     x86_64::misc_early_features_init();
 

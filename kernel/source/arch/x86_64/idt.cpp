@@ -99,14 +99,18 @@ C_LINKAGE void sigma_isr_handler(x86_64::idt::idt_registers *registers){
         debug_printf("    R12: %x, R12: %x, R13: %x, R14: %x\n", registers->r12, registers->r13, registers->r13, registers->r14);
         debug_printf("    R15: %x, CS: %x, DS: %x, SS: %x\n", registers->r15, registers->cs, registers->ds, registers->ss);
 
-        if(auto* thread = proc::process::get_current_thread(); thread)
-            if(thread->state == proc::process::thread_state::RUNNING)
-                debug_printf("    Current TID: %x\n", proc::process::get_current_tid());
+        auto fsbase = x86_64::msr::read(x86_64::msr::fs_base);
+        auto gsbase = x86_64::msr::read(x86_64::msr::gs_base);
+        auto kgsbase = x86_64::msr::read(x86_64::msr::kernelgs_base);
 
-        {
-            x86_64::smap::smap_guard smap{};
-            debug::trace_stack(registers->rbp);
-        }
+        debug_printf("    FSBASE: %x, GSBASE: %x, KERNEL_GSBASE: %x\n", fsbase, gsbase, kgsbase);
+
+        if(proc::process::get_current_managed_cpu()) // Make sure scheduler is initialized
+            if(auto* thread = proc::process::get_current_thread(); thread)
+                if(thread->state == proc::process::thread_state::RUNNING)
+                    debug_printf("    Current TID: %x\n", proc::process::get_current_tid());
+        
+        debug::trace_stack(registers->rbp);
     }
 
     if(handlers[n].callback)

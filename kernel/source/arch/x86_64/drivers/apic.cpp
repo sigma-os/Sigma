@@ -144,7 +144,7 @@ void x86_64::apic::lapic::set_timer_mask(bool state){
 
 #pragma region IOAPIC
 
-static inline uint32_t get_redirection_entry(uint32_t entry){
+constexpr uint32_t get_redirection_entry(uint32_t entry){
     return (x86_64::apic::ioapic_redirection_table + entry * 2);
 }
 

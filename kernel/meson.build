@@ -81,7 +81,7 @@ crt_files = files(crtbegin_obj,
                   crtend_obj)
 
 extra_warning_flags = ['-Wreorder', '-Wdeprecated-copy-dtor', '-Wno-unknown-pragmas', '-Wduplicated-cond', '-Wduplicated-branches',
-                       '-Wlogical-op', '-Werror']
+                       '-Wlogical-op', '-Wno-non-virtual-dtor', '-Werror']
 
 flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding', '-mno-red-zone',
                   '-nostdlib', '-mcmodel=kernel', '-fstack-protector', '-fno-omit-frame-pointer', '-g', '-O2',

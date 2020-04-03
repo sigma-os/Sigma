@@ -44,10 +44,11 @@ void laihost_log(int level, const char *msg){
 void laihost_panic(const char * msg){
     PANIC(msg);
     asm("cli; hlt");
-    while(true);
+    while(true)
+        ;
 }
 
-void *laihost_scan(const char * signature, size_t index){
+void *laihost_scan(const char* signature, size_t index){
     return static_cast<void*>(acpi::get_table(signature, index));
 }
 

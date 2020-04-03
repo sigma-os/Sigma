@@ -5,7 +5,9 @@
 #include <Sigma/misc/misc.h>
 #include <Sigma/arch/x86_64/msr.h>
 #include <Sigma/arch/x86_64/misc/misc.h>
-#include <Sigma/smp/cpu.h>
+
+#include <klibc/string.h>
+#include <klibcxx/algorithm.hpp>
 
 namespace x86_64
 {
@@ -39,14 +41,8 @@ namespace x86_64
 
         class smap_guard {
             public:
-            smap_guard(){
-                if(smp::cpu::entry::get_cpu()->features.smap)
-                    asm("stac");
-            }
-            ~smap_guard(){
-                if(smp::cpu::entry::get_cpu()->features.smap)
-                    asm("clac");
-            }
+            smap_guard();
+            ~smap_guard();
         };
     }
 

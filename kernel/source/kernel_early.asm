@@ -75,7 +75,7 @@ _kernel_early:
     cli
 
     mov rsp, bsp_stack_top
-    and rsp, ~0xF ; Align stack for ABI requirements
+    and rsp, ~8 ; Make sure rsp + 8 is 16 byte aligned as mandated by the SysV ABI
     mov rbp, 0 ; Set to zero to provide stack trace stop
 
     call initialize_sse
@@ -137,5 +137,5 @@ section .bss
 
 align 16
 bsp_stack_bottom:
-    resb 0x4000
+    resb 0x8000
 bsp_stack_top:

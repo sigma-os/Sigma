@@ -56,7 +56,6 @@ namespace generic::handles
 
 	class handle_catalogue {
 		public:
-
 		handle_catalogue& operator=(handle_catalogue&& other){
             this->id_gen = std::move(other.id_gen);
 			this->catalogue = std::move(other.catalogue);
@@ -75,8 +74,10 @@ namespace generic::handles
 		template<typename T>
 		T* get(uint64_t id){
 			auto* handle = catalogue[id];
+			if(!handle)
+				return nullptr;
+			
 			ASSERT(handle->type == T::default_type);
-
 			return static_cast<T*>(handle);
 		}
 

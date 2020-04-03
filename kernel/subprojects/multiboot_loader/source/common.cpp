@@ -6,13 +6,13 @@ void loader::common::abort(){
     while(true);
 }
 
-static inline uint8_t inb(uint16_t port){
+static uint8_t inb(uint16_t port){
     uint8_t ret;
     asm volatile ("in %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
-static inline void outb(uint16_t port, uint8_t data){
+static void outb(uint16_t port, uint8_t data){
     asm volatile ("out %0, %1" : : "a"(data), "Nd"(port));
 }
 
@@ -34,7 +34,7 @@ void loader::common::init(){
 }
 
 
-static inline void print_char(const char c){
+static void print_char(const char c){
     while((inb(com1_base + 5) & 0x20) == 0);
     outb(com1_base, c);
 }

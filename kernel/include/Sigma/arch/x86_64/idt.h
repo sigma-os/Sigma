@@ -56,7 +56,7 @@ namespace x86_64::idt
 
     struct PACKED_ATTRIBUTE idt_pointer {
         void update_idtr(){
-            asm("lidt %0" : : "m"(*this));
+            asm("lidt %0" : : "m"(*this) : "memory");
         }
         volatile uint16_t size;
         volatile uint64_t base;

@@ -14,7 +14,7 @@ auto mcfg_entries = types::linked_list<acpi::mcfg_table_entry>();
 auto pci_devices = types::linked_list<x86_64::pci::device>();
 auto pci_root_busses = types::linked_list<x86_64::pci::device>();
 
-static inline uint32_t make_pci_address(uint32_t bus, uint32_t slot, uint32_t function, uint32_t offset){
+constexpr uint32_t make_pci_address(uint32_t bus, uint32_t slot, uint32_t function, uint32_t offset){
     return ((bus << 16) | (slot << 11) | (function << 8) | (offset & 0xFC) | (1u << 31));
 }
 

@@ -15,13 +15,13 @@ char *strcpy(char *dest, const char *src) {
 }
 
 void* memset(void* s, int c, size_t n){
-    /*uint8_t* buf = (uint8_t*)s;
+    uint8_t* buf = (uint8_t*)s;
 
     for(size_t i = 0; i < n; i++) buf[i] = (uint8_t)c;
 
-    return s;*/
-    asm("rep stosb" : : "a"(c), "D"((uint64_t)s), "c"(n) : "memory");
     return s;
+    //asm("rep stosb" : : "a"(c), "D"((uint64_t)s), "c"(n) : "memory");
+    //return s;
 }
 
 int memcmp(const void* s1, const void* s2, size_t n){
@@ -37,14 +37,14 @@ int memcmp(const void* s1, const void* s2, size_t n){
 }
 
 void* memcpy(void* dest, const void* src, size_t n){
-    /*uint8_t* destination = (uint8_t*)dest;
+    uint8_t* destination = (uint8_t*)dest;
     uint8_t* source = (uint8_t*)src;
 
     for(size_t i = 0; i < n; i++) destination[i] = source[i];
 
-    return dest;*/
-    asm("rep movsb" : : "S"((uint64_t)src), "D"((uint64_t)dest), "c"(n) : "memory");
     return dest;
+    //asm("rep movsb" : : "S"((uint64_t)src), "D"((uint64_t)dest), "c"(n) : "memory");
+    //return dest;
 }
 
 void* memmove(void* dstptr, const void* srcptr, size_t size) {

@@ -4,6 +4,7 @@
 
 .section .text
 .globl _loader_start
+.globl p4_table
 _loader_start:
 	movl %eax, (_start_multiboot_magic - KERNEL_VMA)
     movl %ebx, (_start_multiboot_info - KERNEL_VMA)
@@ -28,7 +29,7 @@ _loader_start:
 	orl     $0x30, %eax
 	movl    %eax, %cr4
 
-	movl    $(p4_table - KERNEL_VMA), %eax
+	movl    $p4_table - KERNEL_VMA, %eax
 	mov     %eax, %cr3
 
 	movl    $0xc0000080, %ecx
@@ -51,30 +52,6 @@ no_long_mode:
 
 	cli
 	hlt
-
-.data
-.align 0x1000
-p4_table:
-	.quad p3_table - KERNEL_VMA + 3 # 510
-	.fill 255,8,0
-	.quad p3_table - KERNEL_VMA + 3
-	.fill 254,8,0
-	.quad p3_table - KERNEL_VMA + 3
-
-p3_table:
-	.quad p2_table - KERNEL_VMA + 3
-	.fill 509,8,0
-	.quad p2_table - KERNEL_VMA + 3
-	.fill 1,8,0
-
-p2_table:
-	.quad 0x0000000000000083
-	.quad 0x0000000000200083
-	.quad 0x0000000000400083
-	.quad 0x0000000000600083
-	.quad 0x0000000000800083
-	.quad 0x0000000000A00083
-	.fill 506,8,0
 
 .globl _start_multiboot_info
 _start_multiboot_info: .fill 1,4,0

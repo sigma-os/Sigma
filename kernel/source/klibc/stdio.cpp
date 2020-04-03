@@ -150,7 +150,9 @@ int printf_internal(const char* format, va_list parameters){
 int printf(const char* format, ...){
     va_list parameters;
     va_start(parameters, format);
-    return printf_internal(format, parameters);
+    auto ret =  printf_internal(format, parameters);
+    va_end(parameters);
+    return ret;
 }
 
 int putchar(int c){
@@ -185,7 +187,9 @@ int debug_printf(const char* format, ...){
     va_start(parameters, format);
     if(auto* log = misc::kernel_args::get_str("debug"); log != nullptr){
         if(strcmp(log, "vga") == 0){
-            return printf_internal(format, parameters);
+            auto ret = printf_internal(format, parameters);
+            va_end(parameters);
+            return ret;
         } else if(strcmp(log, "serial") == 0){
             goto serial;
         } else {

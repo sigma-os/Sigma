@@ -68,7 +68,7 @@ namespace x86_64::tss
         uint16_t io_bitmap_offset;
 
         void load(uint16_t gdt_offset){
-            asm volatile("mov %0, %%ax; ltr %%ax" : : "g"(gdt_offset) : "ax", "memory");
+            asm volatile("ltr %0" : : "r"(gdt_offset) : "memory");
         }
     };
 } // x86_64::tss
