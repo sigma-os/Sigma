@@ -1,4 +1,5 @@
 #include <Sigma/mm/pmm.h>
+#include <Sigma/proc/elf.h>
 
 C_LINKAGE uint64_t _kernel_start;
 C_LINKAGE uint64_t _kernel_end;
@@ -121,14 +122,7 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
 
     sort_stack();
 
-    pmm_global_mutex.unlock();
-
-    // TODO: Remove this hack and just ignore any mem under 1MiB
-    for(int i = 0; i < 10; i++)
-        mm::pmm::alloc_block();
-
     auto reserve_block = [](uint64_t addr){
-        std::lock_guard guard{pmm_global_mutex};
         for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
             if(addr >= entry->base && addr <= (entry->base + (entry->n_pages * mm::pmm::block_size)) && entry->n_pages != 0){
                 // Replace the entry and push the other one
@@ -152,7 +146,23 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     for(uint64_t addr = initrd_start; addr <= initrd_end; addr += mm::pmm::block_size)
         reserve_block(addr);
 
+    const auto [symtab_range, strtab_range] = proc::elf::get_symbol_pmm_exclusion_zones();
+    const auto [symtab_base, symtab_size] = symtab_range;
+    for(uint64_t addr = ALIGN_DOWN(symtab_base, mm::pmm::block_size); addr <= ALIGN_UP(symtab_base + symtab_size, mm::pmm::block_size); addr += mm::pmm::block_size)
+        reserve_block(addr);
+
+    const auto [strtab_base, strtab_size] = strtab_range;
+    for(uint64_t addr = ALIGN_DOWN(strtab_base, mm::pmm::block_size); addr <= ALIGN_UP(strtab_base + strtab_size, mm::pmm::block_size); addr += mm::pmm::block_size)
+        reserve_block(addr);
+
+
     sort_stack(); // Cleanup things that might've been left behind by reserve_block()
+
+    pmm_global_mutex.unlock();
+
+    // TODO: Remove this hack and just ignore any mem under 1MiB
+    for(int i = 0; i < 10; i++)
+        mm::pmm::alloc_block();
 }
 
 NODISCARD_ATTRIBUTE

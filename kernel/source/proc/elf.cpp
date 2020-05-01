@@ -284,7 +284,7 @@ void proc::elf::init_symbol_list(boot::boot_protocol& protocol){
     uint64_t n_elf_sections = protocol.kernel_n_elf_sections;
 
     for(uint64_t i = 0; i < n_elf_sections; i++){
-        proc::elf::Elf64_Shdr* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
+        auto* shdr = reinterpret_cast<proc::elf::Elf64_Shdr*>(reinterpret_cast<uint64_t>(elf_sections_start) + (i * sizeof(proc::elf::Elf64_Shdr)));
         
         if(symtab == nullptr && shdr->sh_type == sht_symtab)
             symtab = shdr;
@@ -306,17 +306,29 @@ void proc::elf::init_symbol_list(boot::boot_protocol& protocol){
     initialized = true;
 }
 
+std::pair<std::pair<size_t, size_t>, std::pair<size_t, size_t>> proc::elf::get_symbol_pmm_exclusion_zones(){
+    ASSERT(initialized);
+
+    size_t strtab_base = strtab->sh_addr;
+    size_t strtab_size = strtab->sh_size;
+
+    size_t symtab_base = symtab->sh_addr;
+    size_t symtab_size = symtab->sh_size;
+
+    return {{symtab_base, symtab_size}, {strtab_base, strtab_size}};
+}
+
 std::pair<const char*, size_t> proc::elf::get_symbol(uint64_t address){
     if(initialized){
         for (size_t i = 0; i < n_symbols; i++) {
-		    Elf64_Sym sym = ((Elf64_Sym *)(symtab->sh_addr + KERNEL_VBASE))[i];
-		    const char *name = (const char *)(strtab->sh_addr + KERNEL_VBASE + sym.st_name);
+		    auto sym = ((Elf64_Sym *)(symtab->sh_addr + KERNEL_VBASE))[i];
+		    const auto* name = (const char*)(strtab->sh_addr + KERNEL_VBASE + sym.st_name);
 
 		    if ((sym.st_info & 0xf) != stt_func)
 			    continue;
 
 		    if (address >= sym.st_value && address <= (sym.st_value + sym.st_size)) {
-                size_t addr = sym.st_value;
+                auto addr = sym.st_value;
 		        return {name, addr};
 	        }
         }

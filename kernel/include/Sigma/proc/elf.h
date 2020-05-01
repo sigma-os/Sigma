@@ -146,6 +146,7 @@ namespace proc::elf
     bool start_elf_executable(const char* initrd_filename, proc::process::thread** thread, proc::process::thread_privilege_level privilege);
     void map_kernel(boot::boot_protocol& protocol);
     void init_symbol_list(boot::boot_protocol& protocol);
+    std::pair<std::pair<size_t, size_t>, std::pair<size_t, size_t>> get_symbol_pmm_exclusion_zones();
     std::pair<const char*, size_t> get_symbol(uint64_t address); 
 } // proc::elf
 

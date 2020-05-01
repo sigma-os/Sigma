@@ -12,8 +12,8 @@ long_mode_start:
     mov ss, ax
     mov ds, ax
     mov es, ax
-    mov fs, ax
-    mov gs, ax
+    ;mov fs, ax
+    ;mov gs, ax
 
 
     mov rax, cr3

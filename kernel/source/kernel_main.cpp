@@ -70,6 +70,7 @@ C_LINKAGE void kernel_main(){
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
     entry.set_gs();
 
+    proc::elf::init_symbol_list(*boot_protocol);
     mm::pmm::init(boot_protocol);
 
     x86_64::misc_early_features_init();
@@ -88,7 +89,6 @@ C_LINKAGE void kernel_main(){
     idt.init();
     x86_64::idt::register_generic_handlers();    
 
-    proc::elf::init_symbol_list(*boot_protocol);
 
     auto& vmm = mm::vmm::kernel_vmm::get_instance();
 
