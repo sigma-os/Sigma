@@ -15,14 +15,14 @@ namespace generic::handles
 	enum class handle_type {vCpu, vSpace, irq, ipcRing};
 
 	struct handle {
-		handle(handle_type type): type{type} {}
+		explicit handle(handle_type type): type{type} {}
 		handle_type type;
 
 		virtual ~handle() {}
 	};
 
 	struct vcpu_handle : public handle {
-		vcpu_handle(generic::virt::vspace* space): handle{handle_type::vCpu}, cpu{space} {}
+		explicit vcpu_handle(generic::virt::vspace* space): handle{handle_type::vCpu}, cpu{space} {}
 		
 		static constexpr handle_type default_type = handle_type::vCpu;
 
@@ -30,7 +30,7 @@ namespace generic::handles
 	};
 
 	struct vspace_handle : public handle {
-		vspace_handle(): handle{handle_type::vSpace}, space{} {}
+		explicit vspace_handle(): handle{handle_type::vSpace}, space{} {}
 	
 		static constexpr handle_type default_type = handle_type::vSpace;
 
@@ -38,7 +38,7 @@ namespace generic::handles
 	};
 
 	struct irq_handle : public handle {
-		irq_handle(uint8_t vector): handle{handle_type::irq}, vector{vector}, event{} {}
+		explicit irq_handle(uint8_t vector): handle{handle_type::irq}, vector{vector}, event{} {}
 
 		static constexpr handle_type default_type = handle_type::irq;
 
@@ -47,7 +47,7 @@ namespace generic::handles
 	};
 
 	struct ipc_ring_handle : public handle {
-		ipc_ring_handle(proc::ipc::ring* ring): handle{handle_type::ipcRing}, ring{ring} {}
+		explicit ipc_ring_handle(proc::ipc::ring* ring): handle{handle_type::ipcRing}, ring{ring} {}
 
 		static constexpr handle_type default_type = handle_type::ipcRing;
 

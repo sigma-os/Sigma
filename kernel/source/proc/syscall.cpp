@@ -257,9 +257,8 @@ void proc::syscall::init_syscall(){
 
 
 void proc::syscall::serve_kernel_vfs(uint64_t ring){
-    const auto& self = *proc::process::get_current_thread();
-    const auto [_, client_tid] = proc::ipc::get_recipients(ring);
-    debug_printf("[SYSCALL]: Serving kernel VFS on tid: %x for tid: %x, with ring handle: %x\n", self.tid, client_tid, ring);
+    const auto [server_tid, client_tid] = proc::ipc::get_recipients(ring);
+    debug_printf("[SYSCALL]: Serving kernel VFS on tid: %x for tid: %x, with ring handle: %x\n", server_tid, client_tid, ring);
 
     while(true){
         using namespace sigma::zeta;
@@ -278,6 +277,7 @@ void proc::syscall::serve_kernel_vfs(uint64_t ring){
             ASSERT(proc::ipc::send(ring, buf, len));
         };
 
+
         client_request_parser parser{array, size};
         ASSERT(parser.has_command());
         auto command = (client_request_type)parser.get_command();
@@ -295,7 +295,7 @@ void proc::syscall::serve_kernel_vfs(uint64_t ring){
                 ASSERT(parser.get_buffer().size() >= parser.get_count());
                 memcpy(tmp, parser.get_buffer().data(), parser.get_count());
 
-                debug_printf("%s", tmp);
+                printf("%s", tmp);
 
                 delete[] tmp;
             } else {
@@ -314,7 +314,7 @@ void proc::syscall::serve_kernel_vfs(uint64_t ring){
             ASSERT(parser.has_fd());
             ASSERT(parser.has_whence());
             ASSERT(parser.has_offset());
-            printf("[SYSCALL]: Ignoring seek, fd: %d, whence: %d, offset: %d\n", parser.get_fd(), parser.get_whence(), parser.get_offset());
+            //printf("[SYSCALL]: Ignoring seek, fd: %d, whence: %d, offset: %d\n", parser.get_fd(), parser.get_whence(), parser.get_offset());
 
             server_response_builder builder{};
             builder.add_status(0);
@@ -325,7 +325,7 @@ void proc::syscall::serve_kernel_vfs(uint64_t ring){
 
         case client_request_type::Tell: {
             ASSERT(parser.has_fd());
-            printf("[SYSCALL]: Ignoring Tell, fd: %d\n", parser.get_fd());
+            //printf("[SYSCALL]: Ignoring Tell, fd: %d\n", parser.get_fd());
 
             server_response_builder builder{};
             builder.add_status(0);

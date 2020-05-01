@@ -5,6 +5,7 @@
 #include <Sigma/arch/x86_64/drivers/apic.h>
 #include <Sigma/arch/x86_64/idt.h>
 #include <Sigma/arch/x86_64/msr.h>
+#include <Sigma/arch/x86_64/cpu.h>
 #include <Sigma/acpi/madt.h>
 #include <Sigma/smp/cpu.h>
 #include <Sigma/types/vector.h>
@@ -148,7 +149,7 @@ namespace proc::process
         proc::process::thread* current_thread;
     };
 
-    constexpr uint64_t cpu_quantum = 100;
+    constexpr uint64_t cpu_quantum = 25;
     constexpr uint16_t cpu_quantum_interrupt_vector = 248;
 
     void init_multitasking(acpi::madt& madt);

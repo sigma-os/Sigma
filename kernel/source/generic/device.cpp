@@ -151,6 +151,7 @@ uint64_t generic::device::devctl(uint64_t cmd, uint64_t arg1, uint64_t arg2, uin
         auto* thread = proc::process::get_current_thread();
         auto& irq = *thread->handle_catalogue.get<generic::handles::irq_handle>(arg1);
 
+        devctl_lock.unlock(); // block isn't returning
         thread->block(&irq.event, regs);
         break;
     }

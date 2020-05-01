@@ -38,8 +38,11 @@ namespace types
 
             ~linked_list() {
                 if((this->head != nullptr) && (this->tail != nullptr) && (this->_length != 0)){
-                    for(auto* entry = this->head; entry != nullptr; entry = entry->next)
-                        delete entry;
+                    for(auto* entry = this->head; entry != nullptr;){
+                        auto* tmp = entry; // Don't UAF
+                        entry = entry->next;
+                        delete tmp;
+                    }
                 }
             }
             
@@ -147,9 +150,9 @@ namespace types
 		    T& operator[](size_t index) {
 			    size_t i = 0;
                 for(auto& entry : *this){
-                    i++;
                     if(i == index)
                         return entry;
+                    i++;
                 }
 
                 PANIC("Index does not exist in linked_lsit");

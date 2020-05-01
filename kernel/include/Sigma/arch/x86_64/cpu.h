@@ -88,6 +88,10 @@ namespace x86_64
             return this->_top;
         }
 
+        void* bottom(){
+            return this->_bottom;
+        }
+
         size_t size(){
             return this->_size;
         }
@@ -107,7 +111,7 @@ namespace x86_64
         size_t _size;
         uint8_t* _bottom, *_top;
 
-        constexpr static size_t default_size = 0x2000;  
+        constexpr static size_t default_size = 0x8000;  
     };
     
     namespace regs {

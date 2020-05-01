@@ -12,7 +12,6 @@ namespace proc::ipc
     class queue {
         public:
         queue(tid_t sender, tid_t receiver);
-        ~queue();
 
         bool send(std::byte* data, size_t size);
         bool receive(std::byte* data);
@@ -23,13 +22,19 @@ namespace proc::ipc
 
         private:
         struct message {
+            #ifdef DEBUG
+            uint16_t magic_low;
+            #endif
             size_t size;
             std::byte* data;
+            #ifdef DEBUG
+            uint16_t magic_high;
+            #endif
         };
 
-        std::mutex _lock;
         types::queue<message> _queue;
         tid_t _sender, _receiver;
+        std::mutex _lock;
     };
 
     class ring {

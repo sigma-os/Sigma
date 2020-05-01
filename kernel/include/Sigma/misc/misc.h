@@ -58,6 +58,10 @@ namespace misc
 			return nullptr; // Unreachable?
 		}
 
+		bool is_initialized(){
+			return _initialized;
+		}
+
 		private:
 		bool _initialized = false;
 		std::aligned_storage_t<sizeof(T), alignof(T)> _storage;

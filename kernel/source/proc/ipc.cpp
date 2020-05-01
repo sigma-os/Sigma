@@ -4,9 +4,7 @@
 
 #include <Sigma/generic/user_handle.hpp>
 
-proc::ipc::queue::queue(tid_t sender, tid_t receiver): _receive_event{}, _lock{}, _queue{}, _sender{sender}, _receiver{receiver} {}
-
-proc::ipc::queue::~queue(){}
+proc::ipc::queue::queue(tid_t sender, tid_t receiver): _receive_event{}, _queue{}, _sender{sender}, _receiver{receiver}, _lock{} {}
 
 bool proc::ipc::queue::send(std::byte* data, size_t size){
     std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
@@ -16,8 +14,16 @@ bool proc::ipc::queue::send(std::byte* data, size_t size){
     if(!copy)
         return false;
     memcpy(copy, data, size);
+    
+    queue::message packet{};
+    #ifdef DEBUG
+    packet.magic_low = 0xF00D;
+    packet.magic_high = 0xDEAD;
+    #endif
+    packet.data = copy;
+    packet.size = size;
 
-    this->_queue.push({.size = size, .data = copy});
+    this->_queue.push(packet);
     this->_receive_event.trigger();
     return true;
 }
@@ -25,10 +31,16 @@ bool proc::ipc::queue::send(std::byte* data, size_t size){
 bool proc::ipc::queue::receive(std::byte* data){
     std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->_lock};
+
     if(this->_queue.length() == 0)
         return false; // No messages on queue right now
     
     const auto msg = this->_queue.pop();
+    
+
+    #ifdef DEBUG
+    ASSERT(msg.magic_low == 0xF00D && msg.magic_high == 0xDEAD);
+    #endif
     memcpy(data, msg.data, msg.size);
     delete[] msg.data;
 

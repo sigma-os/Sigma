@@ -307,8 +307,6 @@ isr_stub:
     cld
     mov rdi, rsp
 
-    and rsp, ~8 ; Make sure rsp + 8 is 16 byte aligned as mandated by the SysV ABI
-
     extern sigma_isr_handler
     call sigma_isr_handler
 

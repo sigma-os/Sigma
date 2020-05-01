@@ -35,10 +35,9 @@ void debug::trace_stack(){
 }
 
 // TODO: Instead of a set x value use another compile time source
-uintptr_t __stack_chk_guard = misc::compile_time_prng(43243, 0xC6AF8B7718FFF628, 8243423);
+uintptr_t __stack_chk_guard = 0x595e9fbd94fda766;//misc::compile_time_prng(43243, 0xC6AF8B7718FFF628, 8243423);
  
-NORETURN_ATTRIBUTE void __stack_chk_fail()
-{
+NORETURN_ATTRIBUTE void __stack_chk_fail(){
 	PANIC("Stack smashing detected");
 
 	while(1)
@@ -135,6 +134,7 @@ C_LINKAGE void __ubsan_handle_type_mismatch_v1(type_mismatch_data_v1* data, uint
 	debug_printf("[UBSan]: Type Mismatch\n");
 	if(!ptr) {
         debug_printf("	Null pointer access\n");
+		debug::trace_stack();
     } else if (ptr &  ((1 << data->log_alignment) - 1)) {
     	debug_printf("	Unaligned memory access\n");
 		debug_printf("	ptr: %x\n", ptr);

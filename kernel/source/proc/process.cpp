@@ -11,7 +11,7 @@ auto cpus = misc::lazy_initializer<types::linked_list<proc::process::managed_cpu
 proc::process::thread* kernel_thread;
 
 proc::process::managed_cpu* proc::process::get_current_managed_cpu(){
-    if(!cpus)
+    if(!cpus.is_initialized())
         return nullptr;
     
     auto current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
@@ -191,7 +191,7 @@ static void idle_cpu(x86_64::idt::idt_registers* regs, proc::process::managed_cp
 	}
 
 
-	uint64_t rsp = smp::cpu::get_current_cpu()->tss->rsp0;
+	uint64_t rsp = (uint64_t)smp::cpu::get_current_cpu()->idle_stack->top();
 	rsp = ALIGN_DOWN(rsp, 16); // Align stack for C code
 
 	smp::cpu::get_current_cpu()->lapic.send_eoi();

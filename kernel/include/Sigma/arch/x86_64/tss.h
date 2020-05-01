@@ -14,13 +14,13 @@ namespace x86_64::tss
     public:
         table(){
             //TODO: only allocate needed stacks
-            this->ist_stack1 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-            this->ist_stack2 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-            this->ist_stack3 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-            this->ist_stack4 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-            this->ist_stack5 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-            this->ist_stack6 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
-            this->ist_stack7 = (reinterpret_cast<uint64_t>(mm::pmm::alloc_block()) + KERNEL_VBASE);
+            this->ist_stack1 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
+            this->ist_stack2 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
+            this->ist_stack3 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
+            this->ist_stack4 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
+            this->ist_stack5 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
+            this->ist_stack6 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
+            this->ist_stack7 = ((uint64_t)mm::pmm::alloc_block() + mm::pmm::block_size + KERNEL_VBASE);
 
             this->reserved = 0;
             this->reserved_1 = 0;
@@ -36,13 +36,13 @@ namespace x86_64::tss
         }
 
         ~table(){
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack1 - KERNEL_VBASE));
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack2 - KERNEL_VBASE));
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack3 - KERNEL_VBASE));
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack4 - KERNEL_VBASE));
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack5 - KERNEL_VBASE));
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack6 - KERNEL_VBASE));
-            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack7 - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack1 - mm::pmm::block_size - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack2 - mm::pmm::block_size - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack3 - mm::pmm::block_size - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack4 - mm::pmm::block_size - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack5 - mm::pmm::block_size - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack6 - mm::pmm::block_size - KERNEL_VBASE));
+            mm::pmm::free_block(reinterpret_cast<void*>(this->ist_stack7 - mm::pmm::block_size - KERNEL_VBASE));
         }
 
 

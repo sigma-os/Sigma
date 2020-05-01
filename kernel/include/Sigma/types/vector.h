@@ -45,11 +45,11 @@ namespace types
 
 		void resize(size_t size){
 			ensure_capacity(size + 1);
-			if(size < _length){
-				for(size_t i = size; i < _length; i++)
+			if(size < _offset){
+				for(size_t i = size; i < _offset; i++)
 					_data[i].~T();
 			} else {
-				for(size_t i = size; i < _length; i++)
+				for(size_t i = _offset; i < size; i++)
 					new (&_data[i]) T{};
 			}
 
@@ -124,7 +124,7 @@ namespace types
 			for(size_t i = 0; i < _length; i++)
 				new (&new_data[i]) T{std::move(_data[i])};
 
-			for(size_t i = 0; i < _length; i++)
+			for(size_t i = 0; i < _offset; i++)
 				_data[i].~T();
 			free(_data);
 
