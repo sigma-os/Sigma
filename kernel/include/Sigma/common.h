@@ -24,7 +24,7 @@ using std::size_t;
 
 
 
-#define PANIC(message) (misc::panic::panic_m(message, SIGMA_FUNCTION_NAME, std::experimental::source_location::current()))
+#define PANIC(message) do { misc::panic::panic_m(message, SIGMA_FUNCTION_NAME, std::experimental::source_location::current()); } while(0);
 
 #define ASSERT(condition) do { \
 				if(!(condition)){ \
@@ -47,11 +47,11 @@ using std::size_t;
 
 #define C_LINKAGE extern "C"
 
-#define FUNCTION_CALL_ONCE() ({ \
+#define FUNCTION_CALL_ONCE()  do { \
     static bool called = false; \
     if(!called) called = true; \
     else PANIC("Tried to reenter call-once function"); \
-    })
+    } while(0);
 
 
 #define ARCH_X86_64 // TODO: Actually separate archs

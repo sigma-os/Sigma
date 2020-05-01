@@ -81,10 +81,10 @@ crt_files = files(crtbegin_obj,
                   crtend_obj)
 
 extra_warning_flags = ['-Wreorder', '-Wdeprecated-copy-dtor', '-Wno-unknown-pragmas', '-Wduplicated-cond', '-Wduplicated-branches',
-                       '-Wlogical-op', '-Wno-non-virtual-dtor', '-Werror']
+                       '-Wlogical-op', '-Wno-non-virtual-dtor', '-Werror', '-Wno-address']
 
-flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding', '-mno-red-zone',
-                  '-nostdlib', '-mcmodel=kernel', '-fstack-protector', '-fno-omit-frame-pointer', '-g', '-O2',
+flags_c_common = ['-m64', '-march=x86-64', '-fno-PIC', '-Wall', '-Wextra', '-ffreestanding', '-mno-red-zone', '-D_FORTIFY_SOURCE=2',
+                  '-nostdlib', '-mcmodel=kernel', '-fstack-protector-all', '-fno-omit-frame-pointer', '-g', '-Og',
                   '-mno-mmx', '-mno-sse', '-mno-sse2', '-mno-sse3', '-mno-sse4', '-mno-sse4.1', '-mno-sse4.2', '-mno-sse4a']
 if get_option('sigma_compile_ubsan')
     flags_c_common +=  ['-fsanitize=undefined', '-DSIGMA_UBSAN']

@@ -29,6 +29,7 @@ types::queue<tid_t> scheduling_queue{};
 static proc::process::thread* schedule(proc::process::thread* current){
     auto round_robin = [current]() -> proc::process::thread* {
         auto check_thread = [](proc::process::thread& t) -> bool {
+            std::lock_guard guard{t.thread_lock};
             if(t.state == proc::process::thread_state::IDLE){
                 return true;
             } else if(t.state == proc::process::thread_state::BLOCKED){
@@ -43,11 +44,10 @@ static proc::process::thread* schedule(proc::process::thread* current){
 
         if(current == nullptr){
             // Just got called without any current thread, loop through all of them
-            for(auto& entry : thread_list){
-                std::lock_guard guard{entry.thread_lock};
+            for(auto& entry : thread_list)
                 if(check_thread(entry))
                     return &entry;
-            }
+            
             return nullptr;
         }
 
@@ -61,7 +61,6 @@ static proc::process::thread* schedule(proc::process::thread* current){
         auto end = thread_list.end();
         while(it != end){
             auto& entry = *it;
-            std::lock_guard guard{entry.thread_lock};
             if(check_thread(entry))
                 return &entry;
             
@@ -73,7 +72,6 @@ static proc::process::thread* schedule(proc::process::thread* current){
         end = current_it;
         while(it != end){
             auto& entry = *it;
-            std::lock_guard guard{entry.thread_lock};
             if(check_thread(entry))
                 return &entry;
             
@@ -99,7 +97,6 @@ static proc::process::thread* schedule(proc::process::thread* current){
 }
 
 static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread* thread){
-    std::lock_guard guard{thread->thread_lock};
     thread->context.rax = regs->rax;
     thread->context.rbx = regs->rbx;
     thread->context.rcx = regs->rcx;
@@ -217,18 +214,24 @@ static void timer_handler(x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBU
         scheduler_mutex.unlock();
         return;
     }
+
+    proc::process::thread* old_thread = cpu->current_thread;
+
     proc::process::thread* new_thread = schedule(cpu->current_thread);
     if(!new_thread)
         idle_cpu(regs, cpu); 
     std::lock_guard new_guard{new_thread->thread_lock};
 
-    proc::process::thread* old_thread = cpu->current_thread;
+    if(old_thread && old_thread != new_thread)
+        old_thread->thread_lock.lock();
+    
     switch_context(regs, new_thread, old_thread);
 
     if(old_thread) {
-        std::lock_guard old_guard{old_thread->thread_lock};
         if(old_thread->state == proc::process::thread_state::RUNNING)
 				old_thread->state = proc::process::thread_state::IDLE;
+        if(old_thread != new_thread)
+            old_thread->thread_lock.unlock();
     }
     
     cpu->current_thread = new_thread;
@@ -271,6 +274,7 @@ void proc::process::init_cpu(){
 }
 
 static proc::process::thread* create_thread_int(proc::process::thread* thread, proc::process::thread_privilege_level privilege, proc::process::thread_state state) {
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{thread->thread_lock};
     thread->handle_catalogue = {};
     thread->stacks.reset();
@@ -301,6 +305,7 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, p
 }
 
 void proc::process::make_kernel_thread(proc::process::thread* thread, void (*function)(void*), void* userptr){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{thread->thread_lock};
 
     mm::vmm::kernel_vmm::get_instance().clone_paging_info(thread->vmm);
@@ -324,6 +329,7 @@ void proc::process::make_kernel_thread(proc::process::thread* thread, void (*fun
 }
 
 proc::process::thread* proc::process::create_blocked_thread(proc::process::thread_privilege_level privilege){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{scheduler_mutex};
     for(auto& thread : thread_list){
         if(thread.state == proc::process::thread_state::DISABLED){
@@ -338,6 +344,8 @@ proc::process::thread* proc::process::create_blocked_thread(proc::process::threa
 }
 
 proc::process::thread* proc::process::thread_for_tid(tid_t tid){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
+    std::lock_guard guard{scheduler_mutex};
     for(auto& entry : thread_list){
         if(entry.tid == tid) return &entry;
     }
@@ -346,8 +354,17 @@ proc::process::thread* proc::process::thread_for_tid(tid_t tid){
 }
 
 proc::process::thread* proc::process::get_current_thread(){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{scheduler_mutex}; // Some weird smp bug idfk
+    
     return get_current_managed_cpu()->current_thread;
+}
+
+tid_t proc::process::get_current_tid(){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
+    std::lock_guard guard{scheduler_mutex}; // Some weird smp bug idfk
+
+    return get_current_managed_cpu()->current_thread->tid;
 }
 
 void proc::process::block_thread(tid_t tid, generic::event* event, x86_64::idt::idt_registers* regs){
@@ -362,14 +379,14 @@ bool proc::process::is_blocked(tid_t tid){
     return proc::process::thread_for_tid(tid)->is_blocked();
 }
 
-tid_t proc::process::get_current_tid(){
-    return get_current_thread()->tid;
-}
+
 
 void proc::process::kill(x86_64::idt::idt_registers* regs){
     mm::vmm::kernel_vmm::get_instance().set(); // We want nothing to do with this thread anymore
     proc::process::thread* thread = proc::process::get_current_thread();
     thread->thread_lock.lock();
+    smp::cpu::get_current_cpu()->irq_lock.lock();
+    scheduler_mutex.lock();
 
 
     thread->state = proc::process::thread_state::DISABLED;
@@ -387,12 +404,16 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
     auto* cpu = get_current_managed_cpu();
     cpu->current_thread = nullptr; // May this thread rest in peace
 
+    scheduler_mutex.unlock();
+    smp::cpu::get_current_cpu()->irq_lock.unlock();
+    
     idle_cpu(regs, cpu);
 
     PANIC("idle_cpu returned, how is this happening");
 }
 
 tid_t proc::process::fork(x86_64::idt::idt_registers* regs){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     auto* parent = proc::process::get_current_thread();
     if(parent == nullptr) return 0;
     parent->thread_lock.lock();
@@ -424,30 +445,37 @@ void proc::process::yield(x86_64::idt::idt_registers* regs){
 #pragma region proc::process::thread
 
 void proc::process::thread::set_state(proc::process::thread_state new_state){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->thread_lock};
     this->state = new_state;
 }
 
 void proc::process::thread::block(generic::event* await, x86_64::idt::idt_registers* regs){
+    smp::cpu::get_current_cpu()->irq_lock.lock();
     this->thread_lock.lock();
     this->event = await;
     this->state = proc::process::thread_state::BLOCKED;
     this->thread_lock.unlock();
+    smp::cpu::get_current_cpu()->irq_lock.unlock();
+
     timer_handler(regs, nullptr); // Switch out of the thread
 }
 
 void proc::process::thread::wake(){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->thread_lock};
     this->state = proc::process::thread_state::IDLE;
 }
 
 bool proc::process::thread::is_blocked(){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->thread_lock};
 
     return this->state == proc::process::thread_state::BLOCKED;
 }
 
 void proc::process::thread::expand_thread_stack(size_t pages){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->thread_lock};
     for(uint64_t i = 0; i < pages; i++){
         void* phys = mm::pmm::alloc_block();
@@ -465,6 +493,7 @@ void proc::process::thread::set_fsbase(uint64_t fs){
     if(!misc::is_canonical(fs))
         PANIC("Tried to set non canonical FS for thread");
 
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->thread_lock};
 
     this->context.fs = fs;
@@ -472,6 +501,7 @@ void proc::process::thread::set_fsbase(uint64_t fs){
 }
 
 void* proc::process::thread::map_anonymous(size_t size, void *virt_base, void* phys_base, int prot, int flags){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->thread_lock};
 
     if(!virt_base)
@@ -525,6 +555,7 @@ void* proc::process::thread::map_anonymous(size_t size, void *virt_base, void* p
 }
 
 bool proc::process::thread::get_phys_region(size_t size, int prot, int flags, phys_region* region){
+    std::lock_guard guard{smp::cpu::get_current_cpu()->irq_lock};
     this->thread_lock.lock();
     size_t n_pages = misc::div_ceil(size, mm::pmm::block_size);
     void* phys_addr = mm::pmm::alloc_n_blocks(n_pages);
@@ -536,6 +567,7 @@ bool proc::process::thread::get_phys_region(size_t size, int prot, int flags, ph
             mm::pmm::free_block((void*)cur_phys);
         }
         this->thread_lock.unlock();
+        smp::cpu::get_current_cpu()->irq_lock.unlock();
         return false;
     }
 

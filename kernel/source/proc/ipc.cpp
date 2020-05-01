@@ -9,6 +9,7 @@ proc::ipc::queue::queue(tid_t sender, tid_t receiver): _receive_event{}, _lock{}
 proc::ipc::queue::~queue(){}
 
 bool proc::ipc::queue::send(std::byte* data, size_t size){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->_lock};
 
     auto* copy = new std::byte[size];
@@ -22,6 +23,7 @@ bool proc::ipc::queue::send(std::byte* data, size_t size){
 }
 
 bool proc::ipc::queue::receive(std::byte* data){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->_lock};
     if(this->_queue.length() == 0)
         return false; // No messages on queue right now
@@ -34,7 +36,9 @@ bool proc::ipc::queue::receive(std::byte* data){
 }
 
 size_t proc::ipc::queue::get_top_message_size(){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->_lock};
+
     if(this->_queue.length() == 0)
         return 0; // No messages on queue right now
     
@@ -42,6 +46,7 @@ size_t proc::ipc::queue::get_top_message_size(){
 }
 
 size_t proc::ipc::queue::get_n_messages(){
+    std::lock_guard irq_guard{smp::cpu::get_current_cpu()->irq_lock};
     std::lock_guard guard{this->_lock};
     return this->_queue.length();
 }
