@@ -25,6 +25,8 @@ namespace x86_64::spinlock {
 
         private:
         uint16_t _lock;
+    };
+    
     struct irq_lock {
         constexpr irq_lock() noexcept: _count{0} {}
 

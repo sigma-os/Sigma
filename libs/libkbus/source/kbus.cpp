@@ -33,7 +33,7 @@ kbus::object_id kbus::allocate_object(){
         return -1;
     }
 
-    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC, get_kbus_ring());
 
     size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
@@ -66,7 +66,7 @@ std::vector<kbus::object> kbus::find_devices(std::string query){
         return {};
     }
 
-    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC, get_kbus_ring());
 
     size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
@@ -108,7 +108,7 @@ std::string kbus::object::get_attribute(std::string key){
         return "";
     }
 
-    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC, get_kbus_ring());
 
     size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};
@@ -142,9 +142,8 @@ using namespace sigma::kbus;
         printf("libkbus: Failed to send AddAttribute message\n");
         return;
     }
-
-    if(libsigma_ipc_get_msg_size(get_kbus_ring()) == 0)
-        libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC);
+    
+    libsigma_block_thread(SIGMA_BLOCK_WAITING_FOR_IPC, get_kbus_ring());
 
     size_t res_size = libsigma_ipc_get_msg_size(get_kbus_ring());
     std::vector<uint8_t> res{};

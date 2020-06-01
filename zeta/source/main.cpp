@@ -13,7 +13,7 @@
 #include <async/basic.hpp>
 #include <async/result.hpp>
 
-#define ZETA_ASSERT(condition) do { \
+/*#define ZETA_ASSERT(condition) do { \
 				if(!(condition)){ \
                     libsigma_klog("Zeta Assertion Failed, condition: " #condition); \
                     while(1) asm("pause"); \
@@ -176,7 +176,7 @@ async::run_queue *globalQueue() {
 
 async::detached init(){
     async::detach(handle_requests());
-}
+}*/
 
 int main(){
     fs::devfs devfs{};
@@ -184,10 +184,10 @@ int main(){
 
     libsigma_klog("zeta: Started VFS\n");
     
-    {
+    /*{
         async::queue_scope scope{globalQueue()};
         init();
     }
 
-    globalQueue()->run();
+    globalQueue()->run();*/
 }

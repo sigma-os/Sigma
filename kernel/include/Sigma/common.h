@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <new>
+#include <atomic>
 
 using std::uint8_t;
 using std::uint16_t;
