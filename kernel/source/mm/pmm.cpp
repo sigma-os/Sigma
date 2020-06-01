@@ -49,9 +49,9 @@ static void push(rle_stack_entry entry){
 
 void mm::pmm::print_stack(){
     debug_printf("Starting PMM Stack dump\n");
-    for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
-        debug_printf("  Entry: Start: %x, Length: %x [%x]\n", entry->base, entry->n_pages, (entry->n_pages * mm::pmm::block_size));
-    }
+    size_t i = 0;
+    for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++)
+        debug_printf("  Entry %d: Start: %x, Length: %x [%x]\n", i++, entry->base, entry->n_pages, (entry->n_pages * mm::pmm::block_size));
 }
 
 static void sort_stack();
@@ -82,6 +82,10 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     initrd_start = boot_protocol->kernel_initrd_ptr;
     initrd_end = boot_protocol->kernel_initrd_size + initrd_start;
 
+    const auto [symtab_range, strtab_range] = proc::elf::get_symbol_pmm_exclusion_zones();
+    const auto [symtab_base, symtab_size] = symtab_range;
+    const auto [strtab_base, strtab_size] = strtab_range;
+
     auto* ent = reinterpret_cast<multiboot_tag_mmap*>(boot_protocol->mmap);
     for(multiboot_memory_map_t* entry = ent->entries; (uint64_t)entry < ((uint64_t)ent + ent->size); entry++){
         debug_printf("[e820]: Base: %x, Len: %x, Type: ", entry->addr, entry->len);
@@ -107,17 +111,17 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
             break;
         }
 
-        if(entry->type == MULTIBOOT_MEMORY_AVAILABLE)
-        {
-            // TODO: Make this work on real hw
-            // If it is below 1MiB just skip it
-            if((entry->addr + entry->len) < (1024 * 1024))
-                continue;
-            else if(entry->addr < (1024 * 1024))
-                push({.base = (1024 * 1024), .n_pages = ((entry->len - ((1024 * 1024) - entry->addr)) / mm::pmm::block_size)});
-            else
-                push({.base = entry->addr, .n_pages = (entry->len / mm::pmm::block_size)});
-        }
+        if(entry->type != MULTIBOOT_MEMORY_AVAILABLE)
+            continue;
+        
+        // TODO: Make this work on real hw
+        // If it is below 1MiB just skip it
+        if((entry->addr + entry->len) < (1024 * 1024))
+            continue;
+        else if(entry->addr < (1024 * 1024))
+            push({.base = (1024 * 1024), .n_pages = ((entry->len - ((1024 * 1024) - entry->addr)) / mm::pmm::block_size)});
+        else
+            push({.base = entry->addr, .n_pages = (entry->len / mm::pmm::block_size)});
     }
 
     sort_stack();
@@ -126,12 +130,19 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
         for(rle_stack_entry* entry = stack_base; entry < stack_pointer; entry++){
             if(addr >= entry->base && addr <= (entry->base + (entry->n_pages * mm::pmm::block_size)) && entry->n_pages != 0){
                 // Replace the entry and push the other one
-                auto copy = *entry;
                 uint64_t low_offset = addr - entry->base;
-                entry->n_pages = (low_offset / mm::pmm::block_size);
+                uint64_t high_offset = (entry->base + (entry->n_pages * mm::pmm::block_size)) - (addr + mm::pmm::block_size);
 
-                uint64_t high_offset = (copy.base + (copy.n_pages * mm::pmm::block_size)) - (addr + mm::pmm::block_size);
-                push({.base = (addr + mm::pmm::block_size), .n_pages = (high_offset / mm::pmm::block_size)});
+                auto first = rle_stack_entry{.base = entry->base, .n_pages = (low_offset / mm::pmm::block_size)};
+                auto second = rle_stack_entry{.base = (addr + mm::pmm::block_size), .n_pages = (high_offset / mm::pmm::block_size)};
+
+                if(first.n_pages == 0){
+                    *entry = second;
+                } else {
+                    *entry = first;
+                    if(second.n_pages)
+                        push(second);
+                }
                 break;
             }
         }
@@ -146,15 +157,11 @@ void mm::pmm::init(boot::boot_protocol* boot_protocol){
     for(uint64_t addr = initrd_start; addr <= initrd_end; addr += mm::pmm::block_size)
         reserve_block(addr);
 
-    const auto [symtab_range, strtab_range] = proc::elf::get_symbol_pmm_exclusion_zones();
-    const auto [symtab_base, symtab_size] = symtab_range;
     for(uint64_t addr = ALIGN_DOWN(symtab_base, mm::pmm::block_size); addr <= ALIGN_UP(symtab_base + symtab_size, mm::pmm::block_size); addr += mm::pmm::block_size)
         reserve_block(addr);
 
-    const auto [strtab_base, strtab_size] = strtab_range;
     for(uint64_t addr = ALIGN_DOWN(strtab_base, mm::pmm::block_size); addr <= ALIGN_UP(strtab_base + strtab_size, mm::pmm::block_size); addr += mm::pmm::block_size)
         reserve_block(addr);
-
 
     sort_stack(); // Cleanup things that might've been left behind by reserve_block()
 
@@ -237,22 +244,22 @@ static void sorted_insert(rle_stack_entry x)
     } 
   
     // If top is greater, remove the top item and recur 
-    rle_stack_entry temp = pop(); 
+    auto temp = pop(); 
     sorted_insert(x); 
   
     // Put back the top item removed earlier 
     push(temp); 
 } 
-  
+
 // Function to sort stack 
 static void sort_stack() 
 { 
     if(stack_base != stack_pointer){
-        rle_stack_entry x = pop();
+        auto entry = pop();
   
         sort_stack(); 
 
-        if(x.n_pages)
-            sorted_insert(x); 
+        if(entry.n_pages != 0)
+            sorted_insert(entry); 
     }
 } 
