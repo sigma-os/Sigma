@@ -55,7 +55,7 @@ namespace x86_64::idt
     };
 
     struct PACKED_ATTRIBUTE idt_pointer {
-        void update_idtr(){
+        void store(){
             asm("lidt %0" : : "m"(*this) : "memory");
         }
         volatile uint16_t size;
@@ -75,20 +75,6 @@ namespace x86_64::idt
     constexpr uint8_t nmi_ist_index = 3;
     constexpr uint8_t preemption_ist_index = 4;
 
-    class idt {
-        public:
-        idt_table table;
-        idt_pointer pointer;
-
-        
-        idt(): table(idt_table()), pointer(idt_pointer()){
-            this->pointer.base = (uint64_t)&table;
-            this->pointer.size = (sizeof(x86_64::idt::idt_entry) * x86_64::idt::idt_max_entries) - 1;
-        }
-
-        void init();
-    };
-
     uint8_t get_free_vector();
 
     struct handler {
@@ -99,10 +85,10 @@ namespace x86_64::idt
         bool is_irq = false, should_iret = false;
     };
 
+    void init();
+    void load();
     void register_interrupt_handler(handler h);
-
     void register_irq_status(uint16_t n, bool is_irq);
-
     void register_generic_handlers();
 } // x86_64::idt
 

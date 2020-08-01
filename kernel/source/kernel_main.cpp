@@ -80,9 +80,10 @@ C_LINKAGE void kernel_main(){
 
     x86_64::misc_early_features_init();
 
-    x86_64::idt::idt idt = x86_64::idt::idt();
-    idt.init();
+    x86_64::idt::init();
     x86_64::idt::register_generic_handlers();    
+
+    x86_64::idt::load();
 
 
     auto& vmm = mm::vmm::kernel_vmm::get_instance();
@@ -213,11 +214,8 @@ C_LINKAGE void smp_kernel_main(){
     entry.tss_gdt_offset = entry.gdt.add_tss(entry.tss);
     entry.tss.load(entry.tss_gdt_offset);
 
-    x86_64::idt::idt idt = x86_64::idt::idt();
-    idt.init();
-
+    x86_64::idt::load();
     
-
     entry.lapic = {};
     entry.lapic.init();
     entry.lapic_id = entry.lapic.get_id();
