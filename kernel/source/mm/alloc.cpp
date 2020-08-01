@@ -38,17 +38,26 @@ static uint64_t morecore(size_t size, uint64_t align = 8){
     return ret;
 }
 
-void alloc::print_list(){
+bool alloc::check_for_corruption(bool print_info){
+    if(print_info)
+	    debug_printf("=============================================================================\nStarting Heap Header Dump\nhead = %x, tail = %x\n", head, tail);
+
 	alloc::header *curr = head;
-	debug_printf("head = %x, tail = %x\n", head, tail);
 	while(curr) {
-		debug_printf("addr = %x, size = %x, is_free=%d, next=%x, magic_low: %x, magic_high: %x\n", curr, curr->size, curr->is_free, curr->next, curr->magic_low, curr->magic_high);
+        if(print_info)
+		    debug_printf("addr = %x, size = %x, is_free=%d, next=%x, magic_low: %x, magic_high: %x\n", curr, curr->size, curr->is_free, curr->next, curr->magic_low, curr->magic_high);
         if(((uint64_t)curr->next < (0xffffffffd0000000 - 1) && ((uint64_t)curr->next != 0)) || (uint64_t)curr->next == 0xffffffffffffffff || !curr->check_magic()){
-            debug_printf("Heap corruption detected in entry: addr: %x\n", curr);
-            return;
+            if(print_info)
+                debug_printf("Heap corruption detected in entry: addr: %x\n", curr);
+            return true;
         }
 		curr = curr->next;
 	}
+
+    if(print_info)
+        debug_printf("=============================================================================\n");
+
+    return false;
 }
 
 NODISCARD_ATTRIBUTE
@@ -61,7 +70,7 @@ void* alloc::alloc(size_t size){
     if(header){
         if(!header->check_magic()){
             debug_printf("[ALLOC]: Invalid header magic: allocation size: %x, header ptr: %x\n", size, header);
-            alloc::print_list();
+            alloc::check_for_corruption(true);
             debug::trace_stack();
             return nullptr;
         }
@@ -155,7 +164,7 @@ void alloc::free(void* ptr){
 
     if(!header->check_magic()){
         printf("[ALLOC]: Invalid header magic: header ptr: %x\n", header);
-        alloc::print_list();
+        alloc::check_for_corruption(true);
         debug::trace_stack();
         return;
     }

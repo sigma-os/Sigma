@@ -33,8 +33,7 @@ namespace alloc
     void* alloc_a(size_t size, uint64_t align);
     void* realloc(void* ptr, size_t size);
     void free(void* ptr);
-    void print_list();
-
+    bool check_for_corruption(bool print_info);
 } // namespace alloc
 
 

@@ -230,14 +230,14 @@ void x86_64::svm::vcpu::run(generic::virt::vexit* vexit){
         x86_64::msr::write(x86_64::msr::gs_base, host_state.gs_base);
         x86_64::msr::write(x86_64::msr::kernelgs_base, host_state.gs_kernel_base);
 
-        auto* cpu = smp::cpu::get_current_cpu();
+        auto& cpu = *smp::cpu::get_current_cpu();
         
         // Reload TSS
-        auto& tss_entry = cpu->gdt->get_entry_by_offset(cpu->tss_gdt_offset);
+        auto& tss_entry = cpu.gdt.get_entry_by_offset(cpu.tss_gdt_offset);
         // Make TSS available again
         tss_entry.ent &= ~(0x1Full << 40);
         tss_entry.ent |= (9ull << 40);
-        cpu->tss->load(cpu->tss_gdt_offset);
+        cpu.tss.load(cpu.tss_gdt_offset);
 
         // Reload PAT
         x86_64::msr::write(x86_64::msr::ia32_pat, x86_64::pat::sigma_pat);

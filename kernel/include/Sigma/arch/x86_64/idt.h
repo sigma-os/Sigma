@@ -73,6 +73,7 @@ namespace x86_64::idt
     constexpr uint8_t double_fault_ist_index = 1;
     constexpr uint8_t page_fault_ist_index = 2;
     constexpr uint8_t nmi_ist_index = 3;
+    constexpr uint8_t preemption_ist_index = 4;
 
     class idt {
         public:

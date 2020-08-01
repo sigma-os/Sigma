@@ -21,7 +21,7 @@ All of these features are bools
 - `npsmep` will disable SMEP (Supervisor Mode Execution Prevention)
 - `nosmap` will disable SMAP (Supervisor Mode Access Prevention)
 - `notme` TME currently is an untested feature, so people are advised to turn it off with this flag, it won't disable it if it has been enabled by BIOS / FW, however it will stop Sigma from enabling it
-- `nox2apic` Since Sigma doesn't support Intel VT-d, it is currently impossible to route IRQs to cpus with an APIC id above 256, if an error pops up about this, pass this option to disable the x2apic
+- `nox2apic` Since Sigma doesn't support Intel VT-d IRQ redirection, it is currently impossible to route IRQs to cpus with an APIC id above 256, if an error pops up about this, pass this option to disable the x2apic
 
 ### Features disabled by default
 - `tsd` will enable the TSD bit in cr4 which disallows the `rdtsc` instruction in userland, this can make speculative exploits harder to pull off, however many applications use this instruction for valid purposes so it is disabled by default

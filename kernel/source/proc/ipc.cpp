@@ -37,7 +37,6 @@ bool proc::ipc::queue::receive(std::byte* data){
     
     const auto msg = this->_queue.pop();
     
-
     #ifdef DEBUG
     ASSERT(msg.magic_low == 0xF00D && msg.magic_high == 0xDEAD);
     #endif
@@ -122,7 +121,7 @@ generic::event& proc::ipc::ring::get_receive_event(){
         PANIC("Tried to get event size on non-owned IPC ring");
 }
 
-static proc::ipc::ring* get_ring(uint64_t ring){
+static proc::ipc::ring& get_ring(uint64_t ring){
     auto* thread = proc::process::get_current_thread();
     ASSERT(thread);
 
@@ -132,29 +131,29 @@ static proc::ipc::ring* get_ring(uint64_t ring){
     auto* ipc_ring = handle->ring;
     ASSERT(ipc_ring);
 
-    return ipc_ring;
+    return *ipc_ring;
 }
 
 size_t proc::ipc::get_message_size(uint64_t ring){
-    return get_ring(ring)->get_top_message_size();
+    return get_ring(ring).get_top_message_size();
 }
 
 size_t proc::ipc::get_n_messages(uint64_t ring){
-    return get_ring(ring)->get_n_messages();
+    return get_ring(ring).get_n_messages();
 }
 
 bool proc::ipc::send(uint64_t ring, std::byte* data, size_t size){
-    return get_ring(ring)->send(data, size);
+    return get_ring(ring).send(data, size);
 }
 
 bool proc::ipc::receive(uint64_t ring, std::byte* data){
-    return get_ring(ring)->receive(data);
+    return get_ring(ring).receive(data);
 }
 
 generic::event& proc::ipc::get_receive_event(uint64_t ring){
-    return get_ring(ring)->get_receive_event();
+    return get_ring(ring).get_receive_event();
 }
 
 std::pair<tid_t, tid_t> proc::ipc::get_recipients(uint64_t ring){
-    return get_ring(ring)->get_recipients();
+    return get_ring(ring).get_recipients();
 }

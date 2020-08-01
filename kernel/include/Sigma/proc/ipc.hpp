@@ -61,7 +61,7 @@ namespace proc::ipc
     bool receive(uint64_t ring, std::byte* data);
     generic::event& get_receive_event(uint64_t ring);
     std::pair<tid_t, tid_t> get_recipients(uint64_t ring);
-} // namespace proc::ip
+} // namespace proc::ipc
 
 
 #endif

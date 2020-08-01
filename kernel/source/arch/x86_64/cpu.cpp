@@ -27,7 +27,8 @@ void x86_64::smep::init(){
         if(b & cpuid_bits::SMEP){
             x86_64::regs::cr4 cr4{};
             cr4.bits.smep = 1; // Enable SMEP
-            cr4.flush();
+            cr4.store();
+
             debug_printf("[CPU]: Enabled SMEP\n");
         } else {
             debug_printf("[CPU]: SMEP is not available\n");
@@ -46,7 +47,7 @@ void x86_64::smap::init(){
         if(b & cpuid_bits::SMAP){
             x86_64::regs::cr4 cr4{};
             cr4.bits.smap = 1; // Enable SMAP
-            cr4.flush();
+            cr4.store();
 
             smp::cpu::get_current_cpu()->features.smap = 1;
 
@@ -82,7 +83,8 @@ void x86_64::umip::init(){
             // Ladies and gentlemen, we have UMIP, i repeat, we have UMIP
             x86_64::regs::cr4 cr4{};
             cr4.bits.umip = 1; // Enable UMIP
-            cr4.flush();
+            cr4.store();
+
             debug_printf("[CPU]: Enabled UMIP\n");
         } else {
             debug_printf("[CPU]: UMIP is not available\n");
@@ -110,9 +112,9 @@ void x86_64::pcid::init(){
         debug_printf("[CPU]: Forced invpcid disable\n");
     
     if(supports_pcid){
-        regs::cr4 cr4{};
+        x86_64::regs::cr4 cr4{};
         cr4.bits.pcide = 1;
-        cr4.flush();
+        cr4.store();
 
         auto* cpu = smp::cpu::get_current_cpu();
         cpu->features.pcid = supports_pcid;
@@ -127,9 +129,9 @@ void x86_64::pcid::init(){
 void x86_64::tsd::init(){
     // Assume the TSC is supported since it is *way* older than x86_64
     if(misc::kernel_args::get_bool("enable_tsd")){
-        regs::cr4 cr4{};
+        x86_64::regs::cr4 cr4{};
         cr4.bits.tsd = 1;
-        cr4.flush();
+        cr4.store();
         
         debug_printf("[CPU]: Enabled TSD\n");
     }
@@ -212,7 +214,6 @@ void x86_64::misc_early_features_init(){
         x86_64::svm::init();
     }
 
-    
     x86_64::cpuid(1, a, b, c, d);
     if(c & cpuid_bits::XSAVE){
         // xcr0 specifies what the `xsave` instruction should save, however it is also used for enabling instruction sets, e.g. AVX
@@ -220,7 +221,8 @@ void x86_64::misc_early_features_init(){
         xcr.bits.fpu_mmx = 1; // Set FPU bit, since it is *always* required to be set
         if(d & cpuid_bits::SSE) xcr.bits.sse = 1; // Enable SSE, is always done becuase this is long mode but check because why not
         if(c & cpuid_bits::AVX) xcr.bits.avx = 1; // Enable AVX
-        xcr.flush();
+        
+        xcr.store();
     }
 }
 

@@ -24,12 +24,11 @@ uint64_t x86_64::gdt::gdt::add_entry(uint64_t flags){
     return this->get_offset_by_index((this->entry_index - 1));
 }
 
-uint64_t x86_64::gdt::gdt::add_tss(x86_64::tss::table* tss){
-    uint64_t tss_address = reinterpret_cast<uint64_t>(tss);
+uint64_t x86_64::gdt::gdt::add_tss(x86_64::tss::table& tss){
+    uint64_t tss_address = reinterpret_cast<uint64_t>(&tss);
 
     uint32_t tss_size = (sizeof(x86_64::tss::table) - 1);
     //uint32_t tss_entry_type = 0x8900;
-
 
     uint32_t ent1_low = (tss_size & 0xFFFF) | ((tss_address & 0xFFFF) << 16);
     uint32_t ent1_high = ((tss_address >> 16) & 0xFF) | ((1ULL << 8) | (1ULL << 11) | (1ULL << 15)) | (tss_size & 0x000F0000) | (tss_address & 0xFF000000);

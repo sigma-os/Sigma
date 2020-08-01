@@ -49,9 +49,7 @@ namespace x86_64::gdt
             void init();
 
             uint64_t add_entry(uint64_t flags);
-
-            uint64_t add_tss(x86_64::tss::table *tss);
-
+            uint64_t add_tss(x86_64::tss::table& tss);
             uint64_t get_offset_by_index(uint64_t index);
             x86_64::gdt::entry& get_entry_by_offset(uint64_t offset){
                 return entries[offset / 8];
@@ -60,7 +58,6 @@ namespace x86_64::gdt
             void update_pointer(){
                 this->pointer.update_gdtr();
             }
-
         private:
             x86_64::gdt::entry entries[x86_64::gdt::max_entries];
             x86_64::gdt::pointer pointer;

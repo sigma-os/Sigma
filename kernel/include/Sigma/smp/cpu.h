@@ -17,15 +17,16 @@ namespace smp::cpu
 
     struct entry {
         public:
-        entry(): self_ptr((uint64_t)this), lapic_id{0}, tss{nullptr}, tss_gdt_offset{0}, gdt{nullptr}, features{.raw = 0} {}
+        entry(): self_ptr((uint64_t)this), lapic_id{0}, gdt{}, tss{}, tss_gdt_offset{0}, features{.raw = 0} {}
 
         uint64_t self_ptr;
+
         x86_64::apic::lapic lapic;
         uint32_t lapic_id;
-        x86_64::tss::table* tss;
-        uint16_t tss_gdt_offset;
 
-        x86_64::gdt::gdt* gdt;
+        x86_64::gdt::gdt gdt;
+        x86_64::tss::table tss;
+        uint16_t tss_gdt_offset;
 
         x86_64::paging::pcid_cpu_context pcid_context;
         

@@ -116,24 +116,18 @@ namespace x86_64
     
     namespace regs {
         union cr4 {
-            static cr4 load(){
+            void load(){
                 uint64_t tmp;
                 asm("mov %%cr4, %0" : "=r"(tmp));
-                return cr4{tmp};
+                this->raw = tmp;
             }
 
-            static void store(cr4 reg){
-                asm("mov %0, %%cr4" : : "r"(reg.raw));
+            void store(){
+                asm("mov %0, %%cr4" : : "r"(this->raw));
             }
 
             explicit cr4(uint64_t raw): raw(raw) {}
-            cr4(){
-                *this = cr4::load();
-            }
-
-            void flush(){
-                cr4::store(*this);
-            }
+            cr4(){ load(); }
 
             struct _bits {
                 uint64_t vme : 1;
@@ -168,23 +162,16 @@ namespace x86_64
         static_assert(sizeof(cr4) == 8);
 
         union xcr0 {
-            static xcr0 load(){
-                uint64_t tmp = x86_64::read_xcr(0);
-                return xcr0{tmp};
+            void load(){
+                this->raw = x86_64::read_xcr(0);
             }
 
-            static void store(xcr0 reg){
-                x86_64::write_xcr(0, reg.raw);
+            void store(){
+                x86_64::write_xcr(0, this->raw);
             }
 
             explicit xcr0(uint64_t raw): raw(raw) {}
-            xcr0(){
-                *this = xcr0::load();
-            }
-
-            void flush(){
-                xcr0::store(*this);
-            }
+            xcr0(){ this->load(); }
 
             struct _bits {
                 uint64_t fpu_mmx : 1;

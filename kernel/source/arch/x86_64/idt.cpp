@@ -715,7 +715,7 @@ void x86_64::idt::idt::init(){
     this->table.set_entry(245, (void*)&isr245, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(246, (void*)&isr246, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(247, (void*)&isr247, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
-    this->table.set_entry(248, (void*)&isr248, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
+    this->table.set_entry(248, (void*)&isr248, x86_64::gdt::kernel_code_selector, x86_64::idt::preemption_ist_index);
     this->table.set_entry(249, (void*)&isr249, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index, 3); // Syscall handler so should be able to be called from userspace 
     this->table.set_entry(250, (void*)&isr250, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);
     this->table.set_entry(251, (void*)&isr251, x86_64::gdt::kernel_code_selector, x86_64::idt::normal_ist_index);

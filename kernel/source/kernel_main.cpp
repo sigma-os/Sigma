@@ -43,13 +43,13 @@
 #include <Sigma/arch/x86_64/intel/vt-d.hpp>
 #include <Sigma/generic/user_handle.hpp>
 
-auto cpu_list = types::minimal_array<1, smp::cpu::entry>{};
+types::minimal_array<1, smp::cpu::entry> cpu_list{};
 C_LINKAGE boot::boot_protocol boot_data;
 
 static void enable_cpu_tasking(){
     uint64_t rsp = (uint64_t)smp::cpu::get_current_cpu()->kstack->top();
     rsp = ALIGN_DOWN(rsp, 16); // Align stack to ABI requirements
-    smp::cpu::get_current_cpu()->tss->rsp0 = rsp;
+    smp::cpu::get_current_cpu()->tss.rsp0 = rsp;
 
     proc::process::init_cpu();
 
@@ -65,25 +65,20 @@ C_LINKAGE void kernel_main(){
     printf("Booting Sigma %s, Copyright Thomas Woertman 2019\n", VERSION_STR);
 
     misc::kernel_args::init(boot_protocol->cmdline);
-    
-    auto& entry = cpu_list.empty_entry();
-    entry.pcid_context = x86_64::paging::pcid_cpu_context{};
-    entry.set_gs();
-
     proc::elf::init_symbol_list(*boot_protocol);
     mm::pmm::init(boot_protocol);
 
+    auto& entry = cpu_list.empty_entry();
+    entry.set_gs();
+    entry.pcid_context = {};
+    entry.gdt = {};
+    entry.tss = {};
+    entry.gdt.init();
+    entry.tss.init();
+    entry.tss_gdt_offset = entry.gdt.add_tss(entry.tss);
+    entry.tss.load(entry.tss_gdt_offset);
+
     x86_64::misc_early_features_init();
-
-    x86_64::tss::table tss = x86_64::tss::table();
-    x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
-    gdt.init();
-    uint16_t tss_offset = gdt.add_tss(&tss);
-    tss.load(tss_offset);
-
-    entry.tss = &tss;
-    entry.tss_gdt_offset = tss_offset;
-    entry.gdt = &gdt;
 
     x86_64::idt::idt idt = x86_64::idt::idt();
     idt.init();
@@ -106,11 +101,11 @@ C_LINKAGE void kernel_main(){
         auto* mmap = reinterpret_cast<multiboot_tag_mmap*>(boot_data.mmap);
         for(multiboot_memory_map_t* mmap_entry = mmap->entries; (uintptr_t)mmap_entry < ((uintptr_t)mmap + mmap->size); mmap_entry++){
             if(mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE){
-                auto phys = ALIGN_DOWN(mmap_entry->addr, mm::pmm::block_size);
+                auto bottom = ALIGN_DOWN(mmap_entry->addr, mm::pmm::block_size);
                 auto top = ALIGN_UP(mmap_entry->addr + mmap_entry->len, mm::pmm::block_size);
                 
-                for(; phys < top; phys += mm::pmm::block_size){
-                    vmm.map_page(phys, phys + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute);
+                for(; bottom < top; bottom += mm::pmm::block_size){
+                    vmm.map_page(bottom, bottom + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE, map_page_flags_present | map_page_flags_writable | map_page_flags_global | map_page_flags_no_execute);
                 }
             }
 
@@ -127,7 +122,7 @@ C_LINKAGE void kernel_main(){
 
     // Initialize initrd as early as possible so it can be used for reading files for command line args
     for(uint64_t i = 0; i < boot_data.kernel_initrd_size; i += mm::pmm::block_size){
-        mm::vmm::kernel_vmm::get_instance().map_page(boot_data.kernel_initrd_ptr + i, (boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + i), map_page_flags_present | map_page_flags_global | map_page_flags_no_execute);    
+        vmm.map_page(boot_data.kernel_initrd_ptr + i, (boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE + i), map_page_flags_present | map_page_flags_global | map_page_flags_no_execute);    
     }
 
     proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
@@ -137,7 +132,7 @@ C_LINKAGE void kernel_main(){
     generic::device::init();
 
     acpi::init(boot_protocol);
-    acpi::madt madt = acpi::madt();
+    acpi::madt madt{};
 
     if(madt.found_table()){
         madt.parse();
@@ -149,55 +144,50 @@ C_LINKAGE void kernel_main(){
             x86_64::pic::disable(); 
         }
     } else {
-        PANIC("Didn't find MADT table\n Can't continue boot");
+        PANIC("Didn't find MADT table\nCan't continue boot");
     }
 
-    x86_64::apic::lapic lapic = x86_64::apic::lapic();
-    lapic.init(); 
-
-    entry.lapic = lapic;
+    entry.lapic = {};
+    entry.lapic.init();
     entry.lapic_id = entry.lapic.get_id();
 
-
     x86_64::identify_cpu();
-
-
     x86_64::idt::register_irq_status(33, true);
-
     x86_64::apic::ioapic::init(madt);
-
-
     x86_64::pci::init_pci();
-
     x86_64::hpet::init_hpet();
-
     acpi::init_sci(madt);
-
     x86_64::pci::parse_pci();
 
     proc::process::init_multitasking(madt);
-
-    generic::device::print_list();
-
-    smp::multiprocessing smp = smp::multiprocessing(cpus, &lapic);
-    (void)(smp);
+    proc::syscall::init_syscall();
+    smp::multiprocessing smp{cpus};
+    smp.boot_aps();
 
     x86_64::misc_bsp_late_features_init();
 
-    proc::syscall::init_syscall();
 
-    proc::process::thread* kbus = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/kbus", &kbus, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load kbus\n");
+    proc::process::make_kernel_thread(proc::process::create_blocked_thread(proc::process::thread_privilege_level::KERNEL), [](){
+        constexpr size_t interval = 50;
+        debug_printf("[ALLOC]: Running heap corruption watchdog on TID: %x, checking for heap corruption every %d ms...\n", proc::process::get_current_tid(), interval);
 
-    proc::process::thread* zeta = nullptr;
-    if(!proc::elf::start_elf_executable("/usr/bin/zeta", &zeta, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load zeta\n");
+        while(true) {
+            if(alloc::check_for_corruption(false))
+                alloc::check_for_corruption(true); // First check if its corrupted, then dump all the info
+
+            x86_64::hpet::poll_sleep(interval);
+        }
+    });
+
+    //proc::process::thread* kbus = nullptr;
+    //if(!proc::elf::start_elf_executable("/usr/bin/kbus", &kbus, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load kbus\n");
 
     //proc::process::thread* vfs = nullptr;
     //if(!proc::elf::start_elf_executable("/usr/bin/zeta", &vfs, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load Zeta\n");
 
     // TODO: Start this in modular way
-    //proc::process::thread* block = nullptr;
-    //if(!proc::elf::start_elf_executable("/usr/bin/nvme", &block, proc::process::thread_privilege_level::DRIVER, {.vfs = vfs->tid, .kbus = kbus->tid})) printf("Failed to load nvme\n");
+    proc::process::thread* block = nullptr;
+    if(!proc::elf::start_elf_executable("/usr/bin/nvme", &block, proc::process::thread_privilege_level::DRIVER)) printf("Failed to load nvme\n");
 
     enable_cpu_tasking();
     asm("cli; hlt"); // Wait what?
@@ -206,25 +196,31 @@ C_LINKAGE void kernel_main(){
 
 
 C_LINKAGE void smp_kernel_main(){
-    x86_64::tss::table tss = x86_64::tss::table();
+    /*x86_64::tss::table tss = x86_64::tss::table();
     x86_64::gdt::gdt gdt = x86_64::gdt::gdt();
     gdt.init();
     uint16_t tss_offset = gdt.add_tss(&tss);
     gdt.update_pointer();
-    tss.load(tss_offset);
-
-    x86_64::idt::idt idt = x86_64::idt::idt();
-    idt.init();
+    tss.load(tss_offset);*/
 
     auto& entry = cpu_list.empty_entry();
     entry.set_gs();
 
-    entry.lapic = x86_64::apic::lapic();
+    entry.gdt = {};
+    entry.tss = {};
+    entry.gdt.init();
+    entry.tss.init();
+    entry.tss_gdt_offset = entry.gdt.add_tss(entry.tss);
+    entry.tss.load(entry.tss_gdt_offset);
+
+    x86_64::idt::idt idt = x86_64::idt::idt();
+    idt.init();
+
+    
+
+    entry.lapic = {};
     entry.lapic.init();
     entry.lapic_id = entry.lapic.get_id();
-    entry.gdt = &gdt;
-    entry.tss = &tss;
-    entry.tss_gdt_offset = tss_offset;
     entry.pcid_context = x86_64::paging::pcid_cpu_context{};
     entry.idle_stack.init();
     entry.kstack.init();

@@ -28,14 +28,15 @@ namespace smp
 
     class multiprocessing {
         public:
-        multiprocessing(types::linked_list<cpu_entry>& cpus, x86_64::apic::lapic* lapic);
+        multiprocessing(types::linked_list<cpu_entry>& cpus);
+
+        void boot_aps();
 
         private:
         void boot_cpu(cpu_entry& e);
-
         void boot_apic(smp::cpu_entry& cpu);
 
-        x86_64::apic::lapic* bsp_lapic;
+        types::linked_list<cpu_entry>& cpus;
     };
 } // smp
 
