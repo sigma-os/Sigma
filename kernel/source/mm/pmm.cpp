@@ -12,8 +12,6 @@ static uint64_t mbd_end, initrd_end;
 
 static auto pmm_global_mutex = x86_64::spinlock::mutex();
 
-
-
 struct rle_stack_entry {
     uint64_t base;
     uint64_t n_pages;
@@ -233,11 +231,8 @@ void mm::pmm::free_block(void* block){
     return;
 }
 
-static void sorted_insert(rle_stack_entry x) 
-{ 
-    // Base case: Either stack is empty or newly inserted 
-    // item is greater than top (more than all existing) 
-    if ((stack_base == stack_pointer) || (x < *stack_pointer)) 
+static void sorted_insert(rle_stack_entry x){
+    if ((stack_base == stack_pointer) || (x < *stack_pointer))
     { 
         push(x); 
         return; 
@@ -252,8 +247,7 @@ static void sorted_insert(rle_stack_entry x)
 } 
 
 // Function to sort stack 
-static void sort_stack() 
-{ 
+static void sort_stack() {
     if(stack_base != stack_pointer){
         auto entry = pop();
   

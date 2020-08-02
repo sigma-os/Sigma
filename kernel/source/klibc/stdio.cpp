@@ -20,7 +20,7 @@ x86_64::spinlock::mutex printf_lock = x86_64::spinlock::mutex();
 static bool print(const char* data, size_t length){
 
     //for(uint64_t i = 0; i < length; i++) main_writer.print_char(bytes[i]);
-    main_writer.nprint(data, length);
+    main_writer.print(data, length);
 
     return true;
 }

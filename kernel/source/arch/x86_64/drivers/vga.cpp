@@ -11,24 +11,15 @@ void x86_64::vga::write_entry(text_entry_t character, uint8_t x, uint8_t y){
     *(entry + 1) = character.colour;
 }
 
-void x86_64::vga::writer::nprint(const char* str, size_t n){
+void x86_64::vga::writer::print(const char* str, size_t n){
     std::lock_guard guard{this->mutex};
 
-    for(size_t i = 0; i < n; i++){
-        uint8_t c = str[i];
-
-        this->print_char(c);
-    }
+    for(size_t i = 0; i < n; i++)
+        this->print_char(str[i]);
 }
 
 void x86_64::vga::writer::print(const char* str){
-    std::lock_guard guard{this->mutex};
-
-    for(; *str; str++){
-        uint8_t c = *str;
-
-        this->print_char(c);
-    }
+    print(str, strlen(str));
 }
 
 void x86_64::vga::writer::print_char(const char c){
@@ -68,7 +59,7 @@ void x86_64::vga::writer::print_char(const char c){
         x86_64::vga::text_entry_t entry = x86_64::vga::text_entry_t(c, this->foreground, this->background);
         x86_64::vga::write_entry(entry, x, y);
         x++;
-        if(x > 80){
+        if(x >= 80){
             x = 0;
             y++;
             if(y >= 25){
@@ -94,7 +85,7 @@ void x86_64::vga::writer::set_cursor(uint8_t x, uint8_t y){
     std::lock_guard guard{this->mutex};
     this->x = x;
     this->y = y;
-    if(this->x > 80){
+    if(this->x >= 80){
         this->x = 0;
         this->y++;
         if(this->y >= 25){

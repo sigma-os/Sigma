@@ -74,9 +74,13 @@ p4_table:
     dq p3_table - KERNEL_LMA + 3
 
 p3_table:
-    dq p2_table - KERNEL_LMA + 3
-    times 509 dq 0
-    dq p2_table - KERNEL_LMA + 3
+    dq p2_tableA - KERNEL_LMA + 3
+    dq p2_tableB - KERNEL_LMA + 3
+    dq p2_tableC - KERNEL_LMA + 3
+    dq p2_tableD - KERNEL_LMA + 3
+    dq p2_tableE - KERNEL_LMA + 3
+    times 505 dq 0
+    dq p2_tableA - KERNEL_LMA + 3
     times 1 dq 0
 
 %macro gen_pd_2mb 3
@@ -90,8 +94,20 @@ p3_table:
 	%endrep
 %endmacro
 
-p2_table:
+p2_tableA:
     gen_pd_2mb 0,512,0
+
+p2_tableB:
+    gen_pd_2mb 1 * (0x200000 * 512), 512, 0
+
+p2_tableC:
+    gen_pd_2mb 2 * (0x200000 * 512), 512, 0
+
+p2_tableD:
+    gen_pd_2mb 3 * (0x200000 * 512), 512, 0
+
+p2_tableE:
+    gen_pd_2mb 4 * (0x200000 * 512), 512, 0
 
 
 KERNEL_LMA equ 0xffffffff80000000

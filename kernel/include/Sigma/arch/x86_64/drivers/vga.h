@@ -39,7 +39,7 @@ namespace x86_64::vga
                   mutex(x86_64::spinlock::mutex()) { }
 
         void print(const char* str);
-        void nprint(const char* str, size_t n);
+        void print(const char* str, size_t n);
         void print_char(const char c);
 
         void set_foreground(vga::text_colour colour);
@@ -49,13 +49,10 @@ namespace x86_64::vga
 
         void set_cursor_to_hw();
 
-        
-
         int8_t x, y;
         vga::text_colour foreground, background;
 
         private:
-
         x86_64::spinlock::mutex mutex;
 
         void scroll();
@@ -65,9 +62,6 @@ namespace x86_64::vga
         void disable_hardware_cursor();
         void update_hardware_cursor();
     };
-
-    
-} // vga
-
+} // x86_64::vga
 
 #endif

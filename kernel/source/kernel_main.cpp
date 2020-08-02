@@ -137,7 +137,6 @@ C_LINKAGE void kernel_main(){
 
     if(madt.found_table()){
         madt.parse();
-
         madt.get_cpus(cpus);
 
         if(madt.supports_legacy_pic()){
