@@ -132,7 +132,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
     
     lai_rsdp_info info{};
     if(auto error = lai_bios_detect_rsdp(&info); error != LAI_ERROR_NONE){
-        printf("[ACPI]: Failed finding {R,X}SDP, Error: %s\n", lai_api_error_to_string(error));
+        printf("[ACPI]: Failed finding {R, X}SDP, Error: %s\n", lai_api_error_to_string(error));
         return;
     }
 
@@ -144,7 +144,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
         debug_printf("[ACPI]: Detected version 2 or higher\n");
         auto* xsdp = reinterpret_cast<acpi::xsdp*>(rsdp);
 
-        debug_printf("[ACPI]: Found XSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", xsdp->oem_id[0], xsdp->oem_id[1], xsdp->oem_id[2], xsdp->oem_id[3], xsdp->oem_id[4], xsdp->oem_id[5], xsdp->revision);
+        debug_printf("[ACPI]: Found XSDP: oem_id: \"%c%c%c%c%c%\", Revision: %d\n", xsdp->oem_id[0], xsdp->oem_id[1], xsdp->oem_id[2], xsdp->oem_id[3], xsdp->oem_id[4], xsdp->oem_id[5], xsdp->revision);
 
         mm::vmm::kernel_vmm::get_instance().map_page(xsdp->xsdt_address, (xsdp->xsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
 
@@ -173,13 +173,13 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
 
 
             if(do_checksum(h)){
-                debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id:%c%c%c%c%c%c, Revision: %d\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision);
+                debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id: \"%c%c%c%c%c%c\", Revision: %d\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision);
                 acpi_tables.push_back(reinterpret_cast<uint64_t>(h));
             }
 
         }
     } else {
-        debug_printf("[ACPI]: Found RSDP: oem_id:%c%c%c%c%c%c, Revision: %d\n", rsdp->oem_id[0], rsdp->oem_id[1], rsdp->oem_id[2], rsdp->oem_id[3], rsdp->oem_id[4], rsdp->oem_id[5], rsdp->revision);
+        debug_printf("[ACPI]: Found RSDP: oem_id: \"%c%c%c%c%c%c\", Revision: %d\n", rsdp->oem_id[0], rsdp->oem_id[1], rsdp->oem_id[2], rsdp->oem_id[3], rsdp->oem_id[4], rsdp->oem_id[5], rsdp->revision);
         mm::vmm::kernel_vmm::get_instance().map_page(info.rsdt_address, (info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), map_page_flags_present | map_page_flags_no_execute, map_page_cache_types::uncacheable);
         auto* rsdt = reinterpret_cast<acpi::rsdt*>(info.rsdt_address + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE);
         if(!do_checksum(reinterpret_cast<acpi::sdt_header*>(rsdt))){
@@ -203,7 +203,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
             }
 
             if(do_checksum(h)){
-                debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id:%c%c%c%c%c%c, Revision: %d, Addr: %x\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision, h);
+                debug_printf("[ACPI]: Found Table %c%c%c%c: oem_id: \"%c%c%c%c%c%c\", Revision: %d, Addr: %x\n", h->signature[0], h->signature[1], h->signature[2], h->signature[3], h->oem_id[0], h->oem_id[1], h->oem_id[2], h->oem_id[3], h->oem_id[4], h->oem_id[5], h->revision, h);
 
                 acpi_tables.push_back(reinterpret_cast<uint64_t>(h));
             }
@@ -234,7 +234,7 @@ void acpi::init(MAYBE_UNUSED_ATTRIBUTE boot::boot_protocol* boot_protocol){
 static void acpi_sci_handler(MAYBE_UNUSED_ATTRIBUTE x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBUTE void* userptr) {
 	uint16_t event = lai_get_sci_event();
 	if(event & ACPI_POWER_BUTTON) {
-		debug_printf("[ACPI]: Requested ACPI shutdown at tsc: %x\n", x86_64::read_tsc());
+		debug_printf("[ACPI]: Requested ACPI shutdown at TSC: %x\n", x86_64::read_tsc());
 		lai_enter_sleep(5); // S5 is off
 	} else {
 		printf("[ACPI]: Unknown SCI event: %x\n", event);
@@ -276,8 +276,8 @@ void acpi::init_ec(){
             continue;
  
         // Found one
-        auto* driver = new lai_ec_driver; // Dynamically allocate the memory since -
-        lai_init_ec(node, driver);                               // we dont know how many ECs there could be
+        auto* driver = new lai_ec_driver; // Dynamically allocate the memory since we dont know how many ECs there could be
+        lai_init_ec(node, driver);                               
  
         struct lai_ns_child_iterator child_it = LAI_NS_CHILD_ITERATOR_INITIALIZER(node);
         lai_nsnode_t *child_node;
@@ -288,5 +288,26 @@ void acpi::init_ec(){
                 }
             }
         }
+
+        printf("[ACPI]: Initializing Embedded Controller at %s [cmd: %x, data: %x] ...", lai_stringify_node_path(node), driver->cmd_port, driver->data_port);
+
+        auto* reg = lai_resolve_path(node, "_REG");
+        if(reg){
+            LAI_CLEANUP_VAR lai_variable_t address_space = {};
+            LAI_CLEANUP_VAR lai_variable_t enable = {};
+
+            address_space.type = LAI_INTEGER;
+            address_space.integer = acpi::generic_address_structure_id_embedded_controller;
+
+            enable.type = LAI_INTEGER;
+            enable.integer = 1; // Enable
+
+            if(auto error = lai_eval_largs(nullptr, reg, &state, &address_space, &enable, nullptr); error != LAI_ERROR_NONE){
+                printf("Failed to evaluate %s(EmbeddedControl, 1) due to error %s(%d)\n", lai_stringify_node_path(reg), lai_api_error_to_string(error), error);
+                return;
+            }
+        }
+
+        printf("Success\n");
     }
 }
