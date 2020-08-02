@@ -10,6 +10,9 @@ auto cpus = misc::lazy_initializer<types::linked_list<proc::process::managed_cpu
 
 proc::process::thread* kernel_thread;
 
+auto init_mutex = x86_64::spinlock::mutex();
+
+
 proc::process::managed_cpu* proc::process::get_current_managed_cpu(){
 	if(!cpus.is_initialized())
 		return nullptr;
@@ -81,9 +84,6 @@ static proc::process::thread* schedule(proc::process::thread* current){
 		return nullptr;
 	};
 
-	if(current)
-		std::lock_guard current_guard{current->thread_lock};
-
 	if(scheduling_queue.length() >= 1){
 		auto tid = scheduling_queue.pop();
 		for(auto& entry : thread_list){
@@ -122,10 +122,7 @@ static void save_context(x86_64::idt::idt_registers* regs, proc::process::thread
 
 	thread->context.cr3 = reinterpret_cast<uint64_t>(x86_64::paging::get_current_info());
 
-	if(!thread->context.simd_state)
-		thread->context.simd_state = proc::simd::create_state();
-
-	proc::simd::save_state(thread->context.simd_state);
+	thread->context.simd_state.save();
 
 	thread->context.fs = x86_64::msr::read(x86_64::msr::fs_base);
 }
@@ -159,7 +156,7 @@ static void switch_context(x86_64::idt::idt_registers* regs, proc::process::thre
 
 	x86_64::msr::write(x86_64::msr::fs_base, new_thread->context.fs);
 
-	proc::simd::restore_state(new_thread->context.simd_state);
+	new_thread->context.simd_state.restore();
 
 	if(old_thread == nullptr || old_thread->context.cr3 != new_thread->context.cr3)
 		new_thread->vmm.set();
@@ -236,26 +233,25 @@ static void timer_handler(x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBU
 }
 
 void proc::process::init_multitasking(acpi::madt& madt){
-	auto cpu_list = types::linked_list<smp::cpu_entry>();
+	proc::simd::init();
+
+	types::linked_list<smp::cpu_entry> cpu_list{};
 	madt.get_cpus(cpu_list);
 
 	cpus.init();
-
-	for(auto& entry : cpu_list) cpus->push_back(proc::process::managed_cpu(entry, false, nullptr));
+	for(auto& entry : cpu_list)
+		cpus->push_back({.cpu = entry, .enabled = false, .current_thread = nullptr});
 
 	kernel_thread = thread_list.empty_entry();
 	kernel_thread->tid = current_thread_list_offset++;
 	kernel_thread->state = proc::process::thread_state::SILENT;
 
 	x86_64::idt::register_interrupt_handler({.vector = proc::process::cpu_quantum_interrupt_vector, .callback = timer_handler, .is_irq = true});
-	proc::simd::init_simd();
 }
-
-auto init_mutex = x86_64::spinlock::mutex();
 
 void proc::process::init_cpu(){
 	std::lock_guard guard{init_mutex};
-	uint8_t current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
+	auto current_apic_id = smp::cpu::get_current_cpu()->lapic_id;
 	for(auto& entry : *cpus){
 		if(entry.cpu.lapic_id == current_apic_id){
 			// Found this CPU
@@ -278,7 +274,7 @@ static proc::process::thread* create_thread_int(proc::process::thread* thread, p
 													// Bit 9 is IF, Interrupt flag, Force enable this
 													// so timer interrupts arrive
 	thread->privilege = privilege;
-	thread->context.simd_state = proc::simd::create_state();
+	thread->context.simd_state.init();
 
 	switch(thread->privilege) {
 		case proc::process::thread_privilege_level::KERNEL:
@@ -387,7 +383,7 @@ void proc::process::kill(x86_64::idt::idt_registers* regs){
 	thread->state = proc::process::thread_state::DISABLED;
 
 	thread->stacks.reset();
-	proc::simd::destroy_state(thread->context.simd_state);
+	thread->context.simd_state.deinit();
 	thread->context = proc::process::thread_context(); // Remove all traces from previous function
 	thread->privilege = proc::process::thread_privilege_level::APPLICATION; // Lowest privilege
 	for(auto& frame : thread->resources.frames) mm::pmm::free_block(reinterpret_cast<void*>(frame)); // Free frames

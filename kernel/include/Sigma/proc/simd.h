@@ -12,7 +12,6 @@ namespace proc::process
 
 namespace proc::simd
 {
-    
     struct PACKED_ATTRIBUTE fxsave_area {
         uint16_t fcw;
         uint16_t fsw;
@@ -44,13 +43,24 @@ namespace proc::simd
     };
     static_assert(sizeof(fxsave_area) == 512);
 
+    struct simd_state {
+        simd_state(): data{nullptr} { init(); }
+        void init();
+        void deinit();
 
-    void init_simd();
-    uint8_t* create_state();
-    void destroy_state(uint8_t* state);
-    void save_state(uint8_t* state);
-    void restore_state(uint8_t* thread);
-    void clone_state(uint8_t* old_state, uint8_t* new_state);
+        simd_state(const simd_state&) = delete;
+        simd_state(simd_state&&) = delete;
+        simd_state& operator=(const simd_state& state);
+        simd_state& operator=(simd_state&&) = delete;
+
+        void save();
+        void restore();
+        private:
+
+        uint8_t* data;
+    };
+
+    void init();
 } // namespace proc::simd
 
 

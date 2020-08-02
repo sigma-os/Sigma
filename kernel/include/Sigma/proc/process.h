@@ -21,13 +21,13 @@ namespace proc::process
                           r8(0), r9(0), r10(0), r11(0), r12(0), r13(0), r14(0), r15(0), \
                           rip(0), cr3(0), rflags(0), \
                           ss(0), ds(0), cs(0), fs(0), \
-                          simd_state(nullptr) {}
+                          simd_state() {}
         uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp; // Normal Registers
         uint64_t r8, r9, r10, r11, r12, r13, r14, r15; // General Purpose Registers
         uint64_t rip, cr3, rflags; // Control Registers
         uint16_t ss, ds, cs; // Segment Registers
         uint64_t fs; // Thread Local Base
-        uint8_t* simd_state;
+        simd::simd_state simd_state;
 
         void copy(thread_context& new_ctx){
             new_ctx.rax = rax;
@@ -57,8 +57,7 @@ namespace proc::process
             new_ctx.cs = cs;
             new_ctx.fs = fs;
 
-            new_ctx.simd_state = proc::simd::create_state();
-            proc::simd::clone_state(simd_state, new_ctx.simd_state);
+            new_ctx.simd_state = simd_state;
         }
     };
 
@@ -141,9 +140,6 @@ namespace proc::process
     
 
     struct managed_cpu {
-        managed_cpu() = default;
-        managed_cpu(smp::cpu_entry cpu, bool enabled, proc::process::thread* current_thread): cpu(cpu), \
-             enabled(enabled), current_thread(current_thread) {}
         smp::cpu_entry cpu;
         bool enabled;
         proc::process::thread* current_thread;

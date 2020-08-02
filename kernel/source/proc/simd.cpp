@@ -17,39 +17,51 @@ static uint8_t* default_state = nullptr;
 static uint64_t save_size = 0;
 static uint64_t save_align = 0;
 
+void proc::simd::simd_state::init(){
+    if(!data){
+        data = static_cast<uint8_t*>(mm::hmm::kmalloc_a(save_size, save_align));
+        if(!data)
+            PANIC("Couldn't allocate data for simd_state");
 
-uint8_t* proc::simd::create_state(){
-    auto* ptr = static_cast<uint8_t*>(mm::hmm::kmalloc_a(save_size, save_align));
-    if(!ptr) return nullptr;
-    memcpy(static_cast<void*>(ptr), static_cast<void*>(default_state), save_size);
-    return ptr;
+        #ifdef DEBUG
+        if(((uint64_t)data % save_align) != 0)
+            PANIC("mm::hmm::kmalloc_a didn't allocate sufficiently aligned pointer");
+        #endif
+    }
+
+    memcpy(data, default_state, save_size);
 }
 
-void proc::simd::destroy_state(uint8_t* state){
-    free((void*)state);
+void proc::simd::simd_state::deinit(){
+    if(data) {
+        mm::hmm::kfree(data);
+        data = nullptr;
+    }
 }
 
-void proc::simd::save_state(uint8_t* state){
-    #ifdef DEBUG
-    if(((uint64_t)state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd save");
-    #endif
-
-    global_save(state);
+void proc::simd::simd_state::save(){
+    if(!data)
+        init();
+    
+    global_save(data);
 }
 
-void proc::simd::restore_state(uint8_t* state){
-    #ifdef DEBUG
-    if(((uint64_t)state % save_align) != 0) PANIC("Trying to pass incorrectly aligned pointer to simd restore");
-    #endif
-
-    global_restore(state);
+void proc::simd::simd_state::restore(){
+    if(!data)
+        init();
+    
+    global_restore(data);
 }
 
-void proc::simd::clone_state(uint8_t* old_state, uint8_t* new_state){
-    memcpy(static_cast<void*>(new_state), static_cast<void*>(old_state), save_size);
+proc::simd::simd_state& proc::simd::simd_state::operator=(const simd_state& state){
+    init();
+
+    memcpy(data, state.data, save_size);
+
+    return *this;
 }
 
-void proc::simd::init_simd(){
+void proc::simd::init(){
     uint32_t a1, b1, c1, d1;
     if(!x86_64::cpuid(1, a1, b1, c1, d1)) 
         PANIC("Default CPUID leaf does not exist");
@@ -62,28 +74,18 @@ void proc::simd::init_simd(){
         save_size = c2;
         save_align = 64;
 
+        global_save = xsave_int;
+        global_restore = xrstor_int;
+
         debug_printf("[PROC]: Initializing SIMD saving mechanism with xsave, size: %x\n", save_size);
-
-        global_save = +[](uint8_t* state){
-            xsave_int(state);
-        };
-
-        global_restore = +[](uint8_t* state){
-            xrstor_int(state);
-        };
     } else if(d1 & x86_64::cpuid_bits::FXSAVE){
         save_size = 512;
         save_align = 16;
+
+        global_save = +[](uint8_t* state){ asm("fxsave %0" : : "m"(*state)); };
+        global_restore = +[](uint8_t* state){ asm("fxrstor %0" : : "m"(*state)); };
         
         debug_printf("[PROC]: Initializing SIMD saving mechanism with fxsave, size: %x\n", save_size);
-
-        global_save = +[](uint8_t* state){
-            asm("fxsave %0" : : "m"(*state));
-        };
-
-        global_restore = +[](uint8_t* state){
-            asm("fxrstor %0" : : "m"(*state));
-        };
     } else {
         PANIC("no known SIMD save mechanism available");
     }
@@ -98,9 +100,7 @@ void proc::simd::init_simd(){
     tmp->fcw |= 1 << 3; // Set Overflow Mask
     tmp->fcw |= 1 << 4; // Set Underflow Mask
     tmp->fcw |= 1 << 5; // Set Precision Mask
-
     tmp->fcw |= (1 << 8) | (1 << 9); // Set Double Extended Precision
-
 
     tmp->mxcsr |= 1 << 7; // Set Invalid Operation Mask
 	tmp->mxcsr |= 1 << 8; // Set Denormal Mask

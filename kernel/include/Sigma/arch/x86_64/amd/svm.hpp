@@ -3,6 +3,7 @@
 
 #include <Sigma/common.h>
 #include <Sigma/arch/x86_64/paging.h>
+#include <Sigma/proc/process.h>
 
 #include <Sigma/generic/virt.hpp>
 
@@ -245,8 +246,7 @@ namespace x86_64::svm
 		void* msr_bitmap_phys;
 		void* io_bitmap_phys;
 
-		uint8_t* host_simd;
-		uint8_t* guest_simd;
+		proc::simd::simd_state host_simd, guest_simd;
 		x86_64::paging::context* npt;
 
 		friend struct vspace;

@@ -28,7 +28,7 @@ void x86_64::pic::remap(uint8_t pic1_base, uint8_t pic2_base){
     x86_64::io::outb(x86_64::pic::pic2_data_port, 2); // Tell slave its cascade identity
 
     x86_64::io::outb(x86_64::pic::pic1_data_port, x86_64::pic::icw4_8086); // Set them in 8086 mode
-    x86_64::io::outb(x86_64::pic::pic2_data_port,x86_64::pic::icw4_8086);
+    x86_64::io::outb(x86_64::pic::pic2_data_port, x86_64::pic::icw4_8086);
 
     x86_64::io::outb(x86_64::pic::pic1_data_port, pic1_mask); // Restore masks
     x86_64::io::outb(x86_64::pic::pic2_data_port, pic2_mask);

@@ -3,7 +3,6 @@
 #include <Sigma/arch/x86_64/misc/misc.h>
 #include <klibc/stdio.h>
 #include <Sigma/arch/x86_64/cpu.h>
-#include <Sigma/proc/process.h>
 
 #include <Sigma/smp/cpu.h>
 
@@ -192,14 +191,14 @@ x86_64::svm::vcpu::vcpu(generic::virt::vspace* space): gpr_state({}) {
     vmcb->dr6 = 0xFFFF0FF0;
     vmcb->cr0 = (1 << 29) | (1 << 30) | (1 << 4); // set cr0.{NW, CD, ET}
 
-    guest_simd = proc::simd::create_state();
-    host_simd = proc::simd::create_state();
+    guest_simd.init();
+    host_simd.init();
 }
 
 x86_64::svm::vcpu::~vcpu(){
     std::lock_guard lock{this->lock};
-    proc::simd::destroy_state(guest_simd);
-    proc::simd::destroy_state(host_simd);
+    guest_simd.deinit();
+    host_simd.deinit();
 
     mm::pmm::free_block(vmcb_phys);
     for(size_t i = 0; i < svm::msr_bitmap_size; i++)
@@ -218,13 +217,13 @@ void x86_64::svm::vcpu::run(generic::virt::vexit* vexit){
         host_state.gs_base = x86_64::msr::read(x86_64::msr::gs_base);
         host_state.gs_kernel_base = x86_64::msr::read(x86_64::msr::kernelgs_base);
 
-        proc::simd::save_state(host_simd);
-        proc::simd::restore_state(guest_simd);
+        host_simd.save();
+        guest_simd.restore();
         
         _vmrun(&gpr_state, vmcb_phys);
         
-        proc::simd::save_state(guest_simd);
-        proc::simd::restore_state(host_simd); 
+        guest_simd.save();
+        host_simd.restore();
 
         x86_64::msr::write(x86_64::msr::fs_base, host_state.fs_base);
         x86_64::msr::write(x86_64::msr::gs_base, host_state.gs_base);
