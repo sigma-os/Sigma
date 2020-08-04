@@ -10,7 +10,9 @@ There are 2 things you can do
 
 ## ACPI Features
 - `dsdt_override` which should be a string with the path to the file to read the dsdt from on initrd
-- `acpi_trace` is a bool that enables tracing of AML opcodes
+- `acpi_trace_op` is a bool that enables tracing of AML opcodes
+- `acpi_trace_ns` is a bool that enables tracing of AML namespace
+- `acpi_trace_io` is a bool that enables tracing of AML io
 
 ## CPU Feature control
 All of these features are bools

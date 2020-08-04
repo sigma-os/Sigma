@@ -215,14 +215,12 @@ auto interrupt_overrides = types::linked_list<x86_64::apic::interrupt_override>(
 auto ioapics = types::linked_list<std::pair<x86_64::apic::ioapic_device, uint32_t>>(); // ioapic, and gsi_base
 
 void x86_64::apic::ioapic::init(acpi::madt& madt){
-    auto ioapics_base = types::linked_list<std::pair<uint64_t, uint32_t>>(); // base, and gsi_base
-    madt.get_ioapics(ioapics_base);
-    madt.get_interrupt_overrides(interrupt_overrides);
+    interrupt_overrides = madt.get_interrupt_overrides();
 
-    for(auto& a : ioapics_base){
+    for(const auto [base, gsi_base] : madt.get_ioapics()){
         auto* ioapic = ioapics.empty_entry();
-        ioapic->first.init(a.first);
-        ioapic->second = a.second;
+        ioapic->first.init(base);
+        ioapic->second = gsi_base;
     }
 
     if(madt.supports_legacy_pic()){

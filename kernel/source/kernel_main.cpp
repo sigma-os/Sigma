@@ -128,16 +128,13 @@ C_LINKAGE void kernel_main(){
 
     proc::initrd::init((boot_data.kernel_initrd_ptr + KERNEL_PHYSICAL_VIRTUAL_MAPPING_BASE), boot_data.kernel_initrd_size);
 
-    auto cpus = types::linked_list<smp::cpu_entry>();
-
     generic::device::init();
 
-    acpi::init(boot_protocol);
+    acpi::init();
     acpi::madt madt{};
 
     if(madt.found_table()){
         madt.parse();
-        madt.get_cpus(cpus);
 
         if(madt.supports_legacy_pic()){
             x86_64::pic::set_base_vector(32);
@@ -161,7 +158,7 @@ C_LINKAGE void kernel_main(){
 
     proc::process::init_multitasking(madt);
     proc::syscall::init_syscall();
-    smp::multiprocessing smp{cpus};
+    smp::multiprocessing smp{madt.get_cpus()};
     smp.boot_aps();
 
     x86_64::misc_bsp_late_features_init();

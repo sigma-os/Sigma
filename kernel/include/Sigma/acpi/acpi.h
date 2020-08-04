@@ -21,14 +21,13 @@ namespace acpi
 {
     struct table {
         acpi::sdt_header header;
-        uint8_t data[1];
+        uint8_t data[];
     };
 
-    void init(boot::boot_protocol* boot_protocol);
+    void init();
     void init_ec();
     void init_sci(acpi::madt& madt);
 
-    // Physical! Address
     acpi::table* get_table(const char* signature);
     acpi::table* get_table(const char* signature, uint64_t index);
 

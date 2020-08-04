@@ -97,9 +97,9 @@ namespace acpi
 
         void parse();
 
-        void get_cpus(types::linked_list<smp::cpu_entry>& cpus);
-        void get_ioapics(types::linked_list<std::pair<uint64_t, uint32_t>>& ioapics);
-        void get_interrupt_overrides(types::linked_list<x86_64::apic::interrupt_override>& ioapics);
+        types::linked_list<smp::cpu_entry>& get_cpus();
+        types::linked_list<std::pair<uint64_t, uint32_t>>& get_ioapics();
+        types::linked_list<x86_64::apic::interrupt_override>& get_interrupt_overrides();
         uint64_t get_lapic_address();
         bool supports_legacy_pic(){
             return this->legacy_pic;
@@ -110,7 +110,6 @@ namespace acpi
         }
 
         private:
-
         void parse_lapic(uint8_t* item);
         void parse_x2apic(uint8_t* item);
         void parse_ioapic(uint8_t* item);

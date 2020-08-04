@@ -1,12 +1,7 @@
 #include <Sigma/acpi/madt.h>
 
 
-acpi::madt::madt(): legacy_pic(false) {
-    this->table = reinterpret_cast<acpi::madt_header*>(acpi::get_table(acpi::madt_signature));
-    this->cpus = types::linked_list<smp::cpu_entry>();
-    this->ioapics = types::linked_list<std::pair<uint64_t, uint32_t>>();
-    this->isos = types::linked_list<x86_64::apic::interrupt_override>();
-}
+acpi::madt::madt(): legacy_pic{false}, lapic_addr{0}, cpus{}, ioapics{}, isos{}, table{(acpi::madt_header*)acpi::get_table(acpi::madt_signature)} {}
 
 uint64_t acpi::madt::get_lapic_address(){
     return this->lapic_addr;
@@ -83,12 +78,7 @@ void acpi::madt::parse_lapic_address_override(uint8_t *item) {
 
 void acpi::madt::parse(){
     uint32_t flags = this->table->flags;
-    if(bitops<uint32_t>::bit_test(flags, acpi::flags_pc_at_compatibility)){
-        this->legacy_pic = true;
-    } else {
-        this->legacy_pic = false;
-    }
-
+    this->legacy_pic = bitops<uint32_t>::bit_test(flags, acpi::flags_pc_at_compatibility);
     this->lapic_addr = this->table->lapic_addr & 0xFFFFFFFF;
 
     size_t table_size = (this->table->header.length - sizeof(acpi::madt_header));
@@ -127,14 +117,14 @@ void acpi::madt::parse(){
     }
 }
 
-void acpi::madt::get_cpus(types::linked_list<smp::cpu_entry>& cpus){
-    for(const auto& a : this->cpus) cpus.push_back(a);
+types::linked_list<smp::cpu_entry>& acpi::madt::get_cpus(){
+    return cpus;
 }
 
-void acpi::madt::get_ioapics(types::linked_list<std::pair<uint64_t, uint32_t>>& ioapics){
-    for(const auto& a : this->ioapics) ioapics.push_back(a);
+types::linked_list<std::pair<uint64_t, uint32_t>>& acpi::madt::get_ioapics(){
+    return ioapics;
 }
 
-void acpi::madt::get_interrupt_overrides(types::linked_list<x86_64::apic::interrupt_override>& isos){
-    for(const auto& a : this->isos) isos.push_back(a);
+types::linked_list<x86_64::apic::interrupt_override>& acpi::madt::get_interrupt_overrides(){
+    return isos;
 }

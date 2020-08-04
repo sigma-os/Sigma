@@ -235,11 +235,8 @@ static void timer_handler(x86_64::idt::idt_registers* regs, MAYBE_UNUSED_ATTRIBU
 void proc::process::init_multitasking(acpi::madt& madt){
 	proc::simd::init();
 
-	types::linked_list<smp::cpu_entry> cpu_list{};
-	madt.get_cpus(cpu_list);
-
 	cpus.init();
-	for(auto& entry : cpu_list)
+	for(auto& entry : madt.get_cpus())
 		cpus->push_back({.cpu = entry, .enabled = false, .current_thread = nullptr});
 
 	kernel_thread = thread_list.empty_entry();

@@ -24,28 +24,22 @@ void laihost_free(void *ptr){
 }
 
 void laihost_log(int level, const char *msg){
-    switch (level)
-    {
-    case LAI_DEBUG_LOG:
-        debug_printf("[LAI] Debug: %s\n", msg);
-        break;
-
-    case LAI_WARN_LOG:
-        printf("[LAI] Warning: %s\n", msg);
-        //debug_printf("[LAI] Warning: %s\n", msg);
-        break;
-    
-    default:
-        debug_printf("[LAI] Unknown log level: %s\n", msg);
-        break;
+    switch (level) {
+        case LAI_DEBUG_LOG:
+            debug_printf("[LAI]: Debug: %s\n", msg);
+            break;
+        case LAI_WARN_LOG:
+            printf("[LAI]: Warning: %s\n", msg);
+            debug_printf("[LAI] Warning: %s\n", msg);
+            break;
+        default:
+            debug_printf("[LAI]: Unknown : %s\n", msg);
+            break;
     }
 }
 
-void laihost_panic(const char * msg){
+void laihost_panic(const char* msg){
     PANIC(msg);
-    asm("cli; hlt");
-    while(true)
-        ;
 }
 
 void *laihost_scan(const char* signature, size_t index){
@@ -67,29 +61,13 @@ void laihost_unmap(void* addr, size_t bytes){
     debug_printf("[LAI]: Ignoring laihost_unmap(%x, %x)\n", addr, bytes);
 }
 
-void laihost_outb(uint16_t port, uint8_t val){
-    x86_64::io::outb(port, val);
-}
+void laihost_outb(uint16_t port, uint8_t val){ x86_64::io::outb(port, val); }
+void laihost_outw(uint16_t port, uint16_t val){ x86_64::io::outw(port, val); }
+void laihost_outd(uint16_t port, uint32_t val){ x86_64::io::outd(port, val); }
 
-void laihost_outw(uint16_t port, uint16_t val){
-    x86_64::io::outw(port, val);
-}
-
-void laihost_outd(uint16_t port, uint32_t val){
-    x86_64::io::outd(port, val);
-}
-
-uint8_t laihost_inb(uint16_t port){
-    return x86_64::io::inb(port);
-}
-
-uint16_t laihost_inw(uint16_t port){
-    return x86_64::io::inw(port);
-}
-
-uint32_t laihost_ind(uint16_t port){
-    return x86_64::io::ind(port);
-}
+uint8_t laihost_inb(uint16_t port){ return x86_64::io::inb(port); }
+uint16_t laihost_inw(uint16_t port){ return x86_64::io::inw(port); }
+uint32_t laihost_ind(uint16_t port){ return x86_64::io::ind(port); }
 
 void laihost_pci_writeb(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, uint16_t offset , uint8_t value){
     x86_64::pci::write(seg, bus, device, function, offset, value, 1);
