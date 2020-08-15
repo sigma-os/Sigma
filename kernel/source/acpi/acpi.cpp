@@ -205,13 +205,14 @@ void acpi::init_ec(){
         if(lai_check_device_pnp_id(node, &pnp_id, &state)) // This is not an EC
             continue;
  
-        debug_printf("[ACPI]: Initializing Embedded Controller at %s", lai_stringify_node_path(node));
+        LAI_CLEANUP_FREE_STRING char* path = lai_stringify_node_path(node);
+        debug_printf("[ACPI]: Initializing Embedded Controller at %s", path);
 
         // Found one
         auto* driver = new lai_ec_driver; // Dynamically allocate the memory since we dont know how many ECs there could be
         lai_init_ec(node, driver);    
 
-        debug_printf(" [cmd: %x, data: %x]", lai_stringify_node_path(node), driver->cmd_port, driver->data_port);
+        debug_printf(" [cmd: %x, data: %x]", driver->cmd_port, driver->data_port);
  
         struct lai_ns_child_iterator child_it = LAI_NS_CHILD_ITERATOR_INITIALIZER(node);
         lai_nsnode_t *child_node;
@@ -235,8 +236,9 @@ void acpi::init_ec(){
             enable.integer = 1; // Enable
 
             if(auto error = lai_eval_largs(nullptr, reg, &state, &address_space, &enable, nullptr); error != LAI_ERROR_NONE){
-                debug_printf(" Failed to evaluate %s(EmbeddedControl, 1) due to error %s(%d)\n", lai_stringify_node_path(reg), lai_api_error_to_string(error), error);
-                return;
+                LAI_CLEANUP_FREE_STRING char* reg_path = lai_stringify_node_path(reg);
+                debug_printf(" Failed to evaluate %s(EmbeddedControl, 1) due to error %s(%d)\n", reg_path, lai_api_error_to_string(error), error);
+                continue;;
             }
         }
 
