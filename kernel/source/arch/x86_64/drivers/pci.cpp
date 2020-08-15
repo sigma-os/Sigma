@@ -14,6 +14,31 @@ auto mcfg_entries = types::linked_list<acpi::mcfg_table_entry>();
 auto pci_devices = types::linked_list<x86_64::pci::device>();
 auto pci_root_busses = types::linked_list<x86_64::pci::device>();
 
+size_t eval_aml_pci_method(lai_nsnode_t* device, const char* name) {
+    LAI_CLEANUP_STATE lai_state_t state;
+    lai_init_state(&state);
+
+    LAI_CLEANUP_VAR lai_variable_t var = {};
+    auto* handle = lai_resolve_path(device, name);
+    if (!handle){
+        debug_printf("[PCI]: Root bus doesn't have %s, assuming 0\n", name);
+        return 0;
+    }
+
+    if (auto e = lai_eval(&var, handle, &state); e != LAI_ERROR_NONE){
+        debug_printf("[PCI]: Couldn't evaluate Root Bus %s, assuming 0\n", name);
+        return 0;
+    }
+                
+    uint64_t ret = 0;
+    if(auto e = lai_obj_get_integer(&var, &ret); e != LAI_ERROR_NONE){
+        debug_printf("[PCI]: Root Bus %s evaluation didn't result in an integer, assuming 0\n", name);
+        return 0;
+    }
+
+    return ret;
+}
+
 constexpr uint32_t make_pci_address(uint32_t bus, uint32_t slot, uint32_t function, uint32_t offset){
     return ((bus << 16) | (slot << 11) | (function << 8) | (offset & 0xFC) | (1u << 31));
 }
@@ -22,22 +47,12 @@ static uint32_t legacy_read(MAYBE_UNUSED_ATTRIBUTE uint16_t seg, uint8_t bus, ui
 							uint16_t offset, uint8_t access_size) {
 	x86_64::io::outd(x86_64::pci::config_addr, make_pci_address(bus, slot, function, offset));
 	switch(access_size) {
-		case 1: // Byte
-			return x86_64::io::inb(x86_64::pci::config_data + (offset % 4));
-			break;
-
-		case 2: // Word
-			return x86_64::io::inw(x86_64::pci::config_data + (offset % 4));
-			break;
-
-		case 4: // DWord
-			return x86_64::io::ind(x86_64::pci::config_data + (offset % 4));
-			break;
-
+		case 1: return x86_64::io::inb(x86_64::pci::config_data + (offset % 4));
+		case 2: return x86_64::io::inw(x86_64::pci::config_data + (offset % 4));
+		case 4: return x86_64::io::ind(x86_64::pci::config_data + (offset % 4));
 		default:
 			printf("[PCI]: Unknown Access size [%d]\n", access_size);
 			return 0;
-			break;
 	}
 }
 
@@ -48,15 +63,12 @@ static void legacy_write(MAYBE_UNUSED_ATTRIBUTE uint16_t seg, uint8_t bus, uint8
 		case 1: // Byte
 			x86_64::io::outb(x86_64::pci::config_data + (offset % 4), value);
 			break;
-
 		case 2: // Word
 			x86_64::io::outw(x86_64::pci::config_data + (offset % 4), value);
 			break;
-
 		case 4: // DWord
 			x86_64::io::outd(x86_64::pci::config_data + (offset % 4), value);
 			break;
-
 		default:
 			printf("[PCI]: Unknown Access size [%d]\n", access_size);
 			break;
@@ -153,190 +165,50 @@ static void mcfg_pci_write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func
     debug_printf("[PCI]: Tried to write to nonexistent device, %x:%x:%x:%x\n", seg, bus, slot, function);
 }
 
-const char* x86_64::pci::class_to_str(uint8_t class_code, uint8_t subclass, uint8_t prog_if){
-    switch (class_code)
-    {
-    case 0: return "Undefined";
-    case 1:
-        switch (subclass)
-        {
-        case 0: return "SCSI Bus Controller";
-        case 1: return "IDE Controller";
-        case 2: return "Floppy Disk Controller";
-        case 3: return "IPI Bus Controller";
-        case 4: return "RAID Controller";
-        case 5: return "ATA Controller";
-        case 6:
-            switch (prog_if)
-            {
-            case 0: return "Vendor specific SATA Controller";
-            case 1: return "AHCI SATA Controller";
-            case 2: return "Serial Storage Bus SATA Controller";
-            }
-            break;
-        case 7: return "Serial Attached SCSI Controller";
-        case 8:
-            switch (prog_if)
-            {
-            case 1: return "NVMHCI Controller";
-            case 2: return "NVMe Controller";
-            }
-            break;
-        }
-        return "Mass Storage Controller";
-    case 2:
-        switch (subclass)
-        {
-        case 0: return "Ethernet Controller";
-        case 1: return "Token Ring Controller";
-        case 2: return "FDDI Controller";
-        case 3: return "ATM Controller";
-        case 4: return "ISDN Controller";
-        case 5: return "WorldFip Controller";
-        case 6: return "PICMG 2.14 Controller";
-        case 7: return "InfiniBand Controller";
-        case 8: return "Fabric Controller";
-        }
-        return "Network Controller";
-    case 3:
-        switch (subclass)
-        {
-        case 0: return "VGA Compatible Controller";
-        case 1: return "XGA Controller";
-        case 2: return "3D Controller";
-        }
-        return "Display Controller";
-    case 4: return "Multimedia controller";
-    case 5: return "Memory Controller";
-    case 6:
-        switch (subclass)
-        {
-        case 0: return "Host Bridge";
-        case 1: return "ISA Bridge";
-        case 2: return "EISA Bridge";
-        case 3: return "MCA Bridge";
-        case 4: return "PCI-to-PCI Bridge";
-        case 5: return "PCMCIA Bridge";
-        case 6: return "NuBus Bridge";
-        case 7: return "CardBus Bridge";
-        case 8: return "RACEway Bridge";
-        case 9: return "Semi-Transparent PCI-to-PCI Bridge";
-        case 10: return "InfiniBand-to-PCI Host Bridge";
-        }
-        return "Bridge Device";
-    case 8:
-        switch (subclass)
-        {
-        case 0:
-            switch (prog_if)
-            {
-            case 0: return "8259-Compatible PIC";
-            case 1: return "ISA-Compatible PIC";
-            case 2: return "EISA-Compatible PIC";
-            case 0x10: return "I/O APIC IRQ Controller";
-            case 0x20: return "I/O xAPIC IRQ Controller";
-            }
-            break;
-        case 1:
-            switch (prog_if)
-            {
-            case 0: return "8237-Compatible DMA Controller";
-            case 1: return "ISA-Compatible DMA Controller";
-            case 2: return "EISA-Compatible DMA Controller";
-            }
-            break;
-        case 2:
-            switch (prog_if)
-            {
-            case 0: return "8254-Compatible PIT";
-            case 1: return "ISA-Compatible PIT";
-            case 2: return "EISA-Compatible PIT";
-            case 3: return "HPET";
-            }
-            break;
-        case 3: return "Real Time Clock";
-        case 4: return "PCI Hot-Plug Controller";
-        case 5: return "SDHCI";
-        case 6: return "IOMMU";
-        }
-        return "Base System Peripheral";
-    case 0xC:
-        switch (subclass)
-        {
-        case 0:
-            switch (prog_if)
-            {
-            case 0: return "Generic FireWire (IEEE 1394) Controller";
-            case 0x10: return "OHCI FireWire (IEEE 1394) Controller";
-            }
-            break;
-        case 1: return "ACCESS Bus Controller";
-        case 2: return "SSA Controller";
-        case 3:
-            switch (prog_if)
-            {
-            case 0: return "uHCI USB1 Controller";
-            case 0x10: return "oHCI USB1 Controller";
-            case 0x20: return "eHCI USB2 Controller";
-            case 0x30: return "xHCI USB3 Controller";
-            case 0xFE: return "USB Device";
-            }
-            break;
-        case 4: return "Fibre Channel Controller";
-        case 5: return "SMBus";
-        case 6: return "InfiniBand Controller";
-        case 7: return "IPMI Interface Controller";
-        }
-        return "Serial Bus Controller";
-    default:
-        return "Unknown";
-        break;
-    }
-}
-
 static void enumerate_bus(uint16_t seg, uint8_t bus, x86_64::pci::device* parent);
 
 static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_t function, x86_64::pci::device* parent){
-    x86_64::pci::device* dev = pci_devices.empty_entry();
+    auto& dev = *pci_devices.empty_entry();
     uint16_t vendor_id = x86_64::pci::read(seg, bus, device, function, 0, 2);
     if(vendor_id == 0xFFFF) return; // Device doesn't exist
 
-    dev->exists = true;    
-    dev->parent = parent;
+    dev.exists = true;    
+    dev.parent = parent;
 
-    dev->seg = seg;
-    dev->bus = bus;
-    dev->device = device;
-    dev->function = function;
+    dev.seg = seg;
+    dev.bus = bus;
+    dev.device = device;
+    dev.function = function;
 
-    dev->vendor_id = vendor_id;
+    dev.vendor_id = vendor_id;
 
     uint8_t class_code = (x86_64::pci::read(seg, bus, device, function, 11, 1) & 0xFF);
     uint8_t subclass_code = (x86_64::pci::read(seg, bus, device, function, 10, 1) & 0xFF);
     uint8_t prog_if = (x86_64::pci::read(seg, bus, device, function, 9, 1) & 0xFF);
-    dev->class_code = class_code;
-    dev->subclass_code = subclass_code;
-    dev->prog_if = prog_if;
+    dev.class_code = class_code;
+    dev.subclass_code = subclass_code;
+    dev.prog_if = prog_if;
 
     if(class_code == 0x6 && subclass_code == 0x4){
         // PCI to PCI bridge
         uint8_t secondary_bus = x86_64::pci::read(seg, bus, device, function, 0x19, 1);
-        enumerate_bus(seg, secondary_bus, dev);
-        dev->is_bridge = true;
+        enumerate_bus(seg, secondary_bus, &dev);
+        dev.is_bridge = true;
     }
 
     uint8_t header_type = (x86_64::pci::read(seg, bus, device, 0, 0xE, 1) & 0xFF);
     header_type &= 0x7F; // Ignore Multifunction bit
-    dev->header_type = header_type;
-    if(header_type == 0){
-        // Normal device has 5 bars
-        for(uint8_t i = 0; i < 6; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
-    } else if(header_type == 1){
-        // PCI to PCI bridge has 2 bars
-        for(uint8_t i = 0; i < 3; i++) dev->bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
+    dev.header_type = header_type;
+
+    if(header_type == 0){ // Normal device has 5 bars
+        for(uint8_t i = 0; i < 6; i++)
+            dev.bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
+    } else if(header_type == 1){ // PCI to PCI bridge has 2 bars
+        for(uint8_t i = 0; i < 3; i++)
+            dev.bars[i] = x86_64::pci::read_bar(seg, bus, device, function, i);
     }
 
-    uint16_t status = x86_64::pci::read(seg, bus, device, function, 2);
+    uint16_t status = x86_64::pci::read(seg, bus, device, function, 0x6, 2);
     if(status & (1 << 4)){ // Capability List valid
         uint8_t next_ptr = x86_64::pci::read(seg, bus, device, function, 0x34, 1);
 
@@ -345,10 +217,10 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
 
             switch (id){
             case 0x02: { // AGP
-                dev->agp.supported = true;
+                dev.agp.supported = true;
 
-                dev->agp.minor_ver = x86_64::pci::read(seg, bus, device, function, next_ptr + 2, 1) & 0xFF;
-                dev->agp.major_ver = (x86_64::pci::read(seg, bus, device, function, next_ptr + 2, 1) >> 4) & 0xFF;
+                dev.agp.minor_ver = x86_64::pci::read(seg, bus, device, function, next_ptr + 2, 1) & 0xFF;
+                dev.agp.major_ver = (x86_64::pci::read(seg, bus, device, function, next_ptr + 2, 1) >> 4) & 0xFF;
                 
                 auto status = x86_64::pci::read(seg, bus, device, function, next_ptr + 4, 4);
 
@@ -358,11 +230,11 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
                 // Card running in AGP3 mode
                 if(status & (1 << 3)){
                     if(status & (1 << 1)) {
-                        dev->agp.speed_multiplier = 8;
+                        dev.agp.speed_multiplier = 8;
 
                         command |= (1 << 1); // Set x8 multiplier
                     } else if(status & (1 << 0)){
-                        dev->agp.speed_multiplier = 4;
+                        dev.agp.speed_multiplier = 4;
 
                         command |= (1 << 0); // Set x2 multiplier
                     }
@@ -370,11 +242,11 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
                     command |= (1 << 9); // SideBand addressing enable, required on AGP3
                 } else {
                     if(status & (1 << 1)) {
-                        dev->agp.speed_multiplier = 2;
+                        dev.agp.speed_multiplier = 2;
 
                         command |= (1 << 1); // Set 2x multiplier
                     } else if(status & (1 << 2)) {
-                        dev->agp.speed_multiplier = 4;
+                        dev.agp.speed_multiplier = 4;
 
                         command |= (1 << 2); // Set 4x multiplier
                     }
@@ -387,13 +259,13 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
                 break;
             }
             case 0x05: // Message Signaled Interrupt
-                dev->msi.supported = true;
-                dev->msi.space_offset = next_ptr;
+                dev.msi.supported = true;
+                dev.msi.space_offset = next_ptr;
                 break;
 
             case 0x11: // Message Signaled Interrupt-X
-                dev->msix.supported = true;
-                dev->msix.space_offset = next_ptr;
+                dev.msix.supported = true;
+                dev.msix.space_offset = next_ptr;
                 break;
             
             default:
@@ -404,12 +276,13 @@ static void enumerate_function(uint16_t seg, uint8_t bus, uint8_t device, uint8_
         }
     }
 
-    generic::device::add_pci_device(dev);
+    generic::device::add_pci_device(&dev);
 }
 
 static void enumerate_device(uint16_t seg, uint8_t bus, uint8_t device, x86_64::pci::device* parent){
     uint16_t vendor_id = x86_64::pci::read(seg, bus, device, 0, 0, 2);
-    if(vendor_id == 0xFFFF) return; // Device doesn't exist
+    if(vendor_id == 0xFFFF) 
+        return; // Device doesn't exist
 
     uint8_t header_type = x86_64::pci::read(seg, bus, device, 0, 0xE, 1);
     if(bitops<uint8_t>::bit_test(header_type, 7)){
@@ -454,94 +327,72 @@ void x86_64::pci::parse_pci(){
     lai_eisaid(&pci_pnp_id, x86_64::pci::pci_root_bus_pnp_id);
     lai_eisaid(&pcie_pnp_id, x86_64::pci::pcie_root_bus_pnp_id);
 
-    struct lai_ns_iterator iter = LAI_NS_ITERATOR_INITIALIZER;
+    auto* sb = lai_resolve_path(nullptr, "_SB_");
+    ASSERT(sb);
+
+    struct lai_ns_child_iterator iter = LAI_NS_CHILD_ITERATOR_INITIALIZER(sb);
     lai_nsnode_t *node;
-    while ((node = lai_ns_iterate(&iter))) {
-        if (lai_check_device_pnp_id(node, &pci_pnp_id, &state) &&
-            lai_check_device_pnp_id(node, &pcie_pnp_id, &state)) {
-        continue;
-        }
+    while ((node = lai_ns_child_iterate(&iter))) {
+        if (lai_check_device_pnp_id(node, &pci_pnp_id, &state) && lai_check_device_pnp_id(node, &pcie_pnp_id, &state))
+            continue;
 
-        LAI_CLEANUP_VAR lai_variable_t bus_number = {};
-        uint64_t bbn_result = 0;
-        lai_nsnode_t *bbn_handle = lai_resolve_path(node, "_BBN");
-        if (bbn_handle) {
-            if (lai_eval(&bus_number, bbn_handle, &state)) {
-                debug_printf("[PCI]: Couldn't evaluate Root Bus _BBN, assuming 0\n");
-            }
-            lai_obj_get_integer(&bus_number, &bbn_result);
-        } else {
-            debug_printf("[PCI]: Root bus doesn't have _BBN, assuming 0\n");
-        }
+        auto bbn = eval_aml_pci_method(node, "_BBN");
+        auto seg = eval_aml_pci_method(node, "_SEG");
 
-        LAI_CLEANUP_VAR lai_variable_t seg_number = {};
-        uint64_t seg_result = 0;
-        lai_nsnode_t *seg_handle = lai_resolve_path(node, "_SEG");
-        if (seg_handle) {
-            if (lai_eval(&seg_number, seg_handle, &state)){
-                debug_printf("[PCI]: Couldn't evaluate Root Bus _SEG, assuming 0\n");
-            } else {
-                lai_obj_get_integer(&seg_number, &seg_result);
-            }
-        } else {
-            debug_printf("[PCI]: Root bus doesn't have _SEG, assuming 0\n");
-        }
+        auto& dev = *pci_root_busses.empty_entry();
+        dev.exists = true;
+        dev.seg = bbn;
+        dev.bus = seg;
+        dev.parent = nullptr;
+        dev.node = node;
 
-        x86_64::pci::device* dev = pci_root_busses.empty_entry();
-        dev->exists = true;
-        dev->seg = seg_result;
-        dev->bus = bbn_result;
-        dev->parent = nullptr;
-        dev->node = node;
-
-        dev->prt = {};
-        lai_nsnode_t *prt_handle = lai_resolve_path(node, "_PRT");
+        dev.prt = {};
+        auto* prt_handle = lai_resolve_path(node, "_PRT");
         if (prt_handle) {
-            if (lai_eval(&dev->prt, prt_handle, &state)){
+            if (auto e = lai_eval(&dev.prt, prt_handle, &state); e != LAI_ERROR_NONE)
                 debug_printf("[PCI]: Couldn't evaluate Root Bus _PRT, assuming none\n");
-            }
         } else {
             debug_printf("[PCI]: Root bus doesn't have _PRT, assuming none\n");
         }
 
-
-        enumerate_bus(seg_result, bbn_result, nullptr);
+        enumerate_bus(seg, bbn, nullptr);
     }
 
     pci_route_all_irqs();
 
     for(const auto& entry : pci_devices){
-        if(entry.exists){
-            debug_printf("[PCI]: Device on %x:%x:%x:%x, class: %s [%d:%d:%d]", entry.seg, entry.bus, entry.device, entry.function, class_to_str(entry.class_code, entry.subclass_code, entry.prog_if), entry.class_code, entry.subclass_code, entry.prog_if);
+        if(!entry.exists)
+            continue;
+        
+        debug_printf("[PCI]: Device on %x:%x:%x:%x\n     - Class: %s [%d:%d:%d]\n", entry.seg, entry.bus, entry.device, entry.function, entry.class_str(), entry.class_code, entry.subclass_code, entry.prog_if);
 
-            if(entry.has_irq)
-                debug_printf(", gsi: %d", entry.gsi);
+        if(entry.has_irq || entry.msi.supported || entry.msix.supported){
+            debug_printf("     - IRQs: ");
 
             if(entry.msi.supported)
-                debug_printf(", MSI supported");
+                debug_printf("MSI ");
 
             if(entry.msix.supported)
-                debug_printf(", MSI-X supported");
+                debug_printf("MSI-X ");
 
-            if(entry.agp.supported)
-                debug_printf(", AGP %d.%d Speed multiplier %dx", entry.agp.major_ver, entry.agp.minor_ver, entry.agp.speed_multiplier);
+            if(entry.has_irq)
+                debug_printf("GSI %d ", entry.gsi);
 
             debug_printf("\n");
+        }
+
+        if(entry.agp.supported)
+            debug_printf("     - AGP: %d.%d Speed multiplier %dx\n", entry.agp.major_ver, entry.agp.minor_ver, entry.agp.speed_multiplier);
+
+        if(entry.node){
+            LAI_CLEANUP_FREE_STRING char* path = lai_stringify_node_path(entry.node);
+            debug_printf("     - AML Path: %s\n", path);
         }
     } 
 }
 
-uint32_t x86_64::pci::read(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size){
-    return internal_read(0, bus, slot, function, offset, access_size);
-}
-
 uint32_t x86_64::pci::read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size){
     return internal_read(seg, bus, slot, function, offset, access_size);
-}
-
-
-void x86_64::pci::write(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size){
-    internal_write(0, bus, slot, function, offset, value, access_size);
 }
 
 void x86_64::pci::write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size){
@@ -605,12 +456,6 @@ x86_64::pci::bar x86_64::pci::read_bar(uint16_t seg, uint8_t bus, uint8_t slot, 
 
     return ret;
 }
-
-x86_64::pci::bar x86_64::pci::read_bar(uint8_t bus, uint8_t slot, uint8_t function, uint8_t number){
-    return x86_64::pci::read_bar(0, bus, slot, function, number);
-}
-
-
 
 x86_64::pci::device& x86_64::pci::find_device(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func){
     for(auto& entry : pci_devices){
@@ -791,4 +636,145 @@ void x86_64::pci::device::install_msi(uint32_t dest_id, uint8_t vector){
     control.mme = 0; // Only enable 1 IRQ
 
     x86_64::pci::write(seg, bus, device, function, msi.space_offset + msi::msi_control_reg, control.raw, 2);
+}
+
+const char* x86_64::pci::device::class_str() const {
+    switch (class_code)
+    {
+    case 0: return "Undefined";
+    case 1:
+        switch (subclass_code)
+        {
+        case 0: return "SCSI Bus Controller";
+        case 1: return "IDE Controller";
+        case 2: return "Floppy Disk Controller";
+        case 3: return "IPI Bus Controller";
+        case 4: return "RAID Controller";
+        case 5: return "ATA Controller";
+        case 6:
+            switch (prog_if)
+            {
+            case 0: return "Vendor specific SATA Controller";
+            case 1: return "AHCI SATA Controller";
+            case 2: return "Serial Storage Bus SATA Controller";
+            }
+            break;
+        case 7: return "Serial Attached SCSI Controller";
+        case 8:
+            switch (prog_if)
+            {
+            case 1: return "NVMHCI Controller";
+            case 2: return "NVMe Controller";
+            }
+            break;
+        }
+        return "Mass Storage Controller";
+    case 2:
+        switch (subclass_code)
+        {
+        case 0: return "Ethernet Controller";
+        case 1: return "Token Ring Controller";
+        case 2: return "FDDI Controller";
+        case 3: return "ATM Controller";
+        case 4: return "ISDN Controller";
+        case 5: return "WorldFip Controller";
+        case 6: return "PICMG 2.14 Controller";
+        case 7: return "InfiniBand Controller";
+        case 8: return "Fabric Controller";
+        }
+        return "Network Controller";
+    case 3:
+        switch (subclass_code)
+        {
+        case 0: return "VGA Compatible Controller";
+        case 1: return "XGA Controller";
+        case 2: return "3D Controller";
+        }
+        return "Display Controller";
+    case 4: return "Multimedia controller";
+    case 5: return "Memory Controller";
+    case 6:
+        switch (subclass_code)
+        {
+        case 0: return "Host Bridge";
+        case 1: return "ISA Bridge";
+        case 2: return "EISA Bridge";
+        case 3: return "MCA Bridge";
+        case 4: return "PCI-to-PCI Bridge";
+        case 5: return "PCMCIA Bridge";
+        case 6: return "NuBus Bridge";
+        case 7: return "CardBus Bridge";
+        case 8: return "RACEway Bridge";
+        case 9: return "Semi-Transparent PCI-to-PCI Bridge";
+        case 10: return "InfiniBand-to-PCI Host Bridge";
+        }
+        return "Bridge Device";
+    case 8:
+        switch (subclass_code)
+        {
+        case 0:
+            switch (prog_if)
+            {
+            case 0: return "8259-Compatible PIC";
+            case 1: return "ISA-Compatible PIC";
+            case 2: return "EISA-Compatible PIC";
+            case 0x10: return "I/O APIC IRQ Controller";
+            case 0x20: return "I/O xAPIC IRQ Controller";
+            }
+            break;
+        case 1:
+            switch (prog_if)
+            {
+            case 0: return "8237-Compatible DMA Controller";
+            case 1: return "ISA-Compatible DMA Controller";
+            case 2: return "EISA-Compatible DMA Controller";
+            }
+            break;
+        case 2:
+            switch (prog_if)
+            {
+            case 0: return "8254-Compatible PIT";
+            case 1: return "ISA-Compatible PIT";
+            case 2: return "EISA-Compatible PIT";
+            case 3: return "HPET";
+            }
+            break;
+        case 3: return "Real Time Clock";
+        case 4: return "PCI Hot-Plug Controller";
+        case 5: return "SDHCI";
+        case 6: return "IOMMU";
+        }
+        return "Base System Peripheral";
+    case 0xC:
+        switch (subclass_code)
+        {
+        case 0:
+            switch (prog_if)
+            {
+            case 0: return "Generic FireWire (IEEE 1394) Controller";
+            case 0x10: return "OHCI FireWire (IEEE 1394) Controller";
+            }
+            break;
+        case 1: return "ACCESS Bus Controller";
+        case 2: return "SSA Controller";
+        case 3:
+            switch (prog_if)
+            {
+            case 0: return "uHCI USB1 Controller";
+            case 0x10: return "oHCI USB1 Controller";
+            case 0x20: return "eHCI USB2 Controller";
+            case 0x30: return "xHCI USB3 Controller";
+            case 0xFE: return "USB Device";
+            }
+            break;
+        case 4: return "Fibre Channel Controller";
+        case 5: return "SMBus";
+        case 6: return "InfiniBand Controller";
+        case 7: return "IPMI Interface Controller";
+        }
+        return "Serial Bus Controller";
+    default:
+        return "Unknown";
+        break;
+    }
 }

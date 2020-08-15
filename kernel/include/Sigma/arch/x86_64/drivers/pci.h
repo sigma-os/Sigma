@@ -86,9 +86,7 @@ namespace x86_64::pci
 
 
 
-    uint32_t read(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
     uint32_t read(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint8_t access_size);
-    void write(uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
     void write(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint16_t offset, uint32_t value, uint8_t access_size);
 
     
@@ -107,7 +105,6 @@ namespace x86_64::pci
     constexpr uint8_t bar_flags_prefetchable = 0;
 
     x86_64::pci::bar read_bar(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t function, uint8_t number);
-    x86_64::pci::bar read_bar(uint8_t bus, uint8_t slot, uint8_t function, uint8_t number);
 
     struct device {
         bool exists;
@@ -143,6 +140,7 @@ namespace x86_64::pci
         x86_64::pci::bar bars[6];
 
         void install_msi(uint32_t dest_id, uint8_t vector);
+        const char* class_str() const;
     };
 
     x86_64::pci::device& find_device(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t func);
@@ -153,8 +151,6 @@ namespace x86_64::pci
 
     void init_pci();
     void parse_pci();
-
-    const char* class_to_str(uint8_t class_code, uint8_t subclass, uint8_t prog_if);
 } // namespace x86_64::pci
 
 

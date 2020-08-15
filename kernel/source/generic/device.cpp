@@ -24,7 +24,7 @@ void generic::device::print_list(){
 void generic::device::add_pci_device(x86_64::pci::device* dev){
     auto& entry = *generic::device::get_device_list().empty_entry();
     entry.add_pci_device(dev);
-    entry.name = x86_64::pci::class_to_str(dev->class_code, dev->subclass_code, dev->prog_if);
+    entry.name = dev->class_str();
 }
 
 /*static device::device_descriptor find_acpi_node(lai_nsnode_t* node){
