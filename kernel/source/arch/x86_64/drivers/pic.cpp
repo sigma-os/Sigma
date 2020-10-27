@@ -7,7 +7,7 @@ static uint16_t get_irq_reg(uint8_t ocw3){
     x86_64::io::outb(x86_64::pic::pic1_cmd_port, ocw3);
     x86_64::io::outb(x86_64::pic::pic2_cmd_port, ocw3);
 
-    return (x86_64::io::inb(x86_64::pic::pic2_data_port) << 8) | (x86_64::io::inb(x86_64::pic::pic1_data_port));
+    return (x86_64::io::inb(x86_64::pic::pic2_cmd_port) << 8) | (x86_64::io::inb(x86_64::pic::pic1_cmd_port));
 }
 
 static uint16_t get_isr(){
